@@ -33,7 +33,7 @@ The output jar is written to `java/emma-endinv/build/libs/emma-endinv-1.2.0.jar`
 
 ## Deploy Helper
 
-`java/build_and_deploy.sh` builds the mod, copies the jar into `java/dist/`, and can optionally copy it into one or more target mods directories.
+`java/build_and_deploy.sh` builds the mod, copies the jar into `java/dist/`, deploys it to the default PrismLauncher Emma, Elric, and AltoClef instances, and can optionally copy it into one or more additional target mods directories.
 
 Examples:
 

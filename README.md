@@ -31,14 +31,14 @@ java/emma-endinv/build/libs/emma-endinv-1.2.0.jar
 
 ## Deploy Helper
 
-Build only:
+Build and deploy to the default PrismLauncher Emma, Elric, and AltoClef mods folders:
 
 ```bash
 cd java
 ./build_and_deploy.sh
 ```
 
-Build and copy the jar to one or more mods folders:
+Build, deploy to the default PrismLauncher targets, and also copy the jar to one or more extra mods folders:
 
 ```bash
 cd java

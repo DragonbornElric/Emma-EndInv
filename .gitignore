@@ -1,7 +1,7 @@
 # Gradle
 java/emma-endinv/.gradle/
 java/emma-endinv/build/
-java/emma-endinv/bin/
+/java/*/bin
 java/dist/
 
 # IDE
