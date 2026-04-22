@@ -5,6 +5,7 @@ import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.autopick.AutoPickHelper;
 import com.emma.endinv.network.payloads.toClient.ItemPickedUpPayload;
 import com.emma.endinv.event.BlockBreakRedirect;
+import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -53,6 +54,7 @@ public abstract class BlockDropMixin {
                 ItemStack picked = stack.copy();
                 picked.setCount(inserted);
                 ModInfo.getPacketDistributor().sendToPlayer(breaker, new ItemPickedUpPayload(picked));
+                fireVanillaInventoryChanged(breaker, picked);
             }
 
             if (remain.isEmpty()) {
@@ -80,5 +82,15 @@ public abstract class BlockDropMixin {
     // Simplified for 1.21.8: let vanilla handle mending elsewhere
     private static int repairPlayerItems(ServerPlayer player, int value) {
         return value;
+    }
+
+    // Block drop redirection can skip ItemEntity.playerTouch entirely, so fire
+    // the same vanilla inventory-changed milestone trigger from this path too.
+    private static void fireVanillaInventoryChanged(ServerPlayer player, ItemStack pickedUp) {
+        if (pickedUp.isEmpty()) {
+            return;
+        }
+
+        CriteriaTriggers.INVENTORY_CHANGED.trigger(player, player.getInventory(), pickedUp.copy());
     }
 }
