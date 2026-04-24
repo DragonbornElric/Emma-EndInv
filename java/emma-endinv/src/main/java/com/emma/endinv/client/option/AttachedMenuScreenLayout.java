@@ -15,6 +15,9 @@ import java.util.List;
 
 public abstract class AttachedMenuScreenLayout implements SFParamProvider{
 
+    private static final int PANEL_HORIZONTAL_CHROME = 16;
+    private static final int PANEL_RIGHT_BORDER_WIDTH = 8;
+
     static final IRectangleParam PAGE_RECTANGLE = new ScreenRectangleWidgetParam(0,0,9*18 + 8 + 8, 17 + 15*18 + 12);
     static final IRectangleParam SEARCH_BOX = new ScreenRectangleWidgetParam(1, 17 + 15*18 + 12, 8 + 9*18 + 8, 15);
     static final IRectangleParam SORT_BOX = new ScreenRectangleWidgetParam(6, 5, 77, 12);
@@ -86,14 +89,14 @@ public abstract class AttachedMenuScreenLayout implements SFParamProvider{
             int referenceLeft;
             if (actualLeft > centeredLeft + 4) {
                 // Container shifted right — recipe book is open.
-                // Snap to the recipe book's left edge.
-                referenceLeft = actualLeft - RecipeBookComponent.IMAGE_WIDTH;
+                // Reserve the EndInv right border so it does not cover the recipe-book category tabs.
+                referenceLeft = actualLeft - RecipeBookComponent.IMAGE_WIDTH - PANEL_RIGHT_BORDER_WIDTH;
             } else {
                 // No recipe book — snap to container's left edge.
                 referenceLeft = actualLeft;
             }
-            int availableWidth = referenceLeft - 20 - 6 - 6;
-            int columns = Math.max(1, Math.floorDiv(availableWidth, 18));
+            int availablePanelWidth = Math.max(34, referenceLeft - leftPos);
+            int columns = Math.max(1, Math.floorDiv(availablePanelWidth - PANEL_HORIZONTAL_CHROME, 18));
             int rows = Math.max(1, Math.floorDiv(screen.height - 60, 18));
             return new AttachedMenuScreenLayout.LeftLayout(
                     new PageBasicLayoutConfig.Param(rows, columns, false,false),

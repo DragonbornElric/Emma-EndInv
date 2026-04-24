@@ -2,6 +2,7 @@ package com.emma.endinv.client.gui.widget;
 
 import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.client.gui.ScreenFramework;
+import com.emma.endinv.client.gui.TooltipRenderer;
 import com.emma.endinv.client.option.ClientConfigs;
 import com.emma.endinv.client.option.PageSwitchBarConfig;
 import com.emma.endinv.client.option.TextureMode;
@@ -86,6 +87,37 @@ public class PageSwitchBar extends AbstractWidget {
         framework.pageSwitched(index);
     }
 
+    public void renderHoverTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+        int hoveredPageIndex = getHoveredPageIndex(mouseX, mouseY);
+        if (hoveredPageIndex < 0) {
+            return;
+        }
+        guiGraphics.nextStratum();
+        TooltipRenderer.renderText(
+                guiGraphics,
+                Minecraft.getInstance().font,
+                java.util.List.of(framework.getPages().get(hoveredPageIndex).name),
+                mouseX,
+                mouseY
+        );
+    }
+
+    private int getHoveredPageIndex(int mouseX, int mouseY) {
+        int tabX = getX();
+        int tabY = getY();
+        for (int i = ScreenFramework.firstPageIndex; i < ScreenFramework.firstPageIndex + framework.pageBarCount; ++i) {
+            if (mouseX > tabX && mouseX < tabX + tabWidth && mouseY > tabY && mouseY < tabY + tabHeight) {
+                return i;
+            }
+            if (direction_isVertical) {
+                tabY += tabHeight;
+            } else {
+                tabX += tabWidth;
+            }
+        }
+        return -1;
+    }
+
     @Override
     protected void extractWidgetRenderState(@NotNull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         int tabX = getX();
@@ -128,15 +160,6 @@ public class PageSwitchBar extends AbstractWidget {
         tabY = getY();
         for (int i = ScreenFramework.firstPageIndex; i < ScreenFramework.firstPageIndex + framework.pageBarCount; ++i) {
             framework.getPages().get(i).renderPageIcon(guiGraphics, tabX + 15, tabY + 5, partialTick);
-            if (mouseX > tabX && mouseX < tabX + tabWidth && mouseY > tabY && mouseY < tabY + tabHeight) {
-                guiGraphics.setTooltipForNextFrame(
-                        Minecraft.getInstance().font,
-                        java.util.List.of(framework.getPages().get(i).name),
-                        java.util.Optional.empty(),
-                        mouseX,
-                        mouseY
-                );
-            }
             if(direction_isVertical) tabY+=tabHeight; else tabX+=tabWidth;
         }
     }

@@ -139,6 +139,12 @@ public final class ScreenAttachment {
                     @Override public float getPartialTick() { return delta; }
                     @Override public GuiGraphicsExtractor getGuiGraphicsExtractor() { return graphics; }
                 });
+                current.render(new IScreenEvent() {
+                    @Override public double getMouseX() { return mouseX; }
+                    @Override public double getMouseY() { return mouseY; }
+                    @Override public float getPartialTick() { return delta; }
+                    @Override public GuiGraphicsExtractor getGuiGraphicsExtractor() { return graphics; }
+                });
             });
 
             // Register input handlers — they read the static `attachment` field at invocation time,

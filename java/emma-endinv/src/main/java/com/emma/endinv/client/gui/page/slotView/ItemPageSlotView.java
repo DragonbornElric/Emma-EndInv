@@ -1,13 +1,13 @@
 package com.emma.endinv.client.gui.page.slotView;
 
 import com.emma.endinv.SourceInventory;
+import com.emma.endinv.client.gui.TooltipRenderer;
 import com.emma.endinv.client.gui.bg.IRectangleParam;
 import com.emma.endinv.client.gui.page.GridPage;
 import com.emma.endinv.client.gui.page.manager.ResourcePointer;
 import com.emma.endinv.util.ItemKey;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -65,7 +65,6 @@ public class ItemPageSlotView extends Slot implements ResourcePointer<ItemStack>
         if(hasClickedOn(mouseX, mouseY)) renderSlotHighlightBack(guiGraphics, mouseX, mouseY, partialTick);
         guiGraphics.item(stack, x, y, 0);
         guiGraphics.itemDecorations(Minecraft.getInstance().font, stack, x, y, page.getDisplayAmount(stack));
-        if(hasClickedOn(mouseX, mouseY)) renderSlotHighlightFront(guiGraphics, mouseX, mouseY, partialTick);
         if(stack.isEmpty() && !stack.is(Items.AIR)) page.renderEmpty(guiGraphics, x, y, stack);
     }
 
@@ -77,13 +76,19 @@ public class ItemPageSlotView extends Slot implements ResourcePointer<ItemStack>
     @Override
     public void renderSlotHighlightFront(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick){
         guiGraphics.fill(x, y, x+width - 2, y+height - 2, 0x20ffffff);
+    }
+
+    public void renderTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         ItemStack hovering = get();
         if(hovering.isEmpty()) return;
-        guiGraphics.setTooltipForNextFrame(
-                Minecraft.getInstance().font,
-                AbstractContainerScreen.getTooltipFromItem(Minecraft.getInstance(), hovering),
-                hovering.getTooltipImage(),
-                mouseX, mouseY
+        TooltipRenderer.renderItem(
+            guiGraphics,
+            Minecraft.getInstance().font,
+            net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.getTooltipFromItem(Minecraft.getInstance(), hovering),
+            hovering.getTooltipImage(),
+            hovering,
+            mouseX,
+            mouseY
         );
     }
 

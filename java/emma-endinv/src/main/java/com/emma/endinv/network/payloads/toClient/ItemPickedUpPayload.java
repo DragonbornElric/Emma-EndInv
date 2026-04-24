@@ -1,6 +1,7 @@
 package com.emma.endinv.network.payloads.toClient;
 
 import com.emma.endinv.AbstractModInitializer;
+import com.emma.endinv.client.CachedSrcInv;
 import com.emma.endinv.client.event.AutoPickTipper;
 import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.ModPacketPayload;
@@ -36,6 +37,7 @@ public record ItemPickedUpPayload(ItemStack stack) implements ModPacketPayload {
     }
 
     public void handle(ModPacketContext iPayloadContext) {
+        CachedSrcInv.INSTANCE.addItem(stack().copy());
         AutoPickTipper.addItem(stack());
     }
 }

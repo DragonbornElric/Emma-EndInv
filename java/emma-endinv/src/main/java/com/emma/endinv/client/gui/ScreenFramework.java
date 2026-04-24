@@ -5,6 +5,7 @@ import com.emma.endinv.SourceInventory;
 import com.emma.endinv.client.CachedSrcInv;
 import com.emma.endinv.client.ClientModInfo;
 import com.emma.endinv.client.KeyMappings;
+import com.emma.endinv.client.gui.TooltipRenderer;
 import com.emma.endinv.client.gui.bg.*;
 import com.emma.endinv.client.gui.page.DisplayPage;
 import com.emma.endinv.client.gui.page.ItemPage;
@@ -264,28 +265,37 @@ public class ScreenFramework implements PageManager, GuiEventListener {
 
         getDisplayingPage().render(guiGraphics, mouseX, mouseY, partialTick);
 
-        if (searchBox.isHovered() && !searchBox.isFocused())
-            guiGraphics.setTooltipForNextFrame(
-                    mc.font,
-                    List.of(
-                            Component.translatable("search.endinv.prefix.sharp"),
-                            Component.translatable("search.endinv.prefix.at"),
-                            Component.translatable("search.endinv.prefix.xor"),
-                            Component.translatable("search.endinv.prefix.star")
-                    ),
-                    java.util.Optional.empty(),
-                    mouseX,
-                    mouseY
-            );
-        if (reverseSortButton.isHovered())
-            guiGraphics.setTooltipForNextFrame(
-                    mc.font,
-                    List.of(Component.translatable("button.endinv.reverse")),
-                    java.util.Optional.empty(),
-                    mouseX,
-                    mouseY
-            );
         this.sortTypeSwitchBox.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+
+        if (searchBox.isHovered() && !searchBox.isFocused()) {
+            guiGraphics.nextStratum();
+            TooltipRenderer.renderText(
+                guiGraphics,
+                mc.font,
+                List.of(
+                    Component.translatable("search.endinv.prefix.sharp"),
+                    Component.translatable("search.endinv.prefix.at"),
+                    Component.translatable("search.endinv.prefix.xor"),
+                    Component.translatable("search.endinv.prefix.star")
+                ),
+                mouseX,
+                mouseY
+            );
+        }
+        if (reverseSortButton.isHovered()) {
+            guiGraphics.nextStratum();
+            TooltipRenderer.renderText(
+                guiGraphics,
+                mc.font,
+                List.of(Component.translatable("button.endinv.reverse")),
+                mouseX,
+                mouseY
+            );
+        }
+
+        getDisplayingPage().renderHoverOverlay(guiGraphics, mouseX, mouseY, partialTick);
+
+        this.pageSwitchBar.renderHoverTooltip(guiGraphics, mouseX, mouseY);
     }
 
     protected boolean hasClickedOnPage(double mouseX, double mouseY) {

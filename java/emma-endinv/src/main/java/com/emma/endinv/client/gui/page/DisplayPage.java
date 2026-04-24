@@ -229,6 +229,9 @@ public abstract class DisplayPage{
 
     public abstract void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks);
 
+    public void renderHoverOverlay(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    }
+
     public String getDisplayAmount(ItemStack stack){
         int count = stack.getCount();
         double value;

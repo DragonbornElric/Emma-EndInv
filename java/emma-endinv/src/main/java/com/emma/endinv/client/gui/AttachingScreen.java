@@ -101,23 +101,16 @@ public class AttachingScreen<T extends AbstractContainerMenu>{
     }
 
     public void renderPre(IScreenEvent event) {
+    }
+
+    public void render(IScreenEvent event) {
         int mouseX = (int) event.getMouseX();
         int mouseY = (int) event.getMouseY();
         GuiGraphicsExtractor guiGraphics = event.getGuiGraphicsExtractor();
         float partialTick = event.getPartialTick();
 
         frameWork.renderBg(guiGraphics, mouseX, mouseY, partialTick);
-        frameWork.render(guiGraphics,mouseX,mouseY,partialTick);
-    }
-
-    public void render(IScreenEvent event) {
-//        int mouseX = (int) event.getMouseX();
-//        int mouseY = (int) event.getMouseY();
-//        GuiGraphicsExtractor guiGraphics = event.getGuiGraphicsExtractor();
-//        float partialTick = event.getPartialTick();
-
-        //frameWork.renderBg(guiGraphics,mouseX,mouseY,partialTick);
-        //frameWork.render(guiGraphics,mouseX,mouseY,partialTick);
+        frameWork.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
 

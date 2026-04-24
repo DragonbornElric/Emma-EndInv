@@ -133,6 +133,25 @@ public abstract class ItemPage extends GridPage {
         for(ItemPageSlotView slot : viewContainer.slots()){
             slot.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         }
+
+        for (ItemPageSlotView slot : viewContainer.slots()) {
+            if (slot.hasClickedOn(mouseX, mouseY)) {
+                guiGraphics.nextStratum();
+                slot.renderSlotHighlightFront(guiGraphics, mouseX, mouseY, partialTicks);
+                break;
+            }
+        }
+    }
+
+    @Override
+    public void renderHoverOverlay(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        for (ItemPageSlotView slot : viewContainer.slots()) {
+            if (slot.hasClickedOn(mouseX, mouseY)) {
+                guiGraphics.nextStratum();
+                slot.renderTooltip(guiGraphics, mouseX, mouseY, partialTicks);
+                break;
+            }
+        }
     }
 
     @Override

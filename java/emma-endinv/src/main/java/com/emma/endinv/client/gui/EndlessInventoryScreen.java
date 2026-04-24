@@ -111,8 +111,8 @@ public class EndlessInventoryScreen extends AbstractContainerScreen<EndlessInven
         if (menu.isCraftingVisible()) {
             drawCraftingBackground(guiGraphics);
         }
-        frameWork.render(guiGraphics,mouseX,mouseY,partialTick);
         super.extractRenderState(guiGraphics,mouseX,mouseY,partialTick);
+        frameWork.render(guiGraphics,mouseX,mouseY,partialTick);
 
         this.extractTooltip(guiGraphics,mouseX,mouseY);
     }
