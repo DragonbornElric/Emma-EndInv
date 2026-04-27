@@ -98,7 +98,7 @@ public record ItemClickPayload(ItemKey key, int button, ContainerInput clickType
                     LOGGER.debug("ItemClickPayload.SWAP: added inventoryItem, remain={}", remain);
                 }
                 if( !a && b ){
-                    ItemStack swapping = endInv.takeItem(snapStack, count); //take most
+                    ItemStack swapping = endInv.takeItem(snapStack);
                     inventory.setItem(button,swapping);
                     LOGGER.debug("ItemClickPayload.SWAP: took from endInv swapping={}", swapping);
                 }
@@ -106,7 +106,7 @@ public record ItemClickPayload(ItemKey key, int button, ContainerInput clickType
                     ItemStack remain =  endInv.addItem(inventoryItem);
                     LOGGER.debug("ItemClickPayload.SWAP: both non-empty, remainFromAdd={}", remain);
                     if(remain.isEmpty()) {
-                        ItemStack swapping =  endInv.takeItem(snapStack, count); //take most
+                        ItemStack swapping =  endInv.takeItem(snapStack);
                         inventory.setItem(button, swapping);
                         LOGGER.debug("ItemClickPayload.SWAP: swap success swapping={}", swapping);
                     }else {
