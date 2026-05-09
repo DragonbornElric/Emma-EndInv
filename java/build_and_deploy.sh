@@ -9,7 +9,7 @@ BUILD_LIBS_DIR="$ENDINV_DIR/build/libs"
 GRADLE_PROPS="$ENDINV_DIR/gradle.properties"
 LOADER_VERSION=$(awk -F= '/^loader_version=/{print $2}' "$GRADLE_PROPS")
 MC_VERSION=$(awk -F= '/^minecraft_version=/{print $2}' "$GRADLE_PROPS")
-ENDINV_JAR="emma-endinv-F${LOADER_VERSION}+M${MC_VERSION}.jar"
+ENDINV_JAR="emma-endinv-F${LOADER_VERSION}+M${MC_VERSION}+V2.jar"
 PRISM_INSTANCES_DIR="$APPDATA/PrismLauncher/instances"
 
 MODS_DIRS=()
@@ -54,6 +54,8 @@ if ALTOCLEF_MODS_RESOLVED="$(resolve_mods_dir "Emma 26.1 EmmaClef")"; then
 else
     ALTOCLEF_MODS="$PRISM_INSTANCES_DIR/Emma 26.1 EmmaClef/minecraft/mods"
 fi
+
+FABRIC_MODS_DIR="C:/Users/Owner/Fabric Mods"
 
 # Default to a Temp-backed Gradle project cache on Windows so VS Code's Java
 # tooling does not lock the module-local Loom cache during bash.exe runs.
@@ -119,7 +121,8 @@ echo "=== Deploying to PrismLauncher mods folders ==="
 for named_target in \
     "Emma:$EMMA_MODS" \
     "Elric:$ELRIC_MODS" \
-    "Emma 26.1 AltoClef:$ALTOCLEF_MODS"; do
+    "Emma 26.1 AltoClef:$ALTOCLEF_MODS" \
+    "Fabric Mods:$FABRIC_MODS_DIR"; do
     target_name="${named_target%%:*}"
     target_dir="${named_target#*:}"
 

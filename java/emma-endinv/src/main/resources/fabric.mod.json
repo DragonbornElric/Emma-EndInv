@@ -11,6 +11,7 @@
   "contact": {},
   "license": "MIT",
   "icon": "assets/endless_inventory/icon.png",
+  "accessWidener": "endinv.accesswidener",
   "environment": "*",
   "entrypoints": {
     "main": [

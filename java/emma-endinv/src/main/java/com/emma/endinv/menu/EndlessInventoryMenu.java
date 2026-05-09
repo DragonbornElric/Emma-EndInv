@@ -20,12 +20,15 @@ import net.minecraft.ReportedException;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
+import net.minecraft.recipebook.ServerPlaceRecipe;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.StackedItemContents;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
@@ -48,7 +51,7 @@ import static com.emma.endinv.ServerLevelEndInv.getEndInvForPlayer;
 /**The menu who links to EndlessInventory
  * Implementation: maybe let EIS implements them
  */
-public class EndlessInventoryMenu extends AbstractContainerMenu implements PageMetaDataManager, PageQuickMoveHandler.PageQuickMoveOverride {
+public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaDataManager, PageQuickMoveHandler.PageQuickMoveOverride {
 
 
     private final SourceInventory sourceInventory;
@@ -224,6 +227,55 @@ public class EndlessInventoryMenu extends AbstractContainerMenu implements PageM
 
     public boolean isCrafterEnabled(){
         return true;
+    }
+
+    @Override
+    public RecipeBookType getRecipeBookType() {
+        return RecipeBookType.CRAFTING;
+    }
+
+    @Override
+    public void fillCraftSlotsStackedContents(StackedItemContents stackedContents) {
+        craftMatrix.fillStackedContents(stackedContents);
+    }
+
+    @Override
+    public PostPlaceAction handlePlacement(boolean useMaxItems, boolean allowDroppingItemsToClear,
+                                           RecipeHolder<?> recipe, ServerLevel level, Inventory inventory) {
+        @SuppressWarnings("unchecked")
+        RecipeHolder<CraftingRecipe> typedRecipe = (RecipeHolder<CraftingRecipe>) recipe;
+        List<Slot> inputSlots = getCraftingSlots();
+        return ServerPlaceRecipe.placeRecipe(new ServerPlaceRecipe.CraftingMenuAccess<CraftingRecipe>() {
+            @Override
+            public void fillCraftSlotsStackedContents(StackedItemContents contents) {
+                EndlessInventoryMenu.this.fillCraftSlotsStackedContents(contents);
+            }
+            @Override
+            public void clearCraftingContent() {
+                craftResult.clearContent();
+                craftMatrix.clearContent();
+            }
+            @Override
+            public boolean recipeMatches(RecipeHolder<CraftingRecipe> r) {
+                return r.value().matches(craftMatrix.asCraftInput(), level);
+            }
+        }, 3, 3, inputSlots, inputSlots, inventory, typedRecipe, useMaxItems, allowDroppingItemsToClear);
+    }
+
+    public Slot getResultSlot() {
+        return slots.get(RESULT_SLOT_INDEX);
+    }
+
+    public List<Slot> getInputGridSlots() {
+        return getCraftingSlots();
+    }
+
+    public int getGridWidth() {
+        return CRAFT_GRID_WIDTH;
+    }
+
+    public int getGridHeight() {
+        return CRAFT_GRID_HEIGHT;
     }
 
     public void setCraftingVisible(boolean visible) {

@@ -1,0 +1,9 @@
+accessWidener v2 official
+
+# GhostSlots: widen protected slot setters so EndInvCraftingRecipeBookComponent (outside the recipebook package) can call them
+accessible method net/minecraft/client/gui/screens/recipebook/GhostSlots setResult (Lnet/minecraft/world/inventory/Slot;Lnet/minecraft/util/context/ContextMap;Lnet/minecraft/world/item/crafting/display/SlotDisplay;)V
+accessible method net/minecraft/client/gui/screens/recipebook/GhostSlots setInput (Lnet/minecraft/world/inventory/Slot;Lnet/minecraft/util/context/ContextMap;Lnet/minecraft/world/item/crafting/display/SlotDisplay;)V
+
+# Allow EndlessInventoryScreen to set dynamic imageWidth/imageHeight after the ARBS super() call
+mutable field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen imageWidth I
+mutable field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen imageHeight I

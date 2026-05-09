@@ -2,7 +2,11 @@ plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 }
 
-version = "F${project.loader_version}+M${project.minecraft_version}"
+loom {
+	accessWidenerPath = file("src/main/resources/endinv.accesswidener")
+}
+
+version = "F${project.loader_version}+M${project.minecraft_version}+V2"
 group = project.maven_group
 
 base {

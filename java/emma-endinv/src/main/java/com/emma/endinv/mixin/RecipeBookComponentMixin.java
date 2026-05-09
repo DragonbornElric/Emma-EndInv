@@ -1,6 +1,7 @@
 package com.emma.endinv.mixin;
 
 import com.emma.endinv.client.CachedSrcInv;
+import com.emma.endinv.client.gui.recipebook.EndInvCraftingRecipeBookComponent;
 import com.emma.endinv.util.recipeTransferHelper.RecipeItemProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
@@ -21,6 +22,10 @@ public class RecipeBookComponentMixin {
     private StackedItemContents stackedContents;
     @Shadow
     protected Minecraft minecraft;
+    @Shadow
+    private int xOffset;
+    @Shadow
+    private int width;
     @Unique
     private final CachedSrcInv srcInv = CachedSrcInv.INSTANCE;
 
@@ -32,5 +37,19 @@ public class RecipeBookComponentMixin {
     @Inject(method = "updateStackedContents", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/inventory/RecipeBookMenu;fillCraftSlotsStackedContents(Lnet/minecraft/world/entity/player/StackedItemContents;)V"))
     private void updateStackedContentsOfEndInv(CallbackInfo ci) {
         RecipeItemProvider.fillStackedItemContents(srcInv.getItemsAsList(), stackedContents);
+    }
+
+    // Reposition the panel to the left edge of the screen when opened from EndInv
+    // Pin the recipe book panel to the left edge when opened from EndInv.
+    // Tab buttons render 30px to the LEFT of the panel origin, so xOffset = (width-147)/2 - 34
+    // puts the tabs at x=4 and the panel at x=34, keeping all controls fully visible.
+    @Inject(method = "initVisuals", at = @At(value = "FIELD",
+            target = "Lnet/minecraft/client/gui/screens/recipebook/RecipeBookComponent;xOffset:I",
+            opcode = org.objectweb.asm.Opcodes.PUTFIELD,
+            shift = At.Shift.AFTER))
+    private void ei$pinPanelToLeftEdge(CallbackInfo ci) {
+        if ((Object) this instanceof EndInvCraftingRecipeBookComponent) {
+            this.xOffset = (this.width - 147) / 2 - 34;
+        }
     }
 }

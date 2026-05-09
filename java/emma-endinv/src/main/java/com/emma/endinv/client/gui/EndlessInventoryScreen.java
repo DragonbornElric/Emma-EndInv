@@ -1,6 +1,7 @@
 package com.emma.endinv.client.gui;
 
 import com.emma.endinv.ModInfo;
+import com.emma.endinv.client.gui.recipebook.EndInvCraftingRecipeBookComponent;
 import com.emma.endinv.menu.EndlessInventoryMenu;
 import com.emma.endinv.network.payloads.toServer.ToggleCraftingPayload;
 import com.emma.endinv.util.NotNullWhenInitialized;
@@ -8,7 +9,8 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.events.GuiEventListener;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.navigation.ScreenPosition;
+import net.minecraft.client.gui.screens.inventory.AbstractRecipeBookScreen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -20,7 +22,7 @@ import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import org.jetbrains.annotations.Nullable;
 
-public class EndlessInventoryScreen extends AbstractContainerScreen<EndlessInventoryMenu> {
+public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInventoryMenu> {
     private static final Identifier CRAFTING_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/container/crafting_table.png");
     @NotNullWhenInitialized
     private ScreenFramework frameWork;
@@ -29,14 +31,35 @@ public class EndlessInventoryScreen extends AbstractContainerScreen<EndlessInven
     private boolean craftingVisible;
 
     public EndlessInventoryScreen(EndlessInventoryMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title, 176, 114 + menu.getBaseRows() * 18);
+        super(menu, new EndInvCraftingRecipeBookComponent(menu), playerInventory, title);
+        this.imageWidth = 176;
+        this.imageHeight = 114 + menu.getBaseRows() * 18;
         this.inventoryLabelY = this.imageHeight - 94;
     }
 
-    public void init(){
-        super.init();
+    @Override
+    protected ScreenPosition getRecipeBookButtonPosition() {
+        // Use fixed centered position — leftPos may be shifted by ARBS when this is called
+        int centeredLeft = (this.width - this.imageWidth) / 2;
+        int centeredTop = (this.height - this.imageHeight) / 2;
+        return new ScreenPosition(centeredLeft, centeredTop - 22);
+    }
+
+    @Override
+    protected void onRecipeBookButtonClick() {
+        // Cancel ARBS's leftPos shift — the ScreenFramework can't follow a horizontal shift,
+        // so we keep the container centered and let the recipe book panel overlap if needed.
+        this.leftPos = (this.width - this.imageWidth) / 2;
+        this.topPos = (this.height - this.imageHeight) / 2;
+        updateCraftingToggleButtonPosition();
+    }
+
+    @Override
+    public void init() {
+        super.init();  // ARBS: initialises recipe book component, sets leftPos, adds book button
         craftingVisible = menu.isCraftingVisible();
         this.inventoryLabelY = this.imageHeight - 94;
+        // Keep container centered regardless of recipe book state
         this.leftPos = (this.width - this.imageWidth) / 2;
         this.topPos = (this.height - this.imageHeight) / 2;
         var existing = ScreenFramework.getInstance();
@@ -47,7 +70,6 @@ public class EndlessInventoryScreen extends AbstractContainerScreen<EndlessInven
 
         frameWork.addWidgetToScreen(this::addRenderableWidget);
         addCraftingToggleButton();
-        // Ensure initial UI matches menu's crafting visibility and row count
         if (this.craftingToggleButton != null) {
             this.craftingToggleButton.setValue(craftingVisible);
         }
@@ -57,39 +79,34 @@ public class EndlessInventoryScreen extends AbstractContainerScreen<EndlessInven
     }
 
     private void addCraftingToggleButton() {
-        int width = 70;
+        int width = 95;
         this.craftingToggleButton = CycleButton.onOffBuilder(false)
-                .create(0,0,width,20,Component.literal("Crafter"), (it,on)->{
-                    toggleCrafting();
-                    if(it.getValue()!=craftingVisible) it.setValue(craftingVisible);
-                });
+                .create(0, 0, width, 20,
+                        Component.translatable("endless_inventory.button.crafting_table"),
+                        (it, on) -> {
+                            toggleCrafting();
+                            if (it.getValue() != craftingVisible) it.setValue(craftingVisible);
+                        });
         updateCraftingToggleButtonPosition();
         addRenderableWidget(this.craftingToggleButton);
     }
 
-    /**
-     * Keeps the crafting toggle anchored to the screen chrome after layout changes.
-     */
     private void updateCraftingToggleButtonPosition() {
         if (this.craftingToggleButton == null) {
             return;
         }
-        int width = this.craftingToggleButton.getWidth();
-        int x = this.leftPos + this.imageWidth - width - 8;
+        int w = this.craftingToggleButton.getWidth();
+        int x = this.leftPos + this.imageWidth - w - 8;
         int y = this.topPos - 20;
         this.craftingToggleButton.setX(x);
         this.craftingToggleButton.setY(y);
     }
 
-    /**
-     * Toggle crafter visibility and realign the surrounding widgets without rebuilding the screen.
-     */
     private void toggleCrafting() {
         craftingVisible = !craftingVisible;
         menu.setCraftingVisible(craftingVisible);
         ModInfo.getPacketDistributor().sendToServer(new ToggleCraftingPayload(craftingVisible));
         int previousTop = this.topPos;
-        // imageHeight is final in MC 26.1; layout is fixed from constructor
         this.leftPos = (this.width - this.imageWidth) / 2;
         this.topPos = (this.height - this.imageHeight) / 2;
         updateCraftingToggleButtonPosition();
@@ -105,21 +122,22 @@ public class EndlessInventoryScreen extends AbstractContainerScreen<EndlessInven
         guiGraphics.blit(RenderPipelines.GUI_TEXTURED, CRAFTING_TEXTURE, craftX, craftY, 0, 12, 176, 58, 256, 256);
     }
 
-    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick){
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.extractBackground(guiGraphics, mouseX, mouseY, partialTick);
-        frameWork.renderBg(guiGraphics,mouseX,mouseY,partialTick);
+        frameWork.renderBg(guiGraphics, mouseX, mouseY, partialTick);
         if (menu.isCraftingVisible()) {
             drawCraftingBackground(guiGraphics);
         }
-        super.extractRenderState(guiGraphics,mouseX,mouseY,partialTick);
-        frameWork.render(guiGraphics,mouseX,mouseY,partialTick);
-
-        this.extractTooltip(guiGraphics,mouseX,mouseY);
+        // Delegates to ARBS which handles: extractContents (slots/labels), recipe book panel,
+        // carried item, snapback, and tooltips.
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+        frameWork.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean pre) {
-        for(GuiEventListener guieventlistener : this.children()) {
+        for (GuiEventListener guieventlistener : this.children()) {
             if (guieventlistener.mouseClicked(event, pre)) {
                 this.setFocused(guieventlistener);
                 if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
@@ -129,7 +147,6 @@ public class EndlessInventoryScreen extends AbstractContainerScreen<EndlessInven
             }
         }
         return frameWork.mouseClicked(event, pre) || super.mouseClicked(event, pre);
-
     }
 
     @Override
@@ -158,25 +175,27 @@ public class EndlessInventoryScreen extends AbstractContainerScreen<EndlessInven
 
     @Override
     public boolean charTyped(CharacterEvent event) {
-        return frameWork.charTyped(event);
+        // Framework gets first chance (search box etc.); recipe book search box gets it via super (ARBS)
+        return frameWork.charTyped(event) || super.charTyped(event);
     }
 
+    @Override
     protected void slotClicked(Slot slot, int slotId, int mouseButton, ContainerInput type) {
-        super.slotClicked(slot,slotId,mouseButton,type);
+        super.slotClicked(slot, slotId, mouseButton, type);
         this.menu.broadcastChanges();
     }
 
-    public void onClose(){
+    @Override
+    public void onClose() {
         super.onClose();
         frameWork.onClose();
     }
-
 
     public com.emma.endinv.menu.page.pageManager.PageMetaDataManager getPageManager() {
         return menu;
     }
 
-    public AbstractContainerScreen<?> getScreen() {
+    public net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> getScreen() {
         return this;
     }
 
@@ -199,6 +218,4 @@ public class EndlessInventoryScreen extends AbstractContainerScreen<EndlessInven
     public int getYSize() {
         return imageHeight;
     }
-
 }
-

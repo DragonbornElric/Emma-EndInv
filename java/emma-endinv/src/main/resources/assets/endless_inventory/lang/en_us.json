@@ -102,5 +102,6 @@
   "endinv.info.white_list_size": "White List Size",
   "endinv.callback.no_access": "Unable to open EndInv as current player is unaccessible to it and is not op.",
   "endinv.callback.not_owner": "Unable to change white list as current player is not the owner and has no permission.",
-  "endinv.configbutton": "Toggle endinv attached menu, shift for settings."
+  "endinv.configbutton": "Toggle endinv attached menu, shift for settings.",
+  "endless_inventory.button.crafting_table": "Crafting Table"
 }
