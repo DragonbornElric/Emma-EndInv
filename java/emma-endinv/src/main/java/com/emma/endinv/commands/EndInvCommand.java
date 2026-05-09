@@ -89,6 +89,7 @@ public class EndInvCommand {
             source.sendFailure(Component.literal("Cannot backup as "+ result.message()));
             return -1;
         }
+        endlessInventory.notifyViewersRemoved(source.getLevel().getServer());
         ServerLevelEndInv.levelEndInvData.byIndexRemove(index);
         source.sendSuccess(() -> Component.literal("Removed " + endlessInventory.getUuid()), true);
         return index;
@@ -103,7 +104,7 @@ public class EndInvCommand {
                 return -1;
             }
             if(endlessInventory.isOwner(player) || Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(source)) {
-                endlessInventory.white_list.add(player.getUUID());
+                endlessInventory.addToWhitelist(player.getUUID());
                 source.sendSuccess(() -> Component.literal("Add " + player.getName().getString() + " to " + endlessInventory.getUuid() + "'s whitelist."), true);
                 return index;
             } else {
@@ -125,7 +126,8 @@ public class EndInvCommand {
                 return -1;
             }
             if(endlessInventory.isOwner(player) || Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(source)) {
-                if(endlessInventory.white_list.remove(player.getUUID())) {
+                if(endlessInventory.white_list.contains(player.getUUID())) {
+                    endlessInventory.removeFromWhitelist(player.getUUID());
                     source.sendSuccess(() -> Component.literal("Remove " + player.getName().getString() + " from " + endlessInventory.getUuid() + "'s whitelist."), true);
                 } else {
                     source.sendFailure(Component.literal(player.getName().getString() + " is not in " + endlessInventory.getUuid() + "'s whitelist."));
@@ -179,7 +181,7 @@ public class EndInvCommand {
                     endInv = ServerLevelEndInv.createPublicEndInv();
                     endInv.setAccessibility(Accessibility.RESTRICTED);
                     source.sendSuccess(()->Component.literal("Created a new white_list endInv with uuid: "+endInv.getUuid()),true);
-                    endInv.white_list.add(player.getUUID());
+                    endInv.addToWhitelist(player.getUUID());
                     source.sendSuccess(()->Component.literal("Add current player to white list"),true);
                 }
                 case PRIVATE -> {

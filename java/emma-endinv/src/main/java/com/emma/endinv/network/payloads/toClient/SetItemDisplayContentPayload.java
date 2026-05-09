@@ -1,21 +1,17 @@
 package com.emma.endinv.network.payloads.toClient;
 
 import com.emma.endinv.AbstractModInitializer;
-import com.emma.endinv.client.CachedSrcInv;
 import com.emma.endinv.client.gui.page.ItemDisplay;
 import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.ModPacketPayload;
 import com.emma.endinv.util.ItemKey;
-import com.emma.endinv.util.ItemState;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**Packet that contains required {@link ItemDisplay}'s content view
  *  when {@code TransferMode==PART}
@@ -65,13 +61,10 @@ public record SetItemDisplayContentPayload(List<ItemStack> stacks) implements Mo
     }
 
     public void handle(ModPacketContext context) {
-        var stackStream = stacks.stream();
-        Map<ItemKey, ItemState> partlyMap = new HashMap<>();
-        stacks.forEach(stack -> partlyMap.put(ItemKey.asKey(stack), new ItemState(stack.getCount(), -1)));
-        CachedSrcInv.INSTANCE.getItemMap().putAll(partlyMap);
-        ModPacketPayload.getClientPageMeta().ifPresent(mng->{
-            if(mng.getDisplayingPage() instanceof ItemDisplay itemDisplay){
-                itemDisplay.buildContentsWith(stackStream.map(ItemKey::asKey).toList());
+        List<ItemKey> keys = stacks.stream().map(ItemKey::asKey).toList();
+        ModPacketPayload.getClientPageMeta().ifPresent(mng -> {
+            if (mng.getDisplayingPage() instanceof ItemDisplay itemDisplay) {
+                itemDisplay.buildContentsWith(keys);
             }
         });
     }

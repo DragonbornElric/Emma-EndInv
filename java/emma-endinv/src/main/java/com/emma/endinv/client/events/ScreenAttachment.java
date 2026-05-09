@@ -16,6 +16,7 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -30,6 +31,11 @@ public final class ScreenAttachment {
 
     @Nullable
     public static AttachingScreen<?> attachment;
+
+    /** The ⚙ toggle button added to every attachable container screen. Held here so
+     *  ScreenFramework can render its tooltip above the EndInv panel. */
+    @Nullable
+    public static Button configToggleButton;
 
     private static boolean charTypedEventsRegistered;
     /** Tracks the parent container's leftPos to detect recipe book toggles */
@@ -58,11 +64,10 @@ public final class ScreenAttachment {
 
             // Add independent config/toggle button (Shift opens settings)
             IRectangleParam btnParam = ClientConfigs.ATTACHED_MENU_CONFIG.get().adjust(container).configButtonA();
-            ((ScreenAccessor) screen).endinv$invokeAddRenderableWidget(
-                    AttachingScreen.configButton(
-                            screen,
-                            btnParam,
-                            () -> {
+            Button cfgBtn = AttachingScreen.configButton(
+                    screen,
+                    btnParam,
+                    () -> {
                                 if (attachment == null) {
                                     ModInfo.getPacketDistributor().sendToServer(new OpenEndInvPayload());
                                     attachment = new AttachingScreen<>(container);
@@ -80,8 +85,9 @@ public final class ScreenAttachment {
                                     attachment = null;
                                 }
                             }
-                    )
             );
+            ((ScreenAccessor) screen).endinv$invokeAddRenderableWidget(cfgBtn);
+            configToggleButton = cfgBtn;
 
             Player player = client.player;
             if (player == null) {
@@ -107,6 +113,7 @@ public final class ScreenAttachment {
                     attachment.closed(new IScreenEvent() {});
                     attachment = null;
                 }
+                configToggleButton = null;
             });
 
             // Track initial container leftPos for recipe book detection

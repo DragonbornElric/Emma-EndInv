@@ -122,6 +122,7 @@ public abstract class SourceInventory {
 
     public void setMaxItemStackSize(int maxStackSize) {
         this.maxStackSize = maxStackSize;
+        setChanged();
     }
 
     public boolean isInfinityMode() {
@@ -130,6 +131,7 @@ public abstract class SourceInventory {
 
     public void setInfinityMode(boolean infinityMode) {
         this.infinityMode = infinityMode;
+        setChanged();
     }
 
     public Accessibility getAccessibility() {
@@ -138,6 +140,7 @@ public abstract class SourceInventory {
 
     public void setAccessibility(Accessibility accessibility) {
         this.accessibility = accessibility;
+        setChanged();
     }
 
     public boolean accessible(Player player) {
@@ -155,6 +158,7 @@ public abstract class SourceInventory {
 
     public void setOwner(@Nullable UUID owner) {
         this.owner = owner;
+        setChanged();
     }
 
 

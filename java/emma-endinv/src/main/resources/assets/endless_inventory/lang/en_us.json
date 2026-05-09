@@ -4,6 +4,8 @@
   "title.endinv.settings": "EndInv Settings",
 
   "button.endinv.reverse": "Reverse sort",
+  "button.endinv.loot_all": "Loot All",
+  "button.endinv.loot_all.tooltip": "Loot All to Endless Inventory",
 
   "page.endinv.all_items": "All items",
   "page.endinv.block_items": "Block items",

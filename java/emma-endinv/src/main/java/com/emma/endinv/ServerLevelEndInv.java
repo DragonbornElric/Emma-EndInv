@@ -61,7 +61,7 @@ public final class ServerLevelEndInv {
                 }
             }
         }
-        if(endlessInventory!=null) endlessInventory.viewers.add((ServerPlayer) player);
+        if(endlessInventory!=null) endlessInventory.viewerIds.add(player.getUUID());
         return Optional.ofNullable(endlessInventory);
     }
 

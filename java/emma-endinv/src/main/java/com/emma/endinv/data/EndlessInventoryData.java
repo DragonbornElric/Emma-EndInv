@@ -111,6 +111,7 @@ public class EndlessInventoryData extends SavedData {
     public void byIndexRemove(int index){
         if(index<0 || index>= levelEndInvs.size()) return;
         levelEndInvs.remove(index);
+        setDirty();
     }
     @Nullable
     public EndlessInventory fromUUID(@Nullable UUID uuid){

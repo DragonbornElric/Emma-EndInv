@@ -1,6 +1,8 @@
 package com.emma.endinv;
 
 
+import com.emma.endinv.network.payloads.toClient.EndInvContent;
+import com.emma.endinv.network.payloads.toClient.EndInvMetadata;
 import com.emma.endinv.util.Accessibility;
 import com.emma.endinv.util.ItemKey;
 import com.emma.endinv.util.ItemState;
@@ -11,6 +13,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
@@ -75,7 +78,8 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
 
     private final long[] lastSortedTimes = new long[SortType.values().length];
 
-    public List<ServerPlayer> viewers = new ArrayList<>();
+    public final Set<UUID> viewerIds = new HashSet<>();
+    private boolean dirty = false;
 
     public EndlessInventory(){
         this(UUID.randomUUID());
@@ -112,7 +116,10 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
 
     public void setChanged() {
         super.setChanged();
-        ServerLevelEndInv.levelEndInvData.setDirty();
+        if (ServerLevelEndInv.levelEndInvData != null) {
+            ServerLevelEndInv.levelEndInvData.setDirty();
+        }
+        this.dirty = true;
     }
 
     /**
@@ -128,10 +135,38 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
         return lastModTime;
     }
 
-    public void broadcastChanges(){//todo handle sending changes and client receiving ...
-        this.viewers.forEach(player -> ServerLevelEndInv.checkAndGetManagerForPlayer(player)
-                .ifPresent(manager -> {
-                    //manager.getDisplayingPageId().syncContentToClient(player)
-                }));
+    public void notifyViewersRemoved(MinecraftServer server) {
+        EndInvContent empty = new EndInvContent(Map.of());
+        for (UUID uuid : new ArrayList<>(viewerIds)) {
+            ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+            if (player != null) {
+                ModInfo.getPacketDistributor().sendToPlayer(player, empty);
+            }
+        }
+        viewerIds.clear();
+    }
+
+    public void addToWhitelist(UUID uuid) {
+        white_list.add(uuid);
+        setChanged();
+    }
+
+    public void removeFromWhitelist(UUID uuid) {
+        white_list.remove(uuid);
+        setChanged();
+    }
+
+    public void broadcastChanges(MinecraftServer server) {
+        if (!dirty) return;
+        dirty = false;
+        EndInvContent contentPayload = new EndInvContent(this.getItemMap());
+        EndInvMetadata metaPayload = EndInvMetadata.getWith(this);
+        for (UUID uuid : new ArrayList<>(viewerIds)) {
+            ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+            if (player != null) {
+                ModInfo.getPacketDistributor().sendToPlayer(player, contentPayload);
+                ModInfo.getPacketDistributor().sendToPlayer(player, metaPayload);
+            }
+        }
     }
 }

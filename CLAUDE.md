@@ -29,7 +29,7 @@ cd java/emma-endinv
 ./gradlew.bat build
 ```
 
-The output jar is written to `java/emma-endinv/build/libs/emma-endinv-1.2.0.jar`.
+The output jar is written to `java/emma-endinv/build/libs/emma-endinv-F<loader_version>+M<minecraft_version>.jar`, e.g. `emma-endinv-F0.19.2+M26.1.2.jar`.
 
 ## Deploy Helper
 
@@ -47,7 +47,7 @@ cd java
 ## Conventions
 
 - Minecraft 26.1.2
-- Fabric Loader 0.18.4
+- Fabric Loader 0.19.2
 - Fabric Loom 1.15.5
 - Java 25
 - Package namespace: `com.emma.endinv`

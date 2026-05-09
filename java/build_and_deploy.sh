@@ -6,7 +6,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DIST_DIR="$SCRIPT_DIR/dist"
 ENDINV_DIR="$SCRIPT_DIR/emma-endinv"
 BUILD_LIBS_DIR="$ENDINV_DIR/build/libs"
-ENDINV_JAR="emma-endinv-1.2.0.jar"
+GRADLE_PROPS="$ENDINV_DIR/gradle.properties"
+LOADER_VERSION=$(awk -F= '/^loader_version=/{print $2}' "$GRADLE_PROPS")
+MC_VERSION=$(awk -F= '/^minecraft_version=/{print $2}' "$GRADLE_PROPS")
+ENDINV_JAR="emma-endinv-F${LOADER_VERSION}+M${MC_VERSION}.jar"
 PRISM_INSTANCES_DIR="$APPDATA/PrismLauncher/instances"
 
 MODS_DIRS=()

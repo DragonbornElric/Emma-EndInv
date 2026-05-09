@@ -1,12 +1,12 @@
 package com.emma.endinv.event;
 
+import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ModInfo;
 import com.emma.endinv.ModRegistries;
 import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.network.payloads.SyncedConfig;
 import com.emma.endinv.network.payloads.toClient.EndInvContent;
 import com.emma.endinv.network.payloads.toClient.EndInvMetadata;
-import com.emma.endinv.options.ContentTransferMode;
 import com.emma.endinv.options.ServerConfigs;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -28,9 +28,8 @@ public final class PlayerEvents {
 
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(PlayerEvents::flushSync);
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            scheduleSync(handler.player);
-        });
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> scheduleSync(handler.player));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> removeViewer(handler.player));
         ServerPlayerEvents.COPY_FROM.register(PlayerEvents::copyFromOldPlayer);
     }
 
@@ -50,6 +49,19 @@ public final class PlayerEvents {
                 sendInitialData(player);
                 iterator.remove();
             }
+        }
+        if (ServerLevelEndInv.levelEndInvData != null) {
+            for (EndlessInventory endInv : ServerLevelEndInv.levelEndInvData.levelEndInvs) {
+                endInv.broadcastChanges(server);
+            }
+        }
+    }
+
+    private static void removeViewer(ServerPlayer player) {
+        if (ServerLevelEndInv.levelEndInvData == null) return;
+        UUID uuid = player.getUUID();
+        for (EndlessInventory endInv : ServerLevelEndInv.levelEndInvData.levelEndInvs) {
+            endInv.viewerIds.remove(uuid);
         }
     }
 
@@ -98,11 +110,9 @@ public final class PlayerEvents {
                         menuCfg.getConfigs()
                 ));
 
-        if (ServerConfigs.ENDINV_BEHAVIOR.TransferMode.get() == ContentTransferMode.ALL) {
-            ServerLevelEndInv.getEndInvForPlayer(player).ifPresent(endInv -> {
-                ModInfo.getPacketDistributor().sendToPlayer(player, new EndInvContent(endInv.getItemMap()));
-                ModInfo.getPacketDistributor().sendToPlayer(player, EndInvMetadata.getWith(endInv));
-            });
-        }
+        ServerLevelEndInv.getEndInvForPlayer(player).ifPresent(endInv -> {
+            ModInfo.getPacketDistributor().sendToPlayer(player, new EndInvContent(endInv.getItemMap()));
+            ModInfo.getPacketDistributor().sendToPlayer(player, EndInvMetadata.getWith(endInv));
+        });
     }
 }

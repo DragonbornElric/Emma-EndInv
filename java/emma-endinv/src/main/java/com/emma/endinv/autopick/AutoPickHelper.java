@@ -58,9 +58,14 @@ public final class AutoPickHelper {
             boolean flag = true;
             for (ItemEntity drop : event.getDrops()) {
                 ItemStack stack = drop.getItem();
+                ItemStack original = stack.copy();
                 ItemStack remain = endInv.addItem(stack);
-                stack.split(remain.getCount());
-                if(!stack.isEmpty()) ModInfo.getPacketDistributor().sendToPlayer(player,new ItemPickedUpPayload(stack));
+                int absorbed = original.getCount() - remain.getCount();
+                if (absorbed > 0) {
+                    ItemStack absorbedStack = original.copy();
+                    absorbedStack.setCount(absorbed);
+                    ModInfo.getPacketDistributor().sendToPlayer(player, new ItemPickedUpPayload(absorbedStack));
+                }
                 if (remain.isEmpty()) {
                     drop.remove(Entity.RemovalReason.DISCARDED);
                 } else {

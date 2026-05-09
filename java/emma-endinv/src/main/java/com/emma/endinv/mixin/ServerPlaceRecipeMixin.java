@@ -60,11 +60,4 @@ public class ServerPlaceRecipeMixin<R extends Recipe<?>> {
         cir.setReturnValue(count - taken.getCount());
     }
 
-    @Inject(method = "tryPlaceRecipe", at = @At("RETURN"))
-    private void ei$broadcastChanges(RecipeHolder<R> recipe, StackedItemContents contents, CallbackInfoReturnable<?> cir) {
-        if (ei$endInv != null) {
-            ei$endInv.broadcastChanges();
-            ei$endInv = null;
-        }
-    }
 }

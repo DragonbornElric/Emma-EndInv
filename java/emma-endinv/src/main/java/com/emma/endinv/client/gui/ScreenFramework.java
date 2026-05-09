@@ -17,6 +17,8 @@ import com.emma.endinv.client.option.ClientConfigs;
 import com.emma.endinv.client.option.EIMConfig;
 import com.emma.endinv.client.option.TextureMode;
 import com.emma.endinv.menu.page.PageType;
+import com.emma.endinv.client.action.LootAllAction;
+import com.emma.endinv.client.events.ScreenAttachment;
 import com.emma.endinv.mixin.ScreenMixin;
 import com.emma.endinv.network.payloads.toServer.CreativeItemModPayload;
 import com.emma.endinv.network.payloads.toServer.QuickMoveToPagePayload;
@@ -81,6 +83,7 @@ public class ScreenFramework implements PageManager, GuiEventListener {
     public EditBox searchBox;
     public SortTypeSwitchBox sortTypeSwitchBox;
     private Button reverseSortButton;
+    @Nullable private Button lootAllButton;
     private final List<AbstractWidget> widgets = new ArrayList<>();
     //page meta data fields
     private int rows;
@@ -239,8 +242,28 @@ public class ScreenFramework implements PageManager, GuiEventListener {
             widgets.add(down);
         }
 
+        if (!(screen instanceof EndlessInventoryScreen)) {
+            int chestLeft = containerScreenHelper.getGuiLeft(screen);
+            int chestTop = containerScreenHelper.getGuiTop(screen);
+            int chestWidth = containerScreenHelper.getGuiXSize(screen);
+            int btnWidth = 60;
+            int btnHeight = 14;
+            this.lootAllButton = Button.builder(
+                            Component.translatable("button.endinv.loot_all"),
+                            btn -> {
+                                LootAllAction.lootAllOpenContainer();
+                                if (getDisplayingPage() instanceof ItemPage itemPage) {
+                                    itemPage.requestRemoteContents();
+                                }
+                            })
+                    .pos(chestLeft + chestWidth / 2 - btnWidth / 2, chestTop - btnHeight - 2)
+                    .size(btnWidth, btnHeight)
+                    .build();
+        }
+
         widgets.add(pageSwitchBar);
         if(screen instanceof EndlessInventoryScreen) widgets.add(configButton);
+        if(lootAllButton != null) widgets.add(lootAllButton);
         widgets.add(reverseSortButton);
         widgets.add(searchBox);
         //widgets.add(sortTypeSwitchBox);
@@ -265,6 +288,10 @@ public class ScreenFramework implements PageManager, GuiEventListener {
 
         getDisplayingPage().render(guiGraphics, mouseX, mouseY, partialTick);
 
+        // Re-render after panel background so these appear on top of it
+        reverseSortButton.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+        if (lootAllButton != null) lootAllButton.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+
         this.sortTypeSwitchBox.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
 
         if (searchBox.isHovered() && !searchBox.isFocused()) {
@@ -288,6 +315,26 @@ public class ScreenFramework implements PageManager, GuiEventListener {
                 guiGraphics,
                 mc.font,
                 List.of(Component.translatable("button.endinv.reverse")),
+                mouseX,
+                mouseY
+            );
+        }
+        if (lootAllButton != null && lootAllButton.isHovered()) {
+            guiGraphics.nextStratum();
+            TooltipRenderer.renderText(
+                guiGraphics,
+                mc.font,
+                List.of(Component.translatable("button.endinv.loot_all.tooltip")),
+                mouseX,
+                mouseY
+            );
+        }
+        if (ScreenAttachment.configToggleButton != null && ScreenAttachment.configToggleButton.isHovered()) {
+            guiGraphics.nextStratum();
+            TooltipRenderer.renderText(
+                guiGraphics,
+                mc.font,
+                List.of(Component.translatable("endinv.configbutton")),
                 mouseX,
                 mouseY
             );

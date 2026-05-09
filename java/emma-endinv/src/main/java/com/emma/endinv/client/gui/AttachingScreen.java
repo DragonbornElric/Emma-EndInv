@@ -10,7 +10,6 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
@@ -88,7 +87,6 @@ public class AttachingScreen<T extends AbstractContainerMenu>{
                 })
                 .pos(configButtonParam.x(), configButtonParam.y())
                 .size(configButtonParam.width(), configButtonParam.height())
-                .tooltip(Tooltip.create(Component.translatableWithFallback("endinv.configbutton", "Toggle endinv attached menu, shift for settings.")))
                 .build();
     }
 

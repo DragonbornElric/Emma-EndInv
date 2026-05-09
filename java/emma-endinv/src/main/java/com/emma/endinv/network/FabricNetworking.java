@@ -24,6 +24,7 @@ public final class FabricNetworking {
         c2s.register(StarItemPayload.TYPE, StarItemPayload.STREAM_CODEC);
         c2s.register(ToggleCraftingPayload.TYPE, ToggleCraftingPayload.STREAM_CODEC);
         c2s.register(SyncedConfig.TYPE, SyncedConfig.STREAM_CODEC);
+        c2s.register(SwapMenuSlotPayload.TYPE, SwapMenuSlotPayload.STREAM_CODEC);
 
         var s2c = PayloadTypeRegistry.clientboundPlay();
         s2c.register(EndInvContent.TYPE, EndInvContent.STREAM_CODEC);
