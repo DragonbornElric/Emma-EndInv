@@ -1,7 +1,7 @@
 package com.emma.endinv.mixin;
 
 import com.emma.endinv.client.CachedSrcInv;
-import com.emma.endinv.client.gui.recipebook.EndInvCraftingRecipeBookComponent;
+import com.emma.endinv.client.gui.recipebook.EndInvRecipeBookComponent;
 import com.emma.endinv.util.recipeTransferHelper.RecipeItemProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
@@ -48,7 +48,7 @@ public class RecipeBookComponentMixin {
             opcode = org.objectweb.asm.Opcodes.PUTFIELD,
             shift = At.Shift.AFTER))
     private void ei$pinPanelToLeftEdge(CallbackInfo ci) {
-        if ((Object) this instanceof EndInvCraftingRecipeBookComponent) {
+        if ((Object) this instanceof EndInvRecipeBookComponent) {
             this.xOffset = (this.width - 147) / 2 - 34;
         }
     }

@@ -2,8 +2,10 @@ package com.emma.endinv.event;
 
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ModInfo;
+import com.emma.endinv.menu.Station;
 import com.emma.endinv.ModRegistries;
 import com.emma.endinv.ServerLevelEndInv;
+import com.emma.endinv.menu.EndlessInventoryMenu;
 import com.emma.endinv.network.payloads.SyncedConfig;
 import com.emma.endinv.network.payloads.toClient.EndInvContent;
 import com.emma.endinv.network.payloads.toClient.EndInvMetadata;
@@ -51,8 +53,28 @@ public final class PlayerEvents {
             }
         }
         if (ServerLevelEndInv.levelEndInvData != null) {
+            // Collect inventories whose menu is currently open so we skip background-ticking them
+            // (the open menu's broadcastChanges() already ticks the furnace each server tick).
+            java.util.Set<Object> openSourceInventories = new java.util.HashSet<>();
+            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                if (p.containerMenu instanceof EndlessInventoryMenu eim) {
+                    openSourceInventories.add(eim.getSourceInventory());
+                }
+            }
             for (EndlessInventory endInv : ServerLevelEndInv.levelEndInvData.levelEndInvs) {
                 endInv.broadcastChanges(server);
+                if (!openSourceInventories.contains(endInv)) {
+                    UUID ownerUuid = endInv.getOwnerUUID();
+                    if (ownerUuid != null) {
+                        ServerPlayer ownerPlayer = server.getPlayerList().getPlayer(ownerUuid);
+                        if (ownerPlayer != null) {
+                            for (Station st : new Station[]{Station.FURNACE, Station.SMOKER, Station.BLAST_FURNACE}) {
+                                endInv.tickCookingBackground(ownerPlayer.level(), st);
+                            }
+                            endInv.tickBrewingBackground(ownerPlayer.level());
+                        }
+                    }
+                }
             }
         }
     }

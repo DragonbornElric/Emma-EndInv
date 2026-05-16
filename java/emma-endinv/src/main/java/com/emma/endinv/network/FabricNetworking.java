@@ -22,7 +22,7 @@ public final class FabricNetworking {
         c2s.register(QuickMoveToPagePayload.TYPE, QuickMoveToPagePayload.STREAM_CODEC);
         c2s.register(BulkQuickMoveFromPagePayload.TYPE, BulkQuickMoveFromPagePayload.STREAM_CODEC);
         c2s.register(StarItemPayload.TYPE, StarItemPayload.STREAM_CODEC);
-        c2s.register(ToggleCraftingPayload.TYPE, ToggleCraftingPayload.STREAM_CODEC);
+        c2s.register(SetActiveStationPayload.TYPE, SetActiveStationPayload.STREAM_CODEC);
         c2s.register(SyncedConfig.TYPE, SyncedConfig.STREAM_CODEC);
         c2s.register(SwapMenuSlotPayload.TYPE, SwapMenuSlotPayload.STREAM_CODEC);
 

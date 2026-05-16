@@ -20,7 +20,8 @@ import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
 
 import java.util.List;
 
-public class EndInvCraftingRecipeBookComponent extends RecipeBookComponent<EndlessInventoryMenu> {
+public class EndInvCraftingRecipeBookComponent extends RecipeBookComponent<EndlessInventoryMenu>
+        implements EndInvRecipeBookComponent {
 
     private static final WidgetSprites FILTER_BUTTON_SPRITES = new WidgetSprites(
         Identifier.withDefaultNamespace("recipe_book/filter_enabled"),

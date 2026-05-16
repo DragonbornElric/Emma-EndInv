@@ -103,5 +103,12 @@
   "endinv.callback.no_access": "Unable to open EndInv as current player is unaccessible to it and is not op.",
   "endinv.callback.not_owner": "Unable to change white list as current player is not the owner and has no permission.",
   "endinv.configbutton": "Toggle endinv attached menu, shift for settings.",
-  "endless_inventory.button.crafting_table": "Crafting Table"
+  "endless_inventory.button.crafting_table": "Crafting Table",
+  "endless_inventory.button.furnace": "Furnace",
+  "endless_inventory.button.smoker": "Smoker",
+  "endless_inventory.button.blast_furnace": "Blast Furnace",
+  "endless_inventory.button.stonecutter": "Stonecutter",
+  "endless_inventory.button.grindstone": "Grindstone",
+  "endless_inventory.button.smithing_table": "Smithing Table",
+  "endless_inventory.button.brewing_stand": "Brewing Stand"
 }

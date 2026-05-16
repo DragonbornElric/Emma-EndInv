@@ -1,6 +1,9 @@
 package com.emma.endinv;
 
 
+import com.emma.endinv.menu.BrewingState;
+import com.emma.endinv.menu.FurnaceState;
+import com.emma.endinv.menu.Station;
 import com.emma.endinv.network.payloads.toClient.EndInvContent;
 import com.emma.endinv.network.payloads.toClient.EndInvMetadata;
 import com.emma.endinv.util.Accessibility;
@@ -16,8 +19,14 @@ import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.crafting.AbstractCookingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
 import org.slf4j.Logger;
 
 import org.jetbrains.annotations.Nullable;
@@ -59,8 +68,12 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                     Codec.list(UUIDUtil.CODEC).fieldOf(WHITE_LIST_KEY).forGetter(ei -> ei.white_list),
                     Codec.STRING.xmap(Accessibility::valueOf, Accessibility::name).fieldOf(ACCESSIBILITY_KEY).forGetter(EndlessInventory::getAccessibility),
                     Codec.INT.fieldOf(MAX_STACK_SIZE_INT_KEY).forGetter(EndlessInventory::getMaxItemStackSize),
-                    Codec.BOOL.fieldOf(INFINITY_BOOL_KEY).forGetter(EndlessInventory::isInfinityMode)
-                        ).apply(instance, (itemMap, aff,uuid, ownerUuid, wLstUid, acc, maxSize, infBool) -> {
+                    Codec.BOOL.fieldOf(INFINITY_BOOL_KEY).forGetter(EndlessInventory::isInfinityMode),
+                    FurnaceState.CODEC.optionalFieldOf("furnace_state", FurnaceState.EMPTY).forGetter(ei -> ei.furnaceState),
+                    FurnaceState.CODEC.optionalFieldOf("smoker_state", FurnaceState.EMPTY).forGetter(ei -> ei.smokerState),
+                    FurnaceState.CODEC.optionalFieldOf("blast_furnace_state", FurnaceState.EMPTY).forGetter(ei -> ei.blastFurnaceState),
+                    BrewingState.CODEC.optionalFieldOf("brewing_state", BrewingState.EMPTY).forGetter(ei -> ei.brewingState)
+                        ).apply(instance, (itemMap, aff, uuid, ownerUuid, wLstUid, acc, maxSize, infBool, furnaceState, smokerState, blastState, brewingState) -> {
                             EndlessInventory endInv = new EndlessInventory(uuid, aff);
                                endInv.itemMap.putAll(itemMap);
                                endInv.owner = ownerUuid;
@@ -68,6 +81,10 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                                endInv.setAccessibility(acc);
                                endInv.setMaxItemStackSize(maxSize);
                                endInv.setInfinityMode(infBool);
+                               endInv.furnaceState = furnaceState;
+                               endInv.smokerState = smokerState;
+                               endInv.blastFurnaceState = blastState;
+                               endInv.brewingState = brewingState;
                                return endInv;
                     }
             )
@@ -80,6 +97,33 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
 
     public final Set<UUID> viewerIds = new HashSet<>();
     private boolean dirty = false;
+    FurnaceState furnaceState = FurnaceState.EMPTY;
+    FurnaceState smokerState = FurnaceState.EMPTY;
+    FurnaceState blastFurnaceState = FurnaceState.EMPTY;
+    BrewingState brewingState = BrewingState.EMPTY;
+
+    public FurnaceState getFurnaceState() { return furnaceState; }
+    public void setFurnaceState(FurnaceState state) { this.furnaceState = state; }
+
+    public FurnaceState getCookingState(Station st) {
+        return switch (st) {
+            case FURNACE -> furnaceState;
+            case SMOKER -> smokerState;
+            case BLAST_FURNACE -> blastFurnaceState;
+            default -> FurnaceState.EMPTY;
+        };
+    }
+
+    public void setCookingState(Station st, FurnaceState state) {
+        switch (st) {
+            case FURNACE -> furnaceState = state;
+            case SMOKER -> smokerState = state;
+            case BLAST_FURNACE -> blastFurnaceState = state;
+        }
+    }
+
+    public BrewingState getBrewingState() { return brewingState; }
+    public void setBrewingState(BrewingState state) { this.brewingState = state; }
 
     public EndlessInventory(){
         this(UUID.randomUUID());
@@ -168,5 +212,179 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                 ModInfo.getPacketDistributor().sendToPlayer(player, metaPayload);
             }
         }
+    }
+
+    public void tickCookingBackground(ServerLevel level, Station st) {
+        FurnaceState state = getCookingState(st);
+        if (state.isEmpty()) return;
+
+        ItemStack input   = state.input().copy();
+        ItemStack fuel    = state.fuel().copy();
+        ItemStack result  = state.result().copy();
+        int litTime       = state.litTime();
+        int litDuration   = state.litDuration();
+        int cookTime      = state.cookTime();
+        int cookDuration  = state.cookDuration();
+
+        boolean hasIngredient = !input.isEmpty();
+        boolean hasFuel       = !fuel.isEmpty();
+        boolean changed       = false;
+
+        boolean isLit;
+        if (litTime > 0) {
+            litTime--;
+            isLit = litTime > 0;
+            changed = true;
+        } else {
+            isLit = false;
+        }
+
+        if (isLit || (hasFuel && hasIngredient)) {
+            if (hasIngredient) {
+                Optional<RecipeHolder<AbstractCookingRecipe>> optRecipe =
+                    getCookingRecipeFor(st, input, level);
+                if (optRecipe.isPresent()) {
+                    AbstractCookingRecipe recipeVal = optRecipe.get().value();
+                    ItemStack burnResult = recipeVal.assemble(new SingleRecipeInput(input));
+                    if (!burnResult.isEmpty() && canCookingBurn(result, burnResult)) {
+                        if (!isLit) {
+                            int newLitTime = level.fuelValues().burnDuration(fuel);
+                            if (newLitTime > 0) {
+                                litTime    = newLitTime;
+                                litDuration = newLitTime;
+                                Item fuelItem = fuel.getItem();
+                                fuel.shrink(1);
+                                if (fuel.isEmpty()) {
+                                    ItemStackTemplate rem = fuelItem.getCraftingRemainder();
+                                    fuel = rem != null ? rem.create() : ItemStack.EMPTY;
+                                }
+                                isLit   = true;
+                                changed = true;
+                            }
+                        }
+                        if (isLit) {
+                            cookTime++;
+                            if (cookDuration == 0) cookDuration = recipeVal.cookingTime();
+                            if (cookTime >= cookDuration) {
+                                cookTime    = 0;
+                                cookDuration = recipeVal.cookingTime();
+                                if (result.isEmpty()) {
+                                    result = burnResult.copy();
+                                } else {
+                                    result.grow(burnResult.getCount());
+                                }
+                                if (st == Station.FURNACE
+                                        && input.is(net.minecraft.world.item.Items.WET_SPONGE)
+                                        && !fuel.isEmpty()
+                                        && fuel.is(net.minecraft.world.item.Items.BUCKET)) {
+                                    fuel = new ItemStack(net.minecraft.world.item.Items.WATER_BUCKET);
+                                }
+                                input.shrink(1);
+                                ServerPlayer ownerPlayer = level.getServer().getPlayerList().getPlayer(owner);
+                                if (ownerPlayer != null) {
+                                    float xp = recipeVal.experience();
+                                    if (xp > 0) {
+                                        int base = Mth.floor(xp);
+                                        if (xp - base > 0 && Math.random() < (xp - base)) base++;
+                                        ExperienceOrb.award(level, ownerPlayer.position(), base);
+                                    }
+                                }
+                            }
+                            changed = true;
+                        } else if (cookTime > 0) {
+                            cookTime = 0;
+                            changed  = true;
+                        }
+                    }
+                }
+            } else if (cookTime > 0) {
+                cookTime = 0;
+                changed  = true;
+            }
+        } else if (cookTime > 0) {
+            cookTime = Mth.clamp(cookTime - 2, 0, cookDuration);
+            changed  = true;
+        }
+
+        if (changed) {
+            setCookingState(st, new FurnaceState(input, fuel, result, litTime, litDuration, cookTime, cookDuration));
+            setChanged();
+        }
+    }
+
+    public void tickBrewingBackground(ServerLevel level) {
+        BrewingState state = brewingState;
+        if (state.isEmpty()) return;
+
+        int fuelAmount = state.fuelAmount();
+        int brewTime   = state.brewTime();
+        ItemStack ingredient = state.ingredient().copy();
+        ItemStack fuel       = state.fuel().copy();
+        ItemStack potion0    = state.potion0().copy();
+        ItemStack potion1    = state.potion1().copy();
+        ItemStack potion2    = state.potion2().copy();
+
+        boolean changed = false;
+
+        // Refuel if depleted and blaze powder available
+        if (fuelAmount <= 0 && !fuel.isEmpty() && fuel.is(net.minecraft.tags.ItemTags.BREWING_FUEL)) {
+            fuelAmount = 20;
+            fuel.shrink(1);
+            changed = true;
+        }
+
+        net.minecraft.world.item.alchemy.PotionBrewing pb = level.potionBrewing();
+        boolean brewable = isBrewableBackground(pb, ingredient, potion0, potion1, potion2);
+
+        if (brewTime > 0) {
+            brewTime--;
+            if (brewTime == 0) {
+                // doBrew
+                if (!ingredient.isEmpty()) {
+                    if (!potion0.isEmpty()) potion0 = pb.mix(ingredient, potion0);
+                    if (!potion1.isEmpty()) potion1 = pb.mix(ingredient, potion1);
+                    if (!potion2.isEmpty()) potion2 = pb.mix(ingredient, potion2);
+                    ingredient.shrink(1);
+                }
+                changed = true;
+            } else if (!brewable) {
+                brewTime = 0;
+                changed  = true;
+            } else {
+                changed  = true;
+            }
+        } else if (fuelAmount > 0 && brewable) {
+            fuelAmount--;
+            brewTime = 400;
+            changed  = true;
+        }
+
+        if (changed) {
+            brewingState = new BrewingState(ingredient, fuel, potion0, potion1, potion2, brewTime, fuelAmount);
+            setChanged();
+        }
+    }
+
+    private static boolean isBrewableBackground(
+            net.minecraft.world.item.alchemy.PotionBrewing pb,
+            ItemStack ingredient, ItemStack p0, ItemStack p1, ItemStack p2) {
+        if (ingredient.isEmpty() || !pb.isIngredient(ingredient)) return false;
+        return (!p0.isEmpty() && pb.hasMix(p0, ingredient))
+            || (!p1.isEmpty() && pb.hasMix(p1, ingredient))
+            || (!p2.isEmpty() && pb.hasMix(p2, ingredient));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Optional<RecipeHolder<AbstractCookingRecipe>> getCookingRecipeFor(
+            Station st, ItemStack input, ServerLevel level) {
+        return (Optional<RecipeHolder<AbstractCookingRecipe>>) (Optional<?>)
+                level.getServer().getRecipeManager()
+                        .getRecipeFor(st.cookingRecipeType, new SingleRecipeInput(input), level);
+    }
+
+    private boolean canCookingBurn(ItemStack current, ItemStack burnResult) {
+        if (current.isEmpty()) return true;
+        if (!ItemStack.isSameItemSameComponents(current, burnResult)) return false;
+        return current.getCount() + burnResult.getCount() <= Math.min(64, current.getMaxStackSize());
     }
 }
