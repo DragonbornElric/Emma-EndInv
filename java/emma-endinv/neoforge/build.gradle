@@ -1,0 +1,44 @@
+plugins {
+    id 'multiloader-loader'
+    id 'net.neoforged.moddev'
+}
+
+neoForge {
+    version = neoforge_version
+    def at = project(':common').file('src/main/resources/META-INF/accesstransformer.cfg')
+    if (at.exists()) {
+        accessTransformers.from(at.absolutePath)
+    }
+    runs {
+        configureEach {
+            systemProperty('neoforge.enabledGameTestNamespaces', mod_id)
+            ideName = "NeoForge ${it.name.capitalize()} (${project.path})"
+        }
+        client {
+            client()
+            gameDirectory = this.mkdir(this.file("runs/client"))
+        }
+        server {
+            server()
+            this.file("runs/server").createParentDirectories()
+            gameDirectory = this.mkdir(this.file("runs/server"))
+        }
+    }
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
+['apiElements', 'runtimeElements', 'sourcesElements', 'javadocElements'].each { variant ->
+    configurations.findByName("$variant")?.attributes { attribute(loaderAttribute, 'neoforge') }
+}
+sourceSets.configureEach {
+    [it.compileClasspathConfigurationName, it.runtimeClasspathConfigurationName].each { variant ->
+        configurations.named("$variant") {
+            attributes { attribute(loaderAttribute, 'neoforge') }
+        }
+    }
+}

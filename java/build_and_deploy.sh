@@ -5,64 +5,51 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DIST_DIR="$SCRIPT_DIR/dist"
 ENDINV_DIR="$SCRIPT_DIR/emma-endinv"
-BUILD_LIBS_DIR="$ENDINV_DIR/build/libs"
 GRADLE_PROPS="$ENDINV_DIR/gradle.properties"
-LOADER_VERSION=$(awk -F= '/^loader_version=/{print $2}' "$GRADLE_PROPS")
-MC_VERSION=$(awk -F= '/^minecraft_version=/{print $2}' "$GRADLE_PROPS")
-ENDINV_JAR="emma-endinv-F${LOADER_VERSION}+M${MC_VERSION}+V2.jar"
-PRISM_INSTANCES_DIR="$APPDATA/PrismLauncher/instances"
 
-MODS_DIRS=()
+MC_VERSION=$(awk -F= '/^minecraft_version=/{print $2}' "$GRADLE_PROPS")
+FABRIC_LOADER_VERSION=$(awk -F= '/^fabric_loader_version=/{print $2}' "$GRADLE_PROPS")
+MOD_VERSION=$(awk -F= '/^version=/{print $2}' "$GRADLE_PROPS")
+
+FABRIC_JAR_GLOB="${ENDINV_DIR}/fabric/build/libs/endless_inventory-fabric-${MC_VERSION}*.jar"
+NEOFORGE_JAR_GLOB="${ENDINV_DIR}/neoforge/build/libs/endless_inventory-neoforge-${MC_VERSION}*.jar"
+FOLIA_VERSION=$(awk -F= '/^folia_version=/{print $2}' "$GRADLE_PROPS")
+FOLIA_JAR_GLOB="${ENDINV_DIR}/folia/build/libs/endless_inventory-folia-${MC_VERSION}*.jar"
+
+PRISM_INSTANCES_DIR="$APPDATA/PrismLauncher/instances"
+FABRIC_MODS_DIR="C:/Users/Owner/Fabric Mods"
+
+FABRIC_MODS_DIRS=()
+NEOFORGE_MODS_DIRS=("C:/Users/Owner/Neoforge Mods")
+FOLIA_MODS_DIRS=("C:/Users/Owner/Paper Plugins")
 GRADLE_ARGS=()
 
-# Resolve a Prism instance mods folder, supporting both MC 26.x layout
-# (<instance>/minecraft/mods) and legacy layout (<instance>/.minecraft/mods).
-# Accepts multiple instance names and returns the first existing directory.
 resolve_mods_dir() {
     for instance_name in "$@"; do
         local modern="$PRISM_INSTANCES_DIR/$instance_name/minecraft/mods"
-        if [[ -d "$modern" ]]; then
-            echo "$modern"
-            return 0
-        fi
-
+        if [[ -d "$modern" ]]; then echo "$modern"; return 0; fi
         local legacy="$PRISM_INSTANCES_DIR/$instance_name/.minecraft/mods"
-        if [[ -d "$legacy" ]]; then
-            echo "$legacy"
-            return 0
-        fi
+        if [[ -d "$legacy" ]]; then echo "$legacy"; return 0; fi
     done
-
     return 1
 }
 
-# Try modern/renamed instances first, then legacy names.
-if EMMA_MODS_RESOLVED="$(resolve_mods_dir "Emma 26.1" "Emma")"; then
-    EMMA_MODS="$EMMA_MODS_RESOLVED"
-else
+if EMMA_MODS="$(resolve_mods_dir "Emma 26.1" "Emma")"; then : ; else
     EMMA_MODS="$PRISM_INSTANCES_DIR/Emma 26.1/minecraft/mods"
 fi
-
-if ELRIC_MODS_RESOLVED="$(resolve_mods_dir "Elric 26.1" "Elric")"; then
-    ELRIC_MODS="$ELRIC_MODS_RESOLVED"
-else
+if ELRIC_MODS="$(resolve_mods_dir "Elric 26.1" "Elric")"; then : ; else
     ELRIC_MODS="$PRISM_INSTANCES_DIR/Elric/minecraft/mods"
 fi
-
-if ALTOCLEF_MODS_RESOLVED="$(resolve_mods_dir "Emma 26.1 EmmaClef")"; then
-    ALTOCLEF_MODS="$ALTOCLEF_MODS_RESOLVED"
-else
-    ALTOCLEF_MODS="$PRISM_INSTANCES_DIR/Emma 26.1 EmmaClef/minecraft/mods"
+if CAMERABOT_MODS="$(resolve_mods_dir "CameraBot26.1")"; then : ; else
+    CAMERABOT_MODS="$PRISM_INSTANCES_DIR/CameraBot26.1/minecraft/mods"
+fi
+if BRANDON_MODS="$(resolve_mods_dir "Brandon 26.1")"; then : ; else
+    BRANDON_MODS="$PRISM_INSTANCES_DIR/Brandon 26.1/minecraft/mods"
 fi
 
-FABRIC_MODS_DIR="C:/Users/Owner/Fabric Mods"
-
-# Default to a Temp-backed Gradle project cache on Windows so VS Code's Java
-# tooling does not lock the module-local Loom cache during bash.exe runs.
 if [[ -z "${GRADLE_PROJECT_CACHE_DIR:-}" && -n "${LOCALAPPDATA:-}" ]]; then
     GRADLE_PROJECT_CACHE_DIR="${LOCALAPPDATA}\\Temp\\emma-endinv-gradle-cache"
 fi
-
 if [[ -n "${GRADLE_PROJECT_CACHE_DIR:-}" ]]; then
     GRADLE_ARGS+=(--project-cache-dir "$GRADLE_PROJECT_CACHE_DIR")
 fi
@@ -70,35 +57,47 @@ fi
 usage() {
     cat <<'EOF'
 Usage:
-  ./build_and_deploy.sh
-  ./build_and_deploy.sh --mods-dir "/path/to/mods"
-  ./build_and_deploy.sh --mods-dir "/path/a" --mods-dir "/path/b"
+  ./build_and_deploy.sh [options]
 
-Builds the standalone Emma-EndInv mod, copies the jar into dist/, deploys it to
-the default PrismLauncher Emma, Elric, and AltoClef instances, and optionally
-copies it into one or more additional Minecraft mods directories.
+Options:
+  --fabric-mods-dir "/path"    Deploy Fabric jar to additional directory (repeatable)
+  --neoforge-mods-dir "/path"  Deploy NeoForge jar to additional directory (repeatable)
+  --folia-mods-dir "/path"     Deploy Folia jar to a plugins/ directory (repeatable)
+  --skip-neoforge              Skip NeoForge build
+  --skip-folia                 Skip Folia build (default: Folia is built but not auto-deployed)
+  -h, --help
+
+Builds Fabric, NeoForge, and Folia jars. The Fabric jar deploys to the default
+PrismLauncher Emma, Elric, and CameraBot26.1 instances and the Fabric Mods folder.
+The NeoForge jar deploys to C:/Users/Owner/Neoforge Mods and any --neoforge-mods-dir targets.
+The Folia jar deploys to C:/Users/Owner/Paper Plugins and any --folia-mods-dir targets.
 EOF
 }
 
+SKIP_NEOFORGE=0
+SKIP_FOLIA=0
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --fabric-mods-dir)
+            [[ $# -lt 2 ]] && { echo "ERROR: --fabric-mods-dir requires a path" >&2; exit 1; }
+            FABRIC_MODS_DIRS+=("$2"); shift 2 ;;
+        --neoforge-mods-dir)
+            [[ $# -lt 2 ]] && { echo "ERROR: --neoforge-mods-dir requires a path" >&2; exit 1; }
+            NEOFORGE_MODS_DIRS+=("$2"); shift 2 ;;
+        --folia-mods-dir)
+            [[ $# -lt 2 ]] && { echo "ERROR: --folia-mods-dir requires a path" >&2; exit 1; }
+            FOLIA_MODS_DIRS+=("$2"); shift 2 ;;
+        # Legacy compat: --mods-dir deploys the Fabric jar
         --mods-dir)
-            if [[ $# -lt 2 ]]; then
-                echo "ERROR: --mods-dir requires a path" >&2
-                exit 1
-            fi
-            MODS_DIRS+=("$2")
-            shift 2
-            ;;
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        *)
-            echo "ERROR: Unknown argument: $1" >&2
-            usage >&2
-            exit 1
-            ;;
+            [[ $# -lt 2 ]] && { echo "ERROR: --mods-dir requires a path" >&2; exit 1; }
+            FABRIC_MODS_DIRS+=("$2"); shift 2 ;;
+        --skip-neoforge)
+            SKIP_NEOFORGE=1; shift ;;
+        --skip-folia)
+            SKIP_FOLIA=1; shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) echo "ERROR: Unknown argument: $1" >&2; usage >&2; exit 1 ;;
     esac
 done
 
@@ -106,43 +105,109 @@ mkdir -p "$DIST_DIR"
 
 echo "=== Building Emma-EndInv ==="
 cd "$ENDINV_DIR"
-./gradlew.bat "${GRADLE_ARGS[@]}" build 2>&1 | grep -v "^Note:" | grep -v "not valid semver" | grep -v "\[Incubating\]" | grep -v "problems-report"
 
-if [[ ! -f "$BUILD_LIBS_DIR/$ENDINV_JAR" ]]; then
-    echo "ERROR: Expected jar not found: $BUILD_LIBS_DIR/$ENDINV_JAR" >&2
-    exit 1
+quiet_gradle() {
+    grep -v "^Note:" \
+    | grep -v "not valid semver" \
+    | grep -v "\[Incubating\]" \
+    | grep -v "problems-report" \
+    | grep -v "^\*\*\*" \
+    | grep -v "^ DONE \| REUSE\| DL " \
+    | grep -v "Waiting for lock" \
+    | grep -v "^Loaded [0-9]* artifacts" \
+    | grep -v "^Total runtime:" \
+    | grep -v "^> Task :" \
+    | grep -v "honour the JVM settings" \
+    | grep -v "Daemon will be stopped" \
+    | grep -v "single-use Daemon" \
+    | grep -v "warning: \[removal\]" \
+    | grep -v "Deprecated Gradle features" \
+    | grep -v "making it incompatible" \
+    | grep -v "You can use '--warning-mode" \
+    | grep -v "please refer to https://" \
+    | grep -v "^$"
+}
+
+GRADLE_TARGETS=(:fabric:build)
+[[ $SKIP_NEOFORGE -eq 0 ]] && GRADLE_TARGETS+=(:neoforge:build)
+[[ $SKIP_FOLIA -eq 0 ]] && GRADLE_TARGETS+=(:folia:build)
+./gradlew.bat "${GRADLE_ARGS[@]}" "${GRADLE_TARGETS[@]}" 2>&1 | quiet_gradle
+
+# Find the built jars (glob avoids hardcoding exact classifier/version suffix)
+FABRIC_JAR=$(ls ${ENDINV_DIR}/fabric/build/libs/endless_inventory-fabric-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
+NEOFORGE_JAR=$(ls ${ENDINV_DIR}/neoforge/build/libs/endless_inventory-neoforge-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
+FOLIA_JAR=$(ls ${ENDINV_DIR}/folia/build/libs/endless_inventory-folia-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
+
+if [[ -z "$FABRIC_JAR" ]]; then
+    echo "ERROR: Fabric jar not found under fabric/build/libs/" >&2; exit 1
 fi
 
-cp "$BUILD_LIBS_DIR/$ENDINV_JAR" "$DIST_DIR/$ENDINV_JAR"
-echo "Staged jar: $DIST_DIR/$ENDINV_JAR"
+FABRIC_JAR_NAME="$(basename "$FABRIC_JAR")"
+cp "$FABRIC_JAR" "$DIST_DIR/$FABRIC_JAR_NAME"
+echo "Staged Fabric jar: $DIST_DIR/$FABRIC_JAR_NAME"
 
-echo "=== Deploying to PrismLauncher mods folders ==="
+if [[ $SKIP_NEOFORGE -eq 0 ]]; then
+    if [[ -z "$NEOFORGE_JAR" ]]; then
+        echo "ERROR: NeoForge jar not found under neoforge/build/libs/" >&2; exit 1
+    fi
+    NEOFORGE_JAR_NAME="$(basename "$NEOFORGE_JAR")"
+    cp "$NEOFORGE_JAR" "$DIST_DIR/$NEOFORGE_JAR_NAME"
+    echo "Staged NeoForge jar: $DIST_DIR/$NEOFORGE_JAR_NAME"
+fi
+
+echo "=== Deploying Fabric jar to default instances ==="
 
 for named_target in \
     "Emma:$EMMA_MODS" \
     "Elric:$ELRIC_MODS" \
-    "Emma 26.1 AltoClef:$ALTOCLEF_MODS" \
+    "CameraBot26.1:$CAMERABOT_MODS" \
+    "Brandon 26.1:$BRANDON_MODS" \
     "Fabric Mods:$FABRIC_MODS_DIR"; do
     target_name="${named_target%%:*}"
     target_dir="${named_target#*:}"
-
     if [[ ! -d "$target_dir" ]]; then
-        echo "WARNING: $target_name mods folder not found at $target_dir" >&2
-        continue
+        echo "WARNING: $target_name mods folder not found: $target_dir" >&2; continue
     fi
-
-    cp "$DIST_DIR/$ENDINV_JAR" "$target_dir/$ENDINV_JAR"
-    echo "Deployed to $target_name: $target_dir"
+    cp "$FABRIC_JAR" "$target_dir/$FABRIC_JAR_NAME"
+    echo "Deployed Fabric to $target_name: $target_dir"
 done
 
-for mods_dir in "${MODS_DIRS[@]}"; do
+for mods_dir in "${FABRIC_MODS_DIRS[@]}"; do
     if [[ ! -d "$mods_dir" ]]; then
-        echo "WARNING: Mods directory not found: $mods_dir" >&2
-        continue
+        echo "WARNING: Fabric mods dir not found: $mods_dir" >&2; continue
     fi
-
-    cp "$DIST_DIR/$ENDINV_JAR" "$mods_dir/$ENDINV_JAR"
-    echo "Deployed to: $mods_dir"
+    cp "$FABRIC_JAR" "$mods_dir/$FABRIC_JAR_NAME"
+    echo "Deployed Fabric to: $mods_dir"
 done
+
+if [[ $SKIP_NEOFORGE -eq 0 && ${#NEOFORGE_MODS_DIRS[@]} -gt 0 ]]; then
+    echo "=== Deploying NeoForge jar ==="
+    for mods_dir in "${NEOFORGE_MODS_DIRS[@]}"; do
+        if [[ ! -d "$mods_dir" ]]; then
+            echo "WARNING: NeoForge mods dir not found: $mods_dir" >&2; continue
+        fi
+        cp "$NEOFORGE_JAR" "$mods_dir/$NEOFORGE_JAR_NAME"
+        echo "Deployed NeoForge to: $mods_dir"
+    done
+fi
+
+if [[ $SKIP_FOLIA -eq 0 ]]; then
+    if [[ -z "$FOLIA_JAR" ]]; then
+        echo "ERROR: Folia jar not found under folia/build/libs/" >&2; exit 1
+    fi
+    FOLIA_JAR_NAME="$(basename "$FOLIA_JAR")"
+    cp "$FOLIA_JAR" "$DIST_DIR/$FOLIA_JAR_NAME"
+    echo "Staged Folia jar: $DIST_DIR/$FOLIA_JAR_NAME"
+    if [[ ${#FOLIA_MODS_DIRS[@]} -gt 0 ]]; then
+        echo "=== Deploying Folia jar ==="
+        for plugins_dir in "${FOLIA_MODS_DIRS[@]}"; do
+            if [[ ! -d "$plugins_dir" ]]; then
+                echo "WARNING: Folia plugins dir not found: $plugins_dir" >&2; continue
+            fi
+            cp "$FOLIA_JAR" "$plugins_dir/$FOLIA_JAR_NAME"
+            echo "Deployed Folia to: $plugins_dir"
+        done
+    fi
+fi
 
 echo "=== Done ==="

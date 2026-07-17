@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${version}",
+  "name": "Endless Inventory (Emma Fork)",
+  "description": "RPG-style infinite inventory for Minecraft. Forked and ported to 26.1 for Emma.",
+  "authors": [
+    "Kay_Zhang",
+    "Emma Team"
+  ],
+  "contact": {},
+  "license": "${license}",
+  "icon": "assets/endless_inventory/icon.png",
+  "accessWidener": "endinv.accesswidener",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.emma.endinv.ModInit"
+    ],
+    "client": [
+      "com.emma.endinv.ClientModInit"
+    ]
+  },
+  "mixins": [
+    "${mod_id}.mixins.json",
+    "${mod_id}.fabric.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "fabric-api": "*",
+    "minecraft": ">=26.1",
+    "java": ">=${java_version}"
+  }
+}

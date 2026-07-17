@@ -1,0 +1,83 @@
+// Convention plugin for the folia/ subproject.
+// Uses paperweight-userdev to compile against Mojang-mapped Folia NMS.
+// Consumes commonServerJava (a filtered zip of common sources that excludes
+// client-only packages) and provides its own overrides for files with
+// inescapable client-class references (toClient payloads, ModPacketPayload, PageType).
+
+plugins {
+    id 'java-library'
+    id 'io.papermc.paperweight.userdev'
+}
+
+base {
+    archivesName = "${mod_id}-folia-${minecraft_version}"
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(java_version)
+    withSourcesJar()
+}
+
+sourcesJar {
+    from(rootProject.file('LICENSE')) {
+        rename { "${it}_${mod_id}" }
+    }
+}
+
+jar {
+    from(rootProject.file('LICENSE')) {
+        rename { "${it}_${mod_id}" }
+    }
+    manifest {
+        attributes([
+                'Specification-Title'   : mod_name,
+                'Specification-Version' : project.jar.archiveVersion,
+                'Implementation-Title'  : project.name,
+                'Implementation-Version': project.jar.archiveVersion,
+                'Built-On-Minecraft'    : minecraft_version
+        ])
+    }
+}
+
+configurations {
+    commonServerJava {
+        canBeResolved = true
+    }
+    commonResources {
+        canBeResolved = true
+    }
+}
+
+dependencies {
+    paperweight.foliaDevBundle("${folia_version}")
+
+    commonServerJava project(path: ':common', configuration: 'commonServerJava')
+    commonResources project(path: ':common', configuration: 'commonResources')
+}
+
+// Unzip commonServerJava (filtered zip) into the compile source tree
+tasks.named('compileJava', JavaCompile) {
+    dependsOn(configurations.commonServerJava)
+    source {
+        configurations.commonServerJava.collect { zip -> project.zipTree(zip) }
+    }
+}
+
+processResources {
+    dependsOn(configurations.commonResources)
+    from(configurations.commonResources)
+
+    inputs.property('version', project.version)
+    filesMatching('paper-plugin.yml') {
+        expand(version: project.version)
+    }
+}
+
+tasks.named('sourcesJar', Jar) {
+    dependsOn(configurations.commonServerJava)
+    from {
+        configurations.commonServerJava.collect { zip -> project.zipTree(zip) }
+    }
+    dependsOn(configurations.commonResources)
+    from(configurations.commonResources)
+}

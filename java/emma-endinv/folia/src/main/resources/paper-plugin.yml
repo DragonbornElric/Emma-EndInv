@@ -1,0 +1,7 @@
+name: EmmaEndInv
+version: '${version}'
+main: com.emma.endinv.folia.EndInvFoliaPlugin
+api-version: '1.21'
+author: Emma
+description: Server-side endless inventory storage, autopick, recipe auto-fill (Folia)
+folia-supported: true

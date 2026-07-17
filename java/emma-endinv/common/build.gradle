@@ -1,0 +1,72 @@
+plugins {
+    id 'multiloader-common'
+    id 'net.neoforged.moddev'
+}
+
+neoForge {
+    // Vanilla-mode: just Minecraft, no NeoForge APIs — used for common compilation only
+    neoFormVersion = neo_form_version
+    def at = file('src/main/resources/META-INF/accesstransformer.cfg')
+    if (at.exists()) {
+        accessTransformers.from(at.absolutePath)
+    }
+}
+
+dependencies {
+    compileOnly group: 'org.spongepowered', name: 'mixin', version: '0.8.5'
+    compileOnly group: 'org.ow2.asm', name: 'asm', version: '9.7'
+}
+
+configurations {
+    commonJava {
+        canBeResolved = false
+        canBeConsumed = true
+    }
+    commonResources {
+        canBeResolved = false
+        canBeConsumed = true
+    }
+    commonServerJava {
+        canBeResolved = false
+        canBeConsumed = true
+    }
+}
+
+// Filtered source zip used by the Folia module — excludes client-only and mixin packages
+// that reference net.minecraft.client.* unavailable on the Paper/Folia server classpath.
+def serverJavaSources = tasks.register('serverJavaSources', Zip) {
+    from(sourceSets.main.java.srcDirs) {
+        exclude 'com/emma/endinv/client/**'
+        exclude 'com/emma/endinv/mixin/**'
+        exclude 'com/emma/endinv/AbstractClientModInitializer.java'
+        exclude 'com/emma/endinv/api/EmmaEndInvApi.java'
+        exclude 'com/emma/endinv/ModRegistries.java'
+        exclude 'com/emma/endinv/network/payloads/ModPacketPayload.java'
+        exclude 'com/emma/endinv/network/payloads/toClient/**'
+        exclude 'com/emma/endinv/menu/page/PageType.java'
+        exclude 'com/emma/endinv/menu/EndlessInventoryMenu.java'
+        exclude 'com/emma/endinv/item/TestEndInv.java'
+        exclude 'com/emma/endinv/item/ScreenDebugger.java'
+    }
+    archiveClassifier = 'server-sources'
+    archiveExtension = 'zip'
+    destinationDirectory = layout.buildDirectory.dir('serverSources')
+}
+
+artifacts {
+    commonJava sourceSets.main.java.sourceDirectories.singleFile
+    commonResources sourceSets.main.resources.sourceDirectories.singleFile
+    commonServerJava(tasks.named('serverJavaSources'))
+}
+
+def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
+['apiElements', 'runtimeElements', 'sourcesElements', 'javadocElements'].each { variant ->
+    configurations.findByName("$variant")?.attributes { attribute(loaderAttribute, 'common') }
+}
+sourceSets.configureEach {
+    [it.compileClasspathConfigurationName, it.runtimeClasspathConfigurationName].each { variant ->
+        configurations.named("$variant") {
+            attributes { attribute(loaderAttribute, 'common') }
+        }
+    }
+}

@@ -1,0 +1,14 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+repositories {
+    maven {
+        name = 'PaperMC'
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+}
+
+dependencies {
+    implementation 'io.papermc.paperweight:paperweight-userdev:2.0.0-SNAPSHOT'
+}

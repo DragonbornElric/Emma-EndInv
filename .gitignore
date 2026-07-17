@@ -1,6 +1,10 @@
 # Gradle
 java/emma-endinv/.gradle/
 java/emma-endinv/build/
+java/emma-endinv/**/.gradle/
+java/emma-endinv/**/build/
+java/emma-endinv/**/bin/
+java/emma-endinv/**/.eclipse/
 /java/*/bin
 java/dist/
 
@@ -19,3 +23,8 @@ claude.local.md
 
 # Temporary archives
 *.zip
+
+# Local conversion leftovers and build logs
+java/emma-endinv/common/src/main/com/
+java/emma-endinv/org/
+log*.txt
