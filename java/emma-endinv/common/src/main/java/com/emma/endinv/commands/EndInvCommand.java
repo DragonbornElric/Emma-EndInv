@@ -19,7 +19,7 @@ import net.minecraft.world.SimpleMenuProvider;
 public class EndInvCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher){
-        dispatcher.register(Commands.literal("endinv").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+        dispatcher.register(Commands.literal("endinv").requires(source -> source.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("backup")
                         .executes(context -> {
                             var result = EndlessInventoryData.backup(context.getSource().getLevel());
@@ -103,7 +103,7 @@ public class EndInvCommand {
                 source.sendFailure(Component.literal("Cannot get EndInv by index "+index));
                 return -1;
             }
-            if(endlessInventory.isOwner(player) || Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(source)) {
+            if(endlessInventory.isOwner(player) || source.hasPermission(Commands.LEVEL_GAMEMASTERS)) {
                 endlessInventory.addToWhitelist(player.getUUID());
                 source.sendSuccess(() -> Component.literal("Add " + player.getName().getString() + " to " + endlessInventory.getUuid() + "'s whitelist."), true);
                 return index;
@@ -125,7 +125,7 @@ public class EndInvCommand {
                 source.sendFailure(Component.literal("Cannot get EndInv by index "+index));
                 return -1;
             }
-            if(endlessInventory.isOwner(player) || Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(source)) {
+            if(endlessInventory.isOwner(player) || source.hasPermission(Commands.LEVEL_GAMEMASTERS)) {
                 if(endlessInventory.white_list.contains(player.getUUID())) {
                     endlessInventory.removeFromWhitelist(player.getUUID());
                     source.sendSuccess(() -> Component.literal("Remove " + player.getName().getString() + " from " + endlessInventory.getUuid() + "'s whitelist."), true);
@@ -153,7 +153,7 @@ public class EndInvCommand {
                 source.sendFailure(Component.literal("Cannot get EndInv by index "+index));
                 return -1;
             }
-            if(endlessInventory.isOwner(player) || Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(source)) {
+            if(endlessInventory.isOwner(player) || source.hasPermission(Commands.LEVEL_GAMEMASTERS)) {
                 endlessInventory.setAccessibility(accessibility);
                 source.sendSuccess(()->Component.literal("Set "+endlessInventory.getUuid()+"'s accessibility to "+accessibility),true);
                 return 1;
@@ -228,7 +228,7 @@ public class EndInvCommand {
             if(endlessInventory.accessible(player)){
                 ServerLevelEndInv.TEMP_ENDINV_REG.put(player, endlessInventory);
                 player.openMenu(new SimpleMenuProvider(EndlessInventoryMenu::createWithTemp, Component.empty()));
-            } else if(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(source)){
+            } else if(source.hasPermission(Commands.LEVEL_GAMEMASTERS)){
                 ServerLevelEndInv.TEMP_ENDINV_REG.put(player, endlessInventory);
                 player.openMenu(new SimpleMenuProvider(EndlessInventoryMenu::createWithTemp, Component.empty()));
                 source.sendSuccess(()->Component.literal("Opened an unaccessible endInv for op"),true);
@@ -288,7 +288,7 @@ public class EndInvCommand {
                 source.sendFailure(Component.literal("Cannot get EndInv by index " + index));
                 return -1;
             }
-            if (!Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(source)) {
+            if (!source.hasPermission(Commands.LEVEL_GAMEMASTERS)) {
                 source.sendFailure(Component.translatable("commands.generic.permission"));
                 return -1;
             }

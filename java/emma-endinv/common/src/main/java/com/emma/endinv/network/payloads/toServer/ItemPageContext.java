@@ -1,6 +1,5 @@
 package com.emma.endinv.network.payloads.toServer;
 
-import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.menu.EndlessInventoryMenu;
@@ -15,9 +14,6 @@ import com.emma.endinv.options.ContentTransferMode;
 import com.emma.endinv.util.SortType;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -35,12 +31,6 @@ import static com.emma.endinv.ModInfo.getPacketDistributor;
  */
 public record ItemPageContext(int startIndex, int length, PageData pageData) implements ModPacketPayload {
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, ItemPageContext> STREAM_CODEC =
-            StreamCodec.of((buf, value) -> encode(value, buf), ItemPageContext::decode);
-
-    public static final CustomPacketPayload.Type<ItemPageContext> TYPE =
-            new CustomPacketPayload.Type<>(AbstractModInitializer.withModLocation("page_context"));
-
     public static void encode(ItemPageContext context, FriendlyByteBuf o) {
         o.writeInt(context.startIndex);
         o.writeInt(context.length);
@@ -49,6 +39,11 @@ public record ItemPageContext(int startIndex, int length, PageData pageData) imp
 
     public static ItemPageContext decode(FriendlyByteBuf o) {
         return new ItemPageContext(o.readInt(), o.readInt(), PageData.decode(o));
+    }
+
+    @Override
+    public void write(FriendlyByteBuf buffer) {
+        encode(this, buffer);
     }
 
     public SortType sortType() {
@@ -74,11 +69,6 @@ public record ItemPageContext(int startIndex, int length, PageData pageData) imp
     @Override
     public String id() {
         return "page_context";
-    }
-
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
-        return TYPE;
     }
 
     public void handle(ModPacketContext iPayloadContext) {

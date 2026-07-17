@@ -7,32 +7,30 @@ import com.emma.endinv.client.option.ClientConfigs;
 import com.emma.endinv.client.option.PageSwitchBarConfig;
 import com.emma.endinv.client.option.TextureMode;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
 public class PageSwitchBar extends AbstractWidget {
 
     //public static final Identifier TABS_RESOURCE = Identifier.withDefaultNamespace("textures/gui/advancements/tabs.png");
-    private static final Identifier TAB_LEFT_MIDDLE_SPRITE = Identifier.withDefaultNamespace("advancements/tab_left_middle");
-    private static final Identifier TAB_LEFT_TOP_SELECTED = Identifier.withDefaultNamespace("advancements/tab_left_top_selected");
-    private static final Identifier TAB_LEFT_MIDDLE_SELECTED = Identifier.withDefaultNamespace("advancements/tab_left_middle_selected");
-    private static final Identifier TAB_LEFT_BOTTOM_SELECTED = Identifier.withDefaultNamespace("advancements/tab_left_bottom_selected");
+    private static final ResourceLocation TAB_LEFT_MIDDLE_SPRITE = new ResourceLocation("advancements/tab_left_middle");
+    private static final ResourceLocation TAB_LEFT_TOP_SELECTED = new ResourceLocation("advancements/tab_left_top_selected");
+    private static final ResourceLocation TAB_LEFT_MIDDLE_SELECTED = new ResourceLocation("advancements/tab_left_middle_selected");
+    private static final ResourceLocation TAB_LEFT_BOTTOM_SELECTED = new ResourceLocation("advancements/tab_left_bottom_selected");
 
-    private static final Identifier TAB_UNSELECTED = AbstractModInitializer.withModLocation("textures/gui/tab_left_middle.png");
-    private static final Identifier TAB_TOP = AbstractModInitializer.withModLocation("textures/gui/tab_left_top_selected.png");
-    private static final Identifier TAB_MIDDLE = AbstractModInitializer.withModLocation("textures/gui/tab_left_middle_selected.png");
-    private static final Identifier TAB_BOTTOM = AbstractModInitializer.withModLocation("textures/gui/tab_left_bottom_selected.png");
+    private static final ResourceLocation TAB_UNSELECTED = AbstractModInitializer.withModLocation("textures/gui/tab_left_middle.png");
+    private static final ResourceLocation TAB_TOP = AbstractModInitializer.withModLocation("textures/gui/tab_left_top_selected.png");
+    private static final ResourceLocation TAB_MIDDLE = AbstractModInitializer.withModLocation("textures/gui/tab_left_middle_selected.png");
+    private static final ResourceLocation TAB_BOTTOM = AbstractModInitializer.withModLocation("textures/gui/tab_left_bottom_selected.png");
 
     private static final int PAGE_FRAME_COLOR = 0x80A0A0A0;
     private static final int PAGE_BG_COLOR = 0x30373737;
 
-    private static Identifier getTabsTexture(TabType type){
+    private static ResourceLocation getTabsTexture(TabType type){
         return ClientConfigs.ATTACHED_MENU_CONFIG.TextureMode.get() == TextureMode.DEDICATED_LOCATION ? type.dedicatedLocation : type.vanillaTexture;
     }
 
@@ -42,10 +40,10 @@ public class PageSwitchBar extends AbstractWidget {
         MIDDLE(TAB_LEFT_MIDDLE_SELECTED, TAB_MIDDLE),
         BOTTOM(TAB_LEFT_BOTTOM_SELECTED, TAB_BOTTOM);
 
-        final Identifier vanillaTexture;
-        final Identifier dedicatedLocation;
+        final ResourceLocation vanillaTexture;
+        final ResourceLocation dedicatedLocation;
 
-        TabType(Identifier vanillaTexture, Identifier dedicatedLocation){
+        TabType(ResourceLocation vanillaTexture, ResourceLocation dedicatedLocation){
             this.vanillaTexture = vanillaTexture;
             this.dedicatedLocation = dedicatedLocation;
         }
@@ -75,8 +73,8 @@ public class PageSwitchBar extends AbstractWidget {
         tabHeight = param.tabParam().height();
     }
 
-    public void onClick(MouseButtonEvent event, boolean pre) {
-        double mouseX = event.x(); double mouseY = event.y();
+    @Override
+    public void onClick(double mouseX, double mouseY) {
         double XOffset = mouseX - getX();
         double YOffset = mouseY - getY();
         if(XOffset < 0 || XOffset > getWidth() || YOffset < 0 || YOffset > getHeight()) return;
@@ -87,12 +85,11 @@ public class PageSwitchBar extends AbstractWidget {
         framework.pageSwitched(index);
     }
 
-    public void renderHoverTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+    public void renderHoverTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int hoveredPageIndex = getHoveredPageIndex(mouseX, mouseY);
         if (hoveredPageIndex < 0) {
             return;
         }
-        guiGraphics.nextStratum();
         TooltipRenderer.renderText(
                 guiGraphics,
                 Minecraft.getInstance().font,
@@ -119,7 +116,7 @@ public class PageSwitchBar extends AbstractWidget {
     }
 
     @Override
-    protected void extractWidgetRenderState(@NotNull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+    protected void renderWidget(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         int tabX = getX();
         int tabY = getY();
         int selectedPageIndex = framework.getDisplayingPageIndex();
@@ -138,20 +135,20 @@ public class PageSwitchBar extends AbstractWidget {
                     if (i == 0) {
                         var tex = getTabsTexture(TabType.TOP);
                         if (tex.equals(TabType.TOP.vanillaTexture)) tex = TabType.TOP.dedicatedLocation;
-                        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, tex, tabX, tabY, 0.0F, 0.0F, tabWidth, tabHeight, tabWidth, tabHeight);
+                        guiGraphics.blit(tex, tabX, tabY, 0.0F, 0.0F, tabWidth, tabHeight, tabWidth, tabHeight);
                     } else if (i == ScreenFramework.firstPageIndex + framework.pageBarCount - 1) {
                         var tex = getTabsTexture(TabType.BOTTOM);
                         if (tex.equals(TabType.BOTTOM.vanillaTexture)) tex = TabType.BOTTOM.dedicatedLocation;
-                        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, tex, tabX, tabY, 0.0F, 0.0F, tabWidth, tabHeight, tabWidth, tabHeight);
+                        guiGraphics.blit(tex, tabX, tabY, 0.0F, 0.0F, tabWidth, tabHeight, tabWidth, tabHeight);
                     } else {
                         var tex = getTabsTexture(TabType.MIDDLE);
                         if (tex.equals(TabType.MIDDLE.vanillaTexture)) tex = TabType.MIDDLE.dedicatedLocation;
-                        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, tex, tabX, tabY, 0.0F, 0.0F, tabWidth, tabHeight, tabWidth, tabHeight);
+                        guiGraphics.blit(tex, tabX, tabY, 0.0F, 0.0F, tabWidth, tabHeight, tabWidth, tabHeight);
                     }
                 } else {
                     var tex = getTabsTexture(TabType.UNSELECTED);
                     if (tex.equals(TabType.UNSELECTED.vanillaTexture)) tex = TabType.UNSELECTED.dedicatedLocation;
-                    guiGraphics.blit(RenderPipelines.GUI_TEXTURED, tex, tabX + 8, tabY, 4.0F, 0.0F, tabWidth - 4, tabHeight, tabWidth, tabHeight);
+                    guiGraphics.blit(tex, tabX + 8, tabY, 4.0F, 0.0F, tabWidth - 4, tabHeight, tabWidth, tabHeight);
                 }
                 if(direction_isVertical) tabY+=tabHeight; else tabX+=tabWidth;
             }

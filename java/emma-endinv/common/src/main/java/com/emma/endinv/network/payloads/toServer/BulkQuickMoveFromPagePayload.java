@@ -1,6 +1,5 @@
 package com.emma.endinv.network.payloads.toServer;
 
-import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.menu.page.pageManager.PageQuickMoveHandler;
@@ -8,9 +7,7 @@ import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.ModPacketPayload;
 import com.emma.endinv.util.ItemKey;
 import com.mojang.logging.LogUtils;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
@@ -28,18 +25,17 @@ public record BulkQuickMoveFromPagePayload(ItemKey prototype) implements ModPack
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, BulkQuickMoveFromPagePayload> STREAM_CODEC =
-            StreamCodec.of((buf, value) -> encode(value, buf), BulkQuickMoveFromPagePayload::decode);
-
-    public static final CustomPacketPayload.Type<BulkQuickMoveFromPagePayload> TYPE =
-            new CustomPacketPayload.Type<>(AbstractModInitializer.withModLocation("bulk_quick_move_from_page"));
-
-    public static BulkQuickMoveFromPagePayload decode(RegistryFriendlyByteBuf buf) {
-        return new BulkQuickMoveFromPagePayload(ItemKey.STREAM_CODEC.decode(buf));
+    public static BulkQuickMoveFromPagePayload decode(FriendlyByteBuf buf) {
+        return new BulkQuickMoveFromPagePayload(ItemKey.decode(buf));
     }
 
-    public static void encode(BulkQuickMoveFromPagePayload payload, RegistryFriendlyByteBuf buf) {
-        ItemKey.STREAM_CODEC.encode(buf, payload.prototype);
+    public static void encode(BulkQuickMoveFromPagePayload payload, FriendlyByteBuf buf) {
+        ItemKey.encode(buf, payload.prototype);
+    }
+
+    @Override
+    public void write(FriendlyByteBuf buffer) {
+        encode(this, buffer);
     }
 
     @Override
@@ -58,7 +54,7 @@ public record BulkQuickMoveFromPagePayload(ItemKey prototype) implements ModPack
         int iterations = 0;
         int movedTotal = 0;
         while (iterations++ < 32768) {
-            ItemStack taken = endInv.takeItem(prototype.toStack(prototype.item().getDefaultMaxStackSize()));
+            ItemStack taken = endInv.takeItem(prototype.toStack(prototype.item().getMaxStackSize()));
             if (taken.isEmpty()) break;
 
             ItemStack remain = mover.quickMoveFromPage(taken);
@@ -80,8 +76,4 @@ public record BulkQuickMoveFromPagePayload(ItemKey prototype) implements ModPack
         return "bulk_quick_move_from_page";
     }
 
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
-        return TYPE;
-    }
 }

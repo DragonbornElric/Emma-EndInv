@@ -4,21 +4,19 @@ import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.IPlatform;
 import com.emma.endinv.NbtAttachment;
 import com.emma.endinv.menu.EndlessInventoryMenu;
+import com.emma.endinv.nbt.FabricNbtStorage;
 import com.emma.endinv.network.IPacketDistributor;
 import com.emma.endinv.network.payloads.SyncedConfig;
 import com.emma.endinv.options.ServerConfigs;
 import com.emma.endinv.options.config.json.JsonConfigurationHandler;
 import com.emma.endinv.event.FabricEvents;
-// ClothConfig integration removed for minimal build
 import com.emma.endinv.network.FabricServerNetworking;
 import com.emma.endinv.platform.ILoaderProvider;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
-import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlags;
@@ -31,40 +29,14 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 import java.util.function.Supplier;
-@SuppressWarnings("UnstableApiUsage")
-public class ModInit extends AbstractModInitializer implements ModInitializer {
 
-    public static final AttachmentType<UUID> ENDINV_UUID = AttachmentRegistry.create(
-            withModLocation("endinv_uuid"),
-            builder -> builder
-                    .initializer(UUID::randomUUID)
-                    .persistent(UUIDUtil.CODEC)
-                    .copyOnDeath()
-                    .syncWith(
-                            UUIDUtil.STREAM_CODEC,
-                            AttachmentSyncPredicate.targetOnly()
-                    )
-    );
-    public static final AttachmentType<SyncedConfig> SYNCED_CONFIG = AttachmentRegistry.create(
-            withModLocation("synced_config"),
-            builder -> builder
-                    .initializer(()-> SyncedConfig.DEFAULT)
-                    .persistent(SyncedConfig.CODEC)
-                    .copyOnDeath()
-                    .syncWith(
-                            SyncedConfig.STREAM_CODEC,
-                            AttachmentSyncPredicate.targetOnly()
-                    )
-    );
+public class ModInit extends AbstractModInitializer implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        // Register payload types first, then receivers
-        com.emma.endinv.network.FabricNetworking.init();
         FabricServerNetworking.init();
         FabricEvents.init();
         super.init();
-        // ClothConfig integration removed for minimal build
     }
 
     @Override
@@ -100,7 +72,7 @@ public class ModInit extends AbstractModInitializer implements ModInitializer {
         return new RegistryCallback<>() {
             @Override
             public <R extends Item> Supplier<R> register(String id, Supplier<R> supplier) {
-                Identifier location = withModLocation(id);
+                ResourceLocation location = withModLocation(id);
                 R item = supplier.get();
                 R registered = net.minecraft.core.Registry.register(BuiltInRegistries.ITEM, location, item);
                 return () -> registered;
@@ -113,7 +85,7 @@ public class ModInit extends AbstractModInitializer implements ModInitializer {
         return new RegistryCallback<>() {
             @Override
             public <R extends MenuType<?>> Supplier<R> register(String id, Supplier<R> supplier) {
-                Identifier location = withModLocation(id);
+                ResourceLocation location = withModLocation(id);
                 R type = supplier.get();
                 R registered = net.minecraft.core.Registry.register(BuiltInRegistries.MENU, location, type);
                 return () -> registered;
@@ -126,7 +98,7 @@ public class ModInit extends AbstractModInitializer implements ModInitializer {
         return () -> {
             @SuppressWarnings({"rawtypes", "unchecked"})
             net.minecraft.world.inventory.MenuType raw = new net.minecraft.world.inventory.MenuType(
-                    (id, inventory) -> {
+                    (net.minecraft.world.inventory.MenuType.MenuSupplier) (id, inventory) -> {
                         try {
                             Class<?> cls = Class.forName("com.emma.endinv.menu.EndlessInventoryMenu");
                             java.lang.reflect.Method m = cls.getMethod("createClient", int.class, net.minecraft.world.entity.player.Inventory.class);
@@ -147,38 +119,65 @@ public class ModInit extends AbstractModInitializer implements ModInitializer {
         return new NbtAttachment<>() {
             @Override@Nullable
             public UUID getWith(Player player) {
-                return player.getAttached(ENDINV_UUID);
+                return FabricNbtStorage.getUuid(player);
             }
 
             @Override
             public void setTo(Player player, UUID uuid) {
-                player.setAttached(ENDINV_UUID, uuid);
+                FabricNbtStorage.setUuid(player, uuid);
             }
 
             @Override
             public UUID computeIfAbsent(Player player) {
-                return player.getAttachedOrCreate(ENDINV_UUID);
+                UUID uuid = FabricNbtStorage.getUuid(player);
+                if (uuid == null) {
+                    uuid = UUID.randomUUID();
+                    FabricNbtStorage.setUuid(player, uuid);
+                }
+                return uuid;
             }
         };
     }
 
-    @Override@SuppressWarnings("UnstableApiUsage")
+    @Override
     protected NbtAttachment<SyncedConfig> createSyncedConfig(String name) {
         return new NbtAttachment<>() {
             @Override@Nullable
             public SyncedConfig getWith(Player player) {
-                return player.getAttached(SYNCED_CONFIG);
+                if (!FabricNbtStorage.hasCompound(player, name)) {
+                    return null;
+                }
+                CompoundTag compound = FabricNbtStorage.getCompound(player, name).copy();
+                return SyncedConfig.CODEC.parse(NbtOps.INSTANCE, compound)
+                        .resultOrPartial(ModInit::logCodecError)
+                        .orElse(null);
             }
 
             @Override
             public void setTo(Player player, SyncedConfig syncedConfig) {
-                player.setAttached(SYNCED_CONFIG, syncedConfig);
+                SyncedConfig.CODEC.encodeStart(NbtOps.INSTANCE, syncedConfig)
+                        .resultOrPartial(ModInit::logCodecError)
+                        .ifPresent(tag -> {
+                            if (tag instanceof CompoundTag compound) {
+                                FabricNbtStorage.setCompound(player, name, compound);
+                            }
+                        });
             }
 
             @Override
             public SyncedConfig computeIfAbsent(Player player) {
-                return player.getAttachedOrCreate(SYNCED_CONFIG);
+                SyncedConfig config = getWith(player);
+                if (config == null) {
+                    config = SyncedConfig.DEFAULT;
+                    setTo(player, config);
+                }
+                return config;
             }
         };
+    }
+
+    private static void logCodecError(String message) {
+        org.slf4j.LoggerFactory.getLogger(ModInit.class)
+                .warn("Failed to process synced config: {}", message);
     }
 }

@@ -81,24 +81,31 @@ public class JsonConfigurationHandler {
 
     private void recursiveBind(JsonObject json, ConfigEntryImpl<?> entry)
     {
-        switch (entry) {
-            case ConfigEntryImpl.BooleanEntry booleanEntry -> bindBoolean(json, booleanEntry);
-            case ConfigEntryImpl.IntEntry intEntry -> bindInt(json, intEntry);
-            case ConfigEntryImpl.LongEntry longEntry -> bindLong(json, longEntry);
-            case ConfigEntryImpl.FloatEntry floatEntry -> bindFloat(json, floatEntry);
-            case ConfigEntryImpl.DoubleEntry doubleEntry -> bindDouble(json, doubleEntry);
-            case ConfigEntryImpl.StringEntry stringEntry -> bindString(json, stringEntry);
-            case ConfigEntryImpl.EnumEntry<?> enumEntry -> bindEnum(json, enumEntry);
-            case ConfigEntryImpl.ListEntry<?> listEntry -> bindList(json, (ConfigEntryImpl.ListEntry<?>) listEntry);
-            case ComplexConfigEntryImpl<?> complexEntry -> {
-                JsonObject section = getOrCreateObject(json, complexEntry.key());
-                for (ConfigEntryImpl<?> field : complexEntry.fields()) {
-                    recursiveBind(section, field);
-                }
-                complexEntry.setInitialized();
-                complexEntry.setSaver(this::save);
+        if (entry instanceof ConfigEntryImpl.BooleanEntry booleanEntry) {
+            bindBoolean(json, booleanEntry);
+        } else if (entry instanceof ConfigEntryImpl.IntEntry intEntry) {
+            bindInt(json, intEntry);
+        } else if (entry instanceof ConfigEntryImpl.LongEntry longEntry) {
+            bindLong(json, longEntry);
+        } else if (entry instanceof ConfigEntryImpl.FloatEntry floatEntry) {
+            bindFloat(json, floatEntry);
+        } else if (entry instanceof ConfigEntryImpl.DoubleEntry doubleEntry) {
+            bindDouble(json, doubleEntry);
+        } else if (entry instanceof ConfigEntryImpl.StringEntry stringEntry) {
+            bindString(json, stringEntry);
+        } else if (entry instanceof ConfigEntryImpl.EnumEntry<?> enumEntry) {
+            bindEnum(json, enumEntry);
+        } else if (entry instanceof ConfigEntryImpl.ListEntry<?> listEntry) {
+            bindList(json, listEntry);
+        } else if (entry instanceof ComplexConfigEntryImpl<?> complexEntry) {
+            JsonObject section = getOrCreateObject(json, complexEntry.key());
+            for (ConfigEntryImpl<?> field : complexEntry.fields()) {
+                recursiveBind(section, field);
             }
-            default -> bindGeneric(json, entry);
+            complexEntry.setInitialized();
+            complexEntry.setSaver(this::save);
+        } else {
+            bindGeneric(json, entry);
         }
     }
 

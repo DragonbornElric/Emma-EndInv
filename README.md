@@ -1,16 +1,22 @@
 # Emma-EndInv
 
-Emma-EndInv is a standalone Fabric mod repository for the Emma fork of Endless Inventory on Minecraft 26.1.
+Emma-EndInv is the standalone, multi-loader repository for Emma's Endless
+Inventory fork.
+
+Maintained branches:
+
+- `main`: Minecraft 26.1.2, Java 25
+- `mc-1.20.1`: Minecraft 1.20.1, Java 17
 
 ## Repository Layout
 
-- `java/emma-endinv/` - the standalone Gradle/Fabric mod project
-- `java/build_and_deploy.sh` - optional helper to build and copy the jar to one or more mod folders
+- `java/emma-endinv/` - shared code plus Fabric, NeoForge, and Folia projects
+- `java/build_and_deploy.sh` - version-aware build and deployment helper
 - `README.md`, `CLAUDE.md` - repository-level documentation
 
 ## Requirements
 
-- Java 25
+- Java 17 for `mc-1.20.1`; Java 25 for `main`
 - Windows: run Gradle with `gradlew.bat`
 - Git Bash or another Bash-compatible shell if you want to use `java/build_and_deploy.sh`
 
@@ -20,18 +26,20 @@ From the repository root:
 
 ```bash
 cd java/emma-endinv
-./gradlew.bat build
+./gradlew.bat :fabric:build :neoforge:build :folia:build
 ```
 
-Output jar:
+Output jars:
 
 ```text
-java/emma-endinv/build/libs/emma-endinv-1.2.0.jar
+java/emma-endinv/fabric/build/libs/endless_inventory-fabric-<mc-version>-<mod-version>.jar
+java/emma-endinv/neoforge/build/libs/endless_inventory-neoforge-<mc-version>-<mod-version>.jar
+java/emma-endinv/folia/build/libs/endless_inventory-folia-<mc-version>-<mod-version>.jar
 ```
 
 ## Deploy Helper
 
-Build and deploy to the default PrismLauncher Emma, Elric, and AltoClef mods folders:
+Build and deploy to version-matched local targets:
 
 ```bash
 cd java
@@ -46,9 +54,13 @@ cd java
 ./build_and_deploy.sh --mods-dir "/path/to/instance-a/mods" --mods-dir "/path/to/instance-b/mods"
 ```
 
-The helper also copies the built jar into `java/dist/` for easy pickup.
+The helper also copies the built jars into `java/dist/`. On `mc-1.20.1`, it
+only uses 1.20.1-named Prism instances and versioned manual staging folders;
+it cannot overwrite the maintained 26.1.2 deployment targets.
 
 ## Notes
 
-- This repository contains only the standalone Emma-EndInv mod.
+- This is the full Emma feature set, including the inventory UI, auto-pick,
+  recipe-book integration, crafting, Endless Inventory persistence, and the
+  shared packet protocol. The 1.20.1 branch is a backport, not a reduced port.
 - It does not include the old multi-mod workspace, sibling mods, Python tooling, or deployment automation for other projects.

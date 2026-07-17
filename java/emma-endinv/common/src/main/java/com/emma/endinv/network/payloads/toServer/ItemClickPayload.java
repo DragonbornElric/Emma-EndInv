@@ -1,6 +1,5 @@
 package com.emma.endinv.network.payloads.toServer;
 
-import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.menu.page.pageManager.PageQuickMoveHandler;
@@ -9,13 +8,11 @@ import com.emma.endinv.network.payloads.ModPacketPayload;
 import com.emma.endinv.util.ItemKey;
 import com.emma.endinv.util.ItemState;
 import com.mojang.logging.LogUtils;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -27,29 +24,28 @@ import org.slf4j.Logger;
  * @param button
  * @param clickType
  */
-public record ItemClickPayload(ItemKey key, int button, ContainerInput clickType) implements ModPacketPayload {
-
-    public static final StreamCodec<RegistryFriendlyByteBuf, ItemClickPayload> STREAM_CODEC =
-            StreamCodec.of((buf, value) -> encode(value, buf), ItemClickPayload::decode);
-
-    public static final CustomPacketPayload.Type<ItemClickPayload> TYPE =
-            new CustomPacketPayload.Type<>(AbstractModInitializer.withModLocation("item_click"));
+public record ItemClickPayload(ItemKey key, int button, ClickType clickType) implements ModPacketPayload {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static ItemClickPayload decode(RegistryFriendlyByteBuf buf) {
+    public static ItemClickPayload decode(FriendlyByteBuf buf) {
         return new ItemClickPayload(
-                ItemKey.STREAM_CODEC.decode(buf),
+                ItemKey.decode(buf),
                 buf.readInt(),
-                buf.readEnum(ContainerInput.class)
+                buf.readEnum(ClickType.class)
         );
     }
 
 
-    public static void encode(ItemClickPayload itemClickPayload,RegistryFriendlyByteBuf o) {
-        ItemKey.STREAM_CODEC.encode(o , itemClickPayload.key);
+    public static void encode(ItemClickPayload itemClickPayload, FriendlyByteBuf o) {
+        ItemKey.encode(o, itemClickPayload.key);
         o.writeInt(itemClickPayload.button);
         o.writeEnum(itemClickPayload.clickType);
+    }
+
+    @Override
+    public void write(FriendlyByteBuf buffer) {
+        encode(this, buffer);
     }
 
     @Override
@@ -126,7 +122,7 @@ public record ItemClickPayload(ItemKey key, int button, ContainerInput clickType
                     Slot scanning = menu.slots.get(index);
                     if(!(scanning.container instanceof Inventory)) break;
                     ItemStack scanningItem =scanning.getItem();
-                    if (ItemStack.isSameItemSameComponents(carried, scanningItem)) {
+                    if (ItemStack.isSameItemSameTags(carried, scanningItem)) {
                         ItemStack taken = scanning.safeTake(scanningItem.getCount(), scanningItem.getCount(), player);
                         LOGGER.debug("ItemClickPayload.PICKUP_ALL: took {} from slot index={}", taken, index);
                         ItemStack remain = endInv.addItem(taken);
@@ -159,8 +155,4 @@ public record ItemClickPayload(ItemKey key, int button, ContainerInput clickType
         return "item_click";
     }
 
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
-        return TYPE;
-    }
 }

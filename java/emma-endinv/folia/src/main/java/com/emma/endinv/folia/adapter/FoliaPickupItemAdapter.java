@@ -3,8 +3,8 @@ package com.emma.endinv.folia.adapter;
 import com.emma.endinv.autopick.events.IPlayerPickupItemEvent;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
-import org.bukkit.craftbukkit.entity.CraftItem;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R1.entity.CraftItem;
+import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 
 public class FoliaPickupItemAdapter implements IPlayerPickupItemEvent {

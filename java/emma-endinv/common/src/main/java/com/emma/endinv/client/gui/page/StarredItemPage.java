@@ -6,7 +6,7 @@ import com.emma.endinv.menu.page.PageType;
 import com.emma.endinv.network.payloads.toServer.StarItemPayload;
 import com.emma.endinv.util.ItemKey;
 import com.emma.endinv.util.ItemStackLike;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
@@ -15,7 +15,7 @@ import static com.emma.endinv.ModInfo.getPacketDistributor;
 
 public class StarredItemPage extends ItemDisplay{
 
-    public Identifier icon = Identifier.fromNamespaceAndPath("minecraft", "book");
+    public ResourceLocation icon = new ResourceLocation("minecraft", "book");
     private int[] countArray;
 
     public StarredItemPage(PageType type, ScreenFramework screenFramework) {

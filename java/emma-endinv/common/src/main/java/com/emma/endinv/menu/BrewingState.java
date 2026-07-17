@@ -16,11 +16,11 @@ public record BrewingState(
 
     public static final Codec<BrewingState> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
-                    ItemStack.OPTIONAL_CODEC.optionalFieldOf("ingredient", ItemStack.EMPTY).forGetter(BrewingState::ingredient),
-                    ItemStack.OPTIONAL_CODEC.optionalFieldOf("fuel", ItemStack.EMPTY).forGetter(BrewingState::fuel),
-                    ItemStack.OPTIONAL_CODEC.optionalFieldOf("potion0", ItemStack.EMPTY).forGetter(BrewingState::potion0),
-                    ItemStack.OPTIONAL_CODEC.optionalFieldOf("potion1", ItemStack.EMPTY).forGetter(BrewingState::potion1),
-                    ItemStack.OPTIONAL_CODEC.optionalFieldOf("potion2", ItemStack.EMPTY).forGetter(BrewingState::potion2),
+                    ItemStack.CODEC.optionalFieldOf("ingredient", ItemStack.EMPTY).forGetter(BrewingState::ingredient),
+                    ItemStack.CODEC.optionalFieldOf("fuel", ItemStack.EMPTY).forGetter(BrewingState::fuel),
+                    ItemStack.CODEC.optionalFieldOf("potion0", ItemStack.EMPTY).forGetter(BrewingState::potion0),
+                    ItemStack.CODEC.optionalFieldOf("potion1", ItemStack.EMPTY).forGetter(BrewingState::potion1),
+                    ItemStack.CODEC.optionalFieldOf("potion2", ItemStack.EMPTY).forGetter(BrewingState::potion2),
                     Codec.INT.optionalFieldOf("brew_time", 0).forGetter(BrewingState::brewTime),
                     Codec.INT.optionalFieldOf("fuel_amount", 0).forGetter(BrewingState::fuelAmount)
             ).apply(instance, BrewingState::new)

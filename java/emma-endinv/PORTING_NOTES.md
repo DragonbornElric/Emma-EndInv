@@ -1,69 +1,71 @@
-# Emma Endless Inventory — 26.1 Port Notes
+# Emma-EndInv 1.20.1 Backport Notes
 
-## Source
-Forked from [kwwsyk/Endless-Inventory](https://github.com/kwwsyk/Endless-Inventory) branch `1.21.11` (v1.1.3.3).
+`mc-1.20.1` is a complete backport of Emma-EndInv. It is maintained beside
+the Minecraft 26.1.2 `main` branch; it is not a reduced compatibility mod.
 
-## What Changed in This Port
+## Source anchors
 
-### Architecture
-- **Flattened** multi-loader (common + fabric + neoforge + forge) into single Fabric module
-- Package renamed: `com.kwwsyk.endinv.common` / `com.kwwsyk.endinv.fabric` → `com.emma.endinv`
-- Removed NeoForge, Forge, JEI integration, ClothConfig integration
-- Multi-loader abstractions (`AbstractModInitializer`, `IPlatform`, `IPacketDistributor`) kept as-is since they don't hurt and avoiding a rewrite reduces risk
+- Emma 26.1.2 feature baseline: commit
+  `8749696f2186e8c33cec337b89bdad1aae4393d8`
+- Historical upstream 1.20.1 API reference:
+  `kwwsyk/Endless-Inventory` commit
+  `96bd1efd25ce44dd5e91226ebbdcf6eba0ab7503`
 
-### Build Config
-- MC `1.21.11` → `26.1-pre-2`
-- Java `21` → `25`
-- Fabric Loader `0.18.4` (same)
-- Fabric Loom `1.15-SNAPSHOT` → `1.15.5`
-- Fabric API `0.141.3+1.21.11` → `0.143.14+26.1`
-- Parchment mappings removed (26.1 is unobfuscated, identity mappings)
-- Mixin compatibility level `JAVA_17` → `JAVA_25`
+The upstream checkout was used only to confirm historical Minecraft APIs.
+Emma's current behavior remains authoritative, including the expanded station
+UI, auto-pick behavior, server persistence, packet surface, and recipe-book
+integration.
 
-### Removed Dependencies
-- ClothConfig (`cloth-config-fabric`) — config screen, optional
-- JEI (`jei-fabric-api`) — recipe transfer, optional
-- Parchment (`parchment-1.21.11`) — not needed on unobfuscated MC
+## Runtime targets
 
-## Potential Compile Issues (Fix as They Appear)
+| Target | Minecraft/API | Java |
+| --- | --- | --- |
+| Fabric | Minecraft 1.20.1, Fabric API 0.92.11 | 17 |
+| NeoForge compatibility build | Forge 47 API (`1.20.1-47.1.106`) | 17 |
+| Folia | Folia 1.20.1 | 17 |
 
-### HIGH PROBABILITY
-1. **`net.minecraft.util.Util`** — May have moved to `net.minecraft.Util` in 26.1 unobfuscated.
-   Fix: Change import in `SourceInventory.java` and anywhere else it's used.
+NeoForge's historical 1.20.1 releases used the Forge 47 package/API boundary,
+so the module intentionally imports `net.minecraftforge.*` and packages
+`META-INF/mods.toml`.
 
-2. **`Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)`** — The constants may have been renamed.
-   Used in: `EndInvCommand.java`, `ConfigCommand.java`
-   Fix: Check what the 26.1 `Commands` class actually exposes. May need `source.hasPermission(2)` instead.
+## Backported architecture
 
-3. **`SavedDataType` constructor** — The 4-arg constructor `new SavedDataType<>(name, factory, codec, dataFixType)` may have changed between 1.21.11 and 26.1.
-   Used in: `EndlessInventoryData.java`
-   Fix: Check the 26.1 `SavedDataType` constructor signature.
+- Vanilla Gradle multiloader layout: `common`, `fabric`, `neoforge`, `folia`
+- Official Mojang mappings
+- Raw `ResourceLocation`/`FriendlyByteBuf` custom-payload protocol
+- 10 client-to-server directions and 7 server-to-client directions
+- 16 unique channel IDs; `endinv_settings` is bidirectional
+- Fabric persistent player NBT through a player-data mixin
+- Forge 47 persistent player capabilities
+- Folia persistent player data plus region-thread scheduling
+- Shared SavedData storage for Endless Inventory contents
 
-### MEDIUM PROBABILITY
-4. **`FeatureFlags.DEFAULT_FLAGS`** — Used in `MenuType` constructor in `ModInit.java`.
-   May be renamed or the `MenuType` constructor signature may have changed.
+Minecraft 1.20.1 predates the typed `CustomPacketPayload`/`StreamCodec`
+networking used on 26.1.2. Each loader adapts the same common raw field layout
+without adding loader-specific discriminators.
 
-5. **`Item.CODEC`** / `Item.STREAM_CODEC`** — Used in codec definitions for serialization.
-   Used in: `EndlessInventory.java`, `EndInvCodecStrategy.java`, `ItemKey.java`, `ItemStackLike.java`
-   These codecs are core Mojang infrastructure and unlikely to change, but check.
+## Feature parity
 
-6. **`DataComponentPatch.CODEC`** — Used in `EndlessInventory.ITEM_MAP_CODEC`.
-   DataComponents were refactored in 1.21.x; the codec should be stable by 26.1.
+The branch retains:
 
-### LOW PROBABILITY
-7. **`NonNullList`** — Standard utility, used heavily. Unlikely to change.
+- inventory pages, search, sorting, starred items, and screen attachment
+- crafting and recipe-book placement using normal inventory plus EndInv
+- furnace, smoker, blast furnace, stonecutter, grindstone, smithing, and
+  brewing stations
+- auto-pick for blocks, entities, experience, and item pickup
+- per-player ownership, access settings, synced settings, and persistence
+- Fabric, NeoForge/Forge 47, and Folia networking and lifecycle integration
 
-8. **Mixin targets** — `LivingEntity.dropFromLootTable`, `AbstractContainerScreen.mouseDragged`, `AbstractContainerScreen.renderBackground`, etc. These are stable MC methods.
+## Build and verification
 
-9. **Fabric API** — `AttachmentRegistry`, `PayloadTypeRegistry`, `ServerPlayNetworking`, `ServerWorldEvents`, `PlayerBlockBreakEvents` — all stable Fabric API.
-
-## Build Command
-```bash
-cd java/emma-endinv
-./gradlew.bat build
+```powershell
+cd java\emma-endinv
+.\gradlew.bat :common:test :fabric:build :neoforge:build :folia:build
 ```
 
-Output JAR: `java/emma-endinv/build/libs/emma-endinv-1.2.0.jar`
+Production artifacts are created under each loader's `build/libs` directory.
+For Folia, deploy the reobfuscated production jar, not the `-dev.jar`.
 
-## Deploy
-Copy `java/emma-endinv/build/libs/emma-endinv-1.2.0.jar` into the target Minecraft instance `mods` directory, or use `cd java && ./build_and_deploy.sh --mods-dir "/path/to/mods"`.
+The repository-level `java/build_and_deploy.sh` reads `minecraft_version` and
+refuses to place 1.20.1 artifacts into paths marked for 26.1. It stages the
+backport only in versioned 1.20.1 target directories.

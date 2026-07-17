@@ -4,7 +4,7 @@ import com.emma.endinv.util.*;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Unmodifiable;

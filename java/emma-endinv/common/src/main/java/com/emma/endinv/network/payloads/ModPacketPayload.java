@@ -2,17 +2,20 @@ package com.emma.endinv.network.payloads;
 
 import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.client.gui.ScreenFramework;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
 
-public interface ModPacketPayload extends CustomPacketPayload {
+public interface ModPacketPayload {
 
     String id();
 
-    default Type<? extends CustomPacketPayload> type(){
-        return new Type<>(AbstractModInitializer.withModLocation(id()));
+    default ResourceLocation payloadId(){
+        return AbstractModInitializer.withModLocation(id());
     }
+
+    void write(FriendlyByteBuf buffer);
 
     void handle(ModPacketContext context);
 

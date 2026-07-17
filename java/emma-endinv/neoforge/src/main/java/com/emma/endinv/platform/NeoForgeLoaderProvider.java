@@ -1,8 +1,8 @@
 package com.emma.endinv.platform;
 
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.fml.loading.FMLPaths;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.nio.file.Path;
 
@@ -10,7 +10,7 @@ public class NeoForgeLoaderProvider implements ILoaderProvider {
 
     @Override
     public boolean isClient() {
-        return FMLEnvironment.getDist().isClient();
+        return FMLEnvironment.dist.isClient();
     }
 
     @Override

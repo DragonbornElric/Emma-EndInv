@@ -1,6 +1,5 @@
 package com.emma.endinv.network.payloads.toServer;
 
-import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.ModRegistries;
 import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.menu.EndlessInventoryMenu;
@@ -10,9 +9,6 @@ import com.emma.endinv.network.payloads.ModPacketPayload;
 import com.emma.endinv.network.payloads.SyncedConfig;
 import com.mojang.logging.LogUtils;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 
@@ -44,20 +40,14 @@ public record OpenEndInvPayload(boolean openNew, int rows, int columns) implemen
         return new OpenEndInvPayload(o.readBoolean(),o.readInt(),o.readInt());
     }
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, OpenEndInvPayload> STREAM_CODEC =
-            StreamCodec.of((buf, value) -> encode(value, buf), OpenEndInvPayload::decode);
-
-    public static final CustomPacketPayload.Type<OpenEndInvPayload> TYPE =
-            new CustomPacketPayload.Type<>(AbstractModInitializer.withModLocation("open_endinv"));
+    @Override
+    public void write(FriendlyByteBuf buffer) {
+        encode(this, buffer);
+    }
 
     @Override
     public String id() {
         return "open_endinv";
-    }
-
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
-        return TYPE;
     }
 
     @Override

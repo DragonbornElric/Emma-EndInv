@@ -1,6 +1,10 @@
 # Emma-EndInv
 
-Multi-loader repository for the Emma fork of Endless Inventory — Fabric, NeoForge, and Folia, targeting Minecraft 26.1.2.
+Multi-loader repository for the Emma fork of Endless Inventory — Fabric,
+historical NeoForge/Forge, and Folia.
+
+This branch is the full Minecraft 1.20.1 backport and uses Java 17. The
+maintained Minecraft 26.1.2/Java 25 line remains on `main`.
 
 ## Scope
 
@@ -14,7 +18,7 @@ java/emma-endinv/
 ├── buildSrc/            Convention plugins (multiloader-common, multiloader-loader, multiloader-folia)
 ├── common/              Loader-neutral code: all mixins, payloads, menus, GUI, service interfaces
 ├── fabric/              Fabric entry points, FabricNetworking, Fabric events, fabric.mod.json
-├── neoforge/            NeoForge entry point, NeoForgeNetworking, @SubscribeEvent handlers, neoforge.mods.toml
+├── neoforge/            Historical NeoForge/Forge entry point, networking, and event handlers
 ├── folia/               Folia server plugin (JavaPlugin, paperweight-userdev, paper-plugin.yml)
 ├── build.gradle         Root: plugin version declarations only
 ├── settings.gradle      Includes common, fabric, neoforge, folia
@@ -28,16 +32,16 @@ java/emma-endinv/
 | `fabric/src/main/java` | Fabric-specific code (entry points, networking, events) |
 | `fabric/src/main/resources` | `fabric.mod.json`, Fabric mixin JSONs, service files |
 | `neoforge/src/main/java` | NeoForge-specific code (entry points, networking, events) |
-| `neoforge/src/main/resources` | `neoforge.mods.toml`, NeoForge mixin JSON, AT, service files |
+| `neoforge/src/main/resources` | `mods.toml`, NeoForge mixin JSON, AT, service files |
 | `folia/src/main/java` | Folia plugin code (EndInvFoliaPlugin, adapters, scheduler helpers, payload overrides) |
 | `folia/src/main/resources` | `paper-plugin.yml`, `META-INF/services/ILoaderProvider` |
 | `java/emma-endinv/gradlew`, `gradlew.bat` | Gradle wrapper |
 | `java/build_and_deploy.sh` | Build helper — produces jars and deploys |
-| `java/emma-endinv/PORTING_NOTES.md` | Notes for the Fabric 26.1 port |
+| `java/emma-endinv/PORTING_NOTES.md` | 1.20.1 backport source anchors, API choices, and parity notes |
 
 ## Build
 
-Use Java 25.
+Use Java 17 on this branch.
 
 **Fabric only:**
 ```bash
@@ -63,7 +67,7 @@ cd java/emma-endinv
 Output jars:
 - `fabric/build/libs/endless_inventory-fabric-<mc_version>*.jar`
 - `neoforge/build/libs/endless_inventory-neoforge-<mc_version>*.jar`
-- `folia/build/libs/endless_inventory-folia-<folia_version>*.jar`
+- `folia/build/libs/endless_inventory-folia-<mc_version>*.jar`
 
 ## Deploy Helper
 
@@ -86,37 +90,38 @@ cd java
 ./build_and_deploy.sh --mods-dir "/path/a"
 ```
 
-The Fabric jar deploys automatically to the default PrismLauncher Emma, Elric, and CameraBot26.1 instances.
-The Folia jar is staged in `dist/` but not auto-deployed (server install paths vary).
+The Fabric jar deploys only to 1.20.1-named PrismLauncher instances on this
+branch. The helper also keeps the manual Fabric, NeoForge, and Folia staging
+folders under version-specific `1.20.1` subdirectories.
 
 ## Conventions
 
-- Minecraft 26.1.2
-- Fabric Loader 0.19.2 / Fabric API 0.149.0+26.1.2
-- NeoForge 26.1.2.7-beta (pin deliberately before upgrading)
-- Folia 26.1.2.build.8-stable (paperweight-userdev 2.0.0-SNAPSHOT, `foliaDevBundle`)
+- Minecraft 1.20.1
+- Fabric Loader 0.19.3 / Fabric API 0.92.11+1.20.1
+- Historical NeoForge/Forge 1.20.1-47.1.106
+- Folia 1.20.1-R0.1-SNAPSHOT (paperweight-userdev, `foliaDevBundle`)
 - Fabric Loom 1.15.5 / ModDevGradle 2.0.141
-- Java 25
+- Java 17
 - Package namespace: `com.emma.endinv`
 - Loader-neutral service abstraction: `ILoaderProvider` (ServiceLoader, one impl per module)
-- Mixin compatibility: `JAVA_25`, `defaultRequire: 1`
+- Mixin compatibility: `JAVA_17`, `defaultRequire: 1`
 - Folia threading: no `Bukkit.getScheduler()`; use `entity.getScheduler()`, `getGlobalRegionScheduler()`, `getRegionScheduler()`
 
 ## Loader Coupling Map
 
 | Surface | Module |
 |---------|--------|
-| All 17 payloads | `common` — vanilla `CustomPacketPayload`/`StreamCodec` only |
+| All 17 payloads | `common` — raw `ResourceLocation` channels and `FriendlyByteBuf` codecs |
 | All 12 mixins | `common` — target vanilla classes only |
 | Menus, inventory, GUI, screens | `common` |
 | `ILoaderProvider` (isClient, isModLoaded, getConfigDir) | `common` interface, `fabric`/`neoforge`/`folia` service impl |
 | `FabricNetworking`, `FabricServerNetworking`, `FabricClientNetworking` | `fabric` |
-| `NeoForgeNetworking` (RegisterPayloadHandlersEvent) | `neoforge` |
-| Folia S2C codec injection (`GAMEPLAY_STREAM_CODEC` via Unsafe) | `folia/FoliaPayloadRegistry` |
+| Historical NeoForge networking | `neoforge` — raw custom-payload events, same wire schema as Fabric/Folia |
+| Folia S2C networking | `folia/FoliaPacketDistributor` — raw 1.20.1 custom-payload packets |
 | Folia C2S dispatch (plugin-message → region-thread hop) | `folia/FoliaIncomingPayloadBridge` + `scheduler/PayloadDispatch` |
 | Fabric attachment registration | `fabric/ModInit.java` |
-| NeoForge attachment registration | `neoforge/EndInvNeoForge.java` (DeferredRegister) |
-| Folia attachment registration (in-memory per-UUID map) | `folia/FoliaMenuRegistry` |
+| NeoForge attachment registration | `neoforge/EndInvNeoForge.java` + persistent Forge capabilities |
+| Folia attachment registration | `folia/FoliaMenuRegistry` + Bukkit persistent player data |
 | Fabric events (PlayerBlockBreakEvents, ServerTickEvents, etc.) | `fabric/event/` |
 | NeoForge events (@SubscribeEvent on NeoForge.EVENT_BUS) | `neoforge/event/NeoForgeEvents.java` |
 | Folia events (Bukkit @EventHandler + global region scheduler tick) | `folia/FoliaEventListeners` |
@@ -127,6 +132,9 @@ The Folia jar is staged in `dist/` but not auto-deployed (server install paths v
 
 - Treat comments as claims, not proof. Verify behavior from the code path.
 - Keep edits focused on the standalone mod and avoid reintroducing assumptions from the old multi-project workspace.
-- NeoForge 26.1.2 is still in `-beta`. Update the `neoforge_version` pin in `gradle.properties` deliberately.
-- The `common` module compiles against vanilla MC only (NeoForm mode) — it must NOT import any loader API.
+- The `common` module compiles against vanilla Minecraft with official mappings
+  and must not import any loader API.
+- Keep the 17 payload channel IDs and FriendlyByteBuf layouts identical on all
+  three loaders; do not replace the historical NeoForge implementation with a
+  numeric-discriminator `SimpleChannel`.
 - The `folia` module compiles against server-only NMS (paperweight-userdev `foliaDevBundle`). It pulls common sources via the `commonServerJava` filtered Zip artifact (excludes `client/`, `mixin/`, `item/`, toClient payloads, `PageType`). Folia-local overrides in `folia/src/main/java/.../network/payloads/` and `menu/page/` replace the excluded files with server-safe versions.

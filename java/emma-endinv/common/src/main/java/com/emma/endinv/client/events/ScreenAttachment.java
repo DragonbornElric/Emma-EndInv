@@ -6,15 +6,12 @@ import com.emma.endinv.client.gui.bg.IRectangleParam;
 import com.emma.endinv.client.option.ClientConfigs;
 import com.emma.endinv.mixin.AbstractContainerScreenAccessor;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.input.CharacterEvent;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,22 +29,25 @@ public final class ScreenAttachment {
 
     private ScreenAttachment() {}
 
-    public static boolean handleMouseDrag(AbstractContainerScreen<?> screen, MouseButtonEvent event, double deltaX, double deltaY) {
+    public static boolean handleMouseDrag(AbstractContainerScreen<?> screen, double mouseX, double mouseY,
+                                          int button, double deltaX, double deltaY) {
         AttachingScreen<?> current = attachment;
         if (current == null || current.screen != screen || !isAttachmentActive(current)) {
             return false;
         }
         boolean[] canceled = {false};
         current.mouseDragged(new IScreenEvent() {
+            @Override public double getMouseX() { return mouseX; }
+            @Override public double getMouseY() { return mouseY; }
+            @Override public int getMouseButton() { return button; }
             @Override public double getDragX() { return deltaX; }
             @Override public double getDragY() { return deltaY; }
             @Override public void setCanceled(boolean flag) { canceled[0] = flag; }
-            public MouseButtonEvent getMouseButtonEvent() { return event; }
         });
         return canceled[0];
     }
 
-    public static void onRenderAfterBackground(AbstractContainerScreen<?> screen, GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public static void onRenderAfterBackground(AbstractContainerScreen<?> screen, GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         AttachingScreen<?> current = attachment;
         if (current == null || current.getScreen() != screen || !isAttachmentActive(current)) {
             return;
@@ -56,11 +56,11 @@ public final class ScreenAttachment {
             @Override public double getMouseX() { return mouseX; }
             @Override public double getMouseY() { return mouseY; }
             @Override public float getPartialTick() { return partialTick; }
-            @Override public GuiGraphicsExtractor getGuiGraphicsExtractor() { return graphics; }
+            @Override public GuiGraphics getGuiGraphics() { return graphics; }
         });
     }
 
-    public static void onRenderPost(AbstractContainerScreen<?> screen, GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public static void onRenderPost(AbstractContainerScreen<?> screen, GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         AttachingScreen<?> current = attachment;
         if (current == null || current.getScreen() != screen || !isAttachmentActive(current)) {
             return;
@@ -69,38 +69,43 @@ public final class ScreenAttachment {
             @Override public double getMouseX() { return mouseX; }
             @Override public double getMouseY() { return mouseY; }
             @Override public float getPartialTick() { return partialTick; }
-            @Override public GuiGraphicsExtractor getGuiGraphicsExtractor() { return graphics; }
+            @Override public GuiGraphics getGuiGraphics() { return graphics; }
         });
     }
 
-    public static boolean beforeCharTyped(GuiEventListener guiEventListener, CharacterEvent event) {
+    public static boolean beforeCharTyped(GuiEventListener guiEventListener, char codePoint, int modifiers) {
         AttachingScreen<?> current = attachment;
         if (current == null) return false;
         if (!(guiEventListener instanceof Screen screen) || current.screen != screen) return false;
         if (!isAttachmentActive(current)) return false;
         boolean[] canceled = {false};
         current.charTyped(new IScreenEvent() {
-            @Override public CharacterEvent getCharEvent() { return event; }
+            @Override public char getCodePoint() { return codePoint; }
+            @Override public int getModifiers() { return modifiers; }
             @Override public void setCanceled(boolean flag) { canceled[0] = flag; }
         });
         return canceled[0];
     }
 
-    public static boolean allowMouseClick(AttachingScreen<?> expected, MouseButtonEvent buttonEvent) {
+    public static boolean allowMouseClick(AttachingScreen<?> expected, double mouseX, double mouseY, int button) {
         if (attachment != expected || !isAttachmentActive(expected)) return true;
         boolean[] canceled = {false};
         expected.mouseClicked(new IScreenEvent() {
-            public MouseButtonEvent getMouseButtonEvent() { return buttonEvent; }
+            @Override public double getMouseX() { return mouseX; }
+            @Override public double getMouseY() { return mouseY; }
+            @Override public int getMouseButton() { return button; }
             @Override public void setCanceled(boolean flag) { canceled[0] = flag; }
         });
         return !canceled[0];
     }
 
-    public static boolean allowMouseRelease(AttachingScreen<?> expected, MouseButtonEvent buttonEvent) {
+    public static boolean allowMouseRelease(AttachingScreen<?> expected, double mouseX, double mouseY, int button) {
         if (attachment != expected || !isAttachmentActive(expected)) return true;
         boolean[] canceled = {false};
         expected.mouseReleased(new IScreenEvent() {
-            public MouseButtonEvent getMouseButtonEvent() { return buttonEvent; }
+            @Override public double getMouseX() { return mouseX; }
+            @Override public double getMouseY() { return mouseY; }
+            @Override public int getMouseButton() { return button; }
             @Override public void setCanceled(boolean flag) { canceled[0] = flag; }
         });
         return !canceled[0];
@@ -119,11 +124,13 @@ public final class ScreenAttachment {
         return !canceled[0];
     }
 
-    public static boolean allowKeyPress(AttachingScreen<?> expected, KeyEvent keyEvent) {
+    public static boolean allowKeyPress(AttachingScreen<?> expected, int keyCode, int scanCode, int modifiers) {
         if (attachment != expected || !isAttachmentActive(expected)) return true;
         boolean[] canceled = {false};
         expected.keyPressed(new IScreenEvent() {
-            public KeyEvent getKeyEvent() { return keyEvent; }
+            @Override public int getKeyCode() { return keyCode; }
+            @Override public int getScanCode() { return scanCode; }
+            @Override public int getModifiers() { return modifiers; }
             @Override public void setCanceled(boolean flag) { canceled[0] = flag; }
         });
         return !canceled[0];

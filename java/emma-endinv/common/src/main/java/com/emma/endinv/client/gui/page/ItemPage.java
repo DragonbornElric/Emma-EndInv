@@ -13,11 +13,12 @@ import com.emma.endinv.util.ItemKey;
 import com.emma.endinv.util.NotNullWhenInitialized;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -129,14 +130,13 @@ public abstract class ItemPage extends GridPage {
         getPacketDistributor().sendToServer(new StarItemPayload(clicked,true));
     }
 
-    public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks){
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks){
         for(ItemPageSlotView slot : viewContainer.slots()){
-            slot.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
+            slot.render(guiGraphics, mouseX, mouseY, partialTicks);
         }
 
         for (ItemPageSlotView slot : viewContainer.slots()) {
             if (slot.hasClickedOn(mouseX, mouseY)) {
-                guiGraphics.nextStratum();
                 slot.renderSlotHighlightFront(guiGraphics, mouseX, mouseY, partialTicks);
                 break;
             }
@@ -144,10 +144,9 @@ public abstract class ItemPage extends GridPage {
     }
 
     @Override
-    public void renderHoverOverlay(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
+    public void renderHoverOverlay(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         for (ItemPageSlotView slot : viewContainer.slots()) {
             if (slot.hasClickedOn(mouseX, mouseY)) {
-                guiGraphics.nextStratum();
                 slot.renderTooltip(guiGraphics, mouseX, mouseY, partialTicks);
                 break;
             }
@@ -155,7 +154,7 @@ public abstract class ItemPage extends GridPage {
     }
 
     @Override
-    public void pageClicked(double XOffset, double YOffset, int button, ContainerInput clickType) {
+    public void pageClicked(double XOffset, double YOffset, int button, ClickType clickType) {
         int slot = getSlotByMouseOffset(XOffset,YOffset);
         if(slot>=0 && slot < viewContainer.getContainerSize()) {
             ItemStack clicked = getItemByMouseOffset(XOffset, YOffset).copy();
@@ -169,7 +168,7 @@ public abstract class ItemPage extends GridPage {
             }
             LOGGER.info("EI:sending:ItemClickPayload: player={} clickType={} button={} stack={}"
                     , framework.getPlayer(),clickType,button, clicked);
-            if(clickType == ContainerInput.PICKUP_ALL && Minecraft.getInstance().hasShiftDown()) return;
+            if(clickType == ClickType.PICKUP_ALL && Screen.hasShiftDown()) return;
             ModInfo.getPacketDistributor().sendToServer(new ItemClickPayload(
                     ItemKey.asKey(clicked),
                     button,clickType));
@@ -272,7 +271,7 @@ public abstract class ItemPage extends GridPage {
     }
     protected void handlePickupAll(ItemStack clicked){
         // Shift + Double Click: bulk quick-move from Endless Inventory page into the open container
-        if (Minecraft.getInstance().hasShiftDown()) {
+        if (Screen.hasShiftDown()) {
             ModInfo.getPacketDistributor().sendToServer(new BulkQuickMoveFromPagePayload(ItemKey.asKey(clicked.copyWithCount(1))));
             int iterations = 0;
             var mover = new PageQuickMoveHandler(framework);
@@ -299,7 +298,7 @@ public abstract class ItemPage extends GridPage {
             Slot scanning = framework.getMenu().slots.get(index);
             if(!(scanning.container instanceof Inventory)) break;
             ItemStack scanningItem =scanning.getItem();
-            if (ItemStack.isSameItemSameComponents(carried, scanningItem)) {
+            if (ItemStack.isSameItemSameTags(carried, scanningItem)) {
                 ItemStack taken = scanning.safeTake(scanningItem.getCount(), scanningItem.getCount(), player);
                 ItemStack remain = addItem(taken);
                 if(!remain.isEmpty()) scanning.set(remain);

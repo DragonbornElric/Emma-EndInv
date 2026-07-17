@@ -5,7 +5,10 @@ java/emma-endinv/**/.gradle/
 java/emma-endinv/**/build/
 java/emma-endinv/**/bin/
 java/emma-endinv/**/.eclipse/
+java/emma-endinv/**/runs/
+java/emma-endinv/**/logs/
 /java/*/bin
+.gradle-*/
 java/dist/
 
 # IDE

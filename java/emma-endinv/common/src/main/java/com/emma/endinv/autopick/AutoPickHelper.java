@@ -12,22 +12,23 @@ import com.emma.endinv.network.payloads.SyncedConfig;
 import com.emma.endinv.network.payloads.toClient.ItemPickedUpPayload;
 import com.emma.endinv.options.ServerConfigs;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public final class AutoPickHelper {
@@ -191,11 +192,11 @@ public final class AutoPickHelper {
     private static boolean shouldMoveTo(Player player, ItemStack stack){
         if(stack.isEmpty()) return false;
         Item item = stack.getItem();
-        if(item.builtInRegistryHolder().is(ItemTags.SWORDS)){
+        if(item instanceof SwordItem){
             return hasSuch(player,item);
         }else if(item instanceof AxeItem axeItem){
             return hasSuch(player,axeItem);
-        }else if(item.builtInRegistryHolder().is(ItemTags.PICKAXES)){
+        }else if(item instanceof PickaxeItem){
             return hasSuch(player,item);
         }else if(item instanceof ShovelItem such){
             return hasSuch(player,such);
@@ -209,46 +210,51 @@ public final class AutoPickHelper {
             return hasSuch(player,such);
         }else if(item instanceof BoatItem such){
             return hasSuch(player,such);
-        }else if(item == Items.ELYTRA){
+        }else if(item instanceof ElytraItem){
             return hasSuch(player,item);
         }else if(item instanceof BowItem such){
             return hasSuch(player,such);
         }else if(item instanceof CrossbowItem such){
             return hasSuch(player,such);
-        }else if(item.components().has(DataComponents.EQUIPPABLE)){
-            return hasOrSwearing(player,item);
+        }else if(item instanceof ArmorItem armorItem){
+            return hasOrSwearing(player,armorItem);
         }else{
             return !canMerge(player,stack);
         }
     }
 
     private static boolean canMerge(Player player, ItemStack stack){
-        return player.inventoryMenu.slots.stream().anyMatch(slot -> ItemStack.isSameItemSameComponents(slot.getItem(), stack));
+        return player.inventoryMenu.slots.stream().anyMatch(slot -> ItemStack.isSameItemSameTags(slot.getItem(), stack));
     }
 
     private static boolean hasSuch(Player player, Item item){
         return player.inventoryMenu.slots.stream().anyMatch(slot->slot.getItem().getItem().getClass()==item.getClass());
     }
 
-    private static boolean hasOrSwearing(Player player,Item armor){
-        EquipmentSlot slot = armorSlot(armor);
-        if(slot == null) return true;
+    private static boolean hasOrSwearing(Player player, ArmorItem armor){
+        EquipmentSlot slot = armor.getEquipmentSlot();
         ItemStack equipped = player.getItemBySlot(slot);
         if(equipped.isEmpty()){
-            return player.inventoryMenu.slots.stream().anyMatch(sl->armorSlot(sl.getItem().getItem())==slot);
+            return player.inventoryMenu.slots.stream().anyMatch(
+                    inventorySlot -> inventorySlot.getItem().getItem() instanceof ArmorItem other
+                            && other.getEquipmentSlot() == slot
+            );
         }
         return true;
     }
 
-    private static EquipmentSlot armorSlot(Item armor){
-        var c = armor.components().get(DataComponents.EQUIPPABLE);
-        if(c==null) return null;//cantHappen
-        return c.slot();
-    }
-
     //copied from ExperienceOrb.java
     private static int repairPlayerItems(Player player, int repairAmount) {
-        // Simplified for 1.21.x: defer repairing via Mending to vanilla mechanics
-        return repairAmount;
+        Map.Entry<EquipmentSlot, ItemStack> entry =
+                EnchantmentHelper.getRandomItemWith(Enchantments.MENDING, player, ItemStack::isDamaged);
+        if (entry == null) {
+            return repairAmount;
+        }
+        ItemStack stack = entry.getValue();
+        // In 1.20.1 Mending repairs two durability for each consumed XP.
+        int repaired = Math.min(repairAmount * 2, stack.getDamageValue());
+        stack.setDamageValue(stack.getDamageValue() - repaired);
+        int remaining = repairAmount - repaired / 2;
+        return remaining > 0 ? repairPlayerItems(player, remaining) : 0;
     }
 }

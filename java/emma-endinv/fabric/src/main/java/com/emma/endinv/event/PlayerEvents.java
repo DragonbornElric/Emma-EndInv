@@ -69,9 +69,9 @@ public final class PlayerEvents {
                         ServerPlayer ownerPlayer = server.getPlayerList().getPlayer(ownerUuid);
                         if (ownerPlayer != null) {
                             for (Station st : new Station[]{Station.FURNACE, Station.SMOKER, Station.BLAST_FURNACE}) {
-                                endInv.tickCookingBackground(ownerPlayer.level(), st);
+                                endInv.tickCookingBackground(ownerPlayer.serverLevel(), st);
                             }
-                            endInv.tickBrewingBackground(ownerPlayer.level());
+                            endInv.tickBrewingBackground(ownerPlayer.serverLevel());
                         }
                     }
                 }

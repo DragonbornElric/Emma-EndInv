@@ -1,9 +1,9 @@
-accessWidener v2 official
-
-# GhostSlots: widen protected slot setters so EndInvCraftingRecipeBookComponent (outside the recipebook package) can call them
-accessible method net/minecraft/client/gui/screens/recipebook/GhostSlots setResult (Lnet/minecraft/world/inventory/Slot;Lnet/minecraft/util/context/ContextMap;Lnet/minecraft/world/item/crafting/display/SlotDisplay;)V
-accessible method net/minecraft/client/gui/screens/recipebook/GhostSlots setInput (Lnet/minecraft/world/inventory/Slot;Lnet/minecraft/util/context/ContextMap;Lnet/minecraft/world/item/crafting/display/SlotDisplay;)V
+accessWidener v2 named
 
 # Allow EndlessInventoryScreen to set dynamic imageWidth/imageHeight after the ARBS super() call
 mutable field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen imageWidth I
 mutable field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen imageHeight I
+
+# Loader-neutral screen registration. MenuScreens.register and its constructor type are private in 1.20.1.
+accessible class net/minecraft/client/gui/screens/MenuScreens$ScreenConstructor
+accessible method net/minecraft/client/gui/screens/MenuScreens register (Lnet/minecraft/world/inventory/MenuType;Lnet/minecraft/client/gui/screens/MenuScreens$ScreenConstructor;)V

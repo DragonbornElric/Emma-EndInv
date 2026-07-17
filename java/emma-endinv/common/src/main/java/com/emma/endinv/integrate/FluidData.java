@@ -1,6 +1,6 @@
 package com.emma.endinv.integrate;
 
-import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.nbt.CompoundTag;
 
 import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
@@ -10,7 +10,7 @@ import java.util.Objects;
  * @param id to get the fluid instance by id (in registration)
  * @param amountMB i bucket = 1000mb
  */
-public record FluidData(String id, long amountMB, @Nullable DataComponentPatch component) implements IFluidStack {
+public record FluidData(String id, long amountMB, @Nullable CompoundTag component) implements IFluidStack {
 
     public static final FluidData EMPTY = new FluidData("air",0,null);
 

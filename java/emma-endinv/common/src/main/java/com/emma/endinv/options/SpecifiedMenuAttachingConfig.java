@@ -5,9 +5,8 @@ import com.emma.endinv.options.config.ConfigEntryImpl;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.InventoryMenu;
@@ -197,7 +196,7 @@ public class SpecifiedMenuAttachingConfig{
         public static List<String> fromMap(Map<MenuType<?>, Boolean> map) {
             List<String> out = new ArrayList<>(map.size());
             for (var e : map.entrySet()) {
-                Identifier id = BuiltInRegistries.MENU.getKey(e.getKey());
+                ResourceLocation id = BuiltInRegistries.MENU.getKey(e.getKey());
                 if (id != null && e.getValue() != null) out.add(id + ":" + e.getValue());
             }
             out.sort(Comparator.naturalOrder());
@@ -222,13 +221,13 @@ public class SpecifiedMenuAttachingConfig{
                 String namespaceTxt = configEntry.substring(0,LCIndex).trim();
 
                 boolean value = parseBoolean(boolTxt);
-                Identifier rl = Identifier.parse(namespaceTxt);
+                ResourceLocation rl = new ResourceLocation(namespaceTxt);
 
                 if(rl.getPath().equals("inventory") || rl.getPath().equals("inventory_menu")){
                     return new ParseStringResult(true, null, value);
                 }
 
-                var type = BuiltInRegistries.MENU.get(rl).map(Holder::value).orElse(null);
+                var type = BuiltInRegistries.MENU.get(rl);
                 if(type==null) return ParseStringResult.FAILED;
 
                 return new ParseStringResult(true, type, value);

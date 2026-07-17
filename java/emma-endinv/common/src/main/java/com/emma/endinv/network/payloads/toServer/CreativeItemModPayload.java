@@ -1,13 +1,10 @@
 package com.emma.endinv.network.payloads.toServer;
 
-import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.ModPacketPayload;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -19,30 +16,23 @@ import java.util.Optional;
  */
 public record CreativeItemModPayload(ItemStack stack, boolean isAdding) implements ModPacketPayload {
 
-    public static void encode(CreativeItemModPayload payload, RegistryFriendlyByteBuf o){
-        ItemStack.STREAM_CODEC.encode(o, payload.stack);
+    public static void encode(CreativeItemModPayload payload, FriendlyByteBuf o){
+        o.writeItem(payload.stack);
         o.writeBoolean(payload.isAdding);
     }
 
-    public static CreativeItemModPayload decode(RegistryFriendlyByteBuf o){
-        return new CreativeItemModPayload(ItemStack.STREAM_CODEC.decode(o),o.readBoolean());
+    public static CreativeItemModPayload decode(FriendlyByteBuf o){
+        return new CreativeItemModPayload(o.readItem(),o.readBoolean());
     }
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, CreativeItemModPayload> STREAM_CODEC =
-            StreamCodec.of((buf, value) -> encode(value, buf), CreativeItemModPayload::decode);
-
-    public static final CustomPacketPayload.Type<CreativeItemModPayload> TYPE =
-            new CustomPacketPayload.Type<>(AbstractModInitializer.withModLocation("item_modify"));
-
+    @Override
+    public void write(FriendlyByteBuf buffer) {
+        encode(this, buffer);
+    }
 
     @Override
     public String id() {
         return "item_modify";
-    }
-
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
-        return TYPE;
     }
 
     @Override

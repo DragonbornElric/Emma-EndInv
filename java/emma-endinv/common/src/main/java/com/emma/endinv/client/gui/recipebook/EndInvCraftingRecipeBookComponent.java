@@ -1,101 +1,21 @@
 package com.emma.endinv.client.gui.recipebook;
 
 import com.emma.endinv.menu.EndlessInventoryMenu;
-import net.minecraft.client.gui.components.WidgetSprites;
-import net.minecraft.client.gui.screens.recipebook.GhostSlots;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
-import net.minecraft.client.gui.screens.recipebook.RecipeCollection;
-import net.minecraft.client.gui.screens.recipebook.SearchRecipeBookCategory;
-import net.minecraft.network.chat.Component;
-import net.minecraft.recipebook.PlaceRecipeHelper;
-import net.minecraft.resources.Identifier;
-import net.minecraft.util.context.ContextMap;
-import net.minecraft.world.entity.player.StackedItemContents;
-import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.RecipeBookCategories;
-import net.minecraft.world.item.crafting.display.RecipeDisplay;
-import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
-import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
 
-import java.util.List;
-
-public class EndInvCraftingRecipeBookComponent extends RecipeBookComponent<EndlessInventoryMenu>
+/**
+ * Marker subclass used by the shared recipe-book mixin.
+ *
+ * <p>Minecraft 1.20.1's {@link RecipeBookComponent} derives its tabs, filter
+ * textures, craft-grid dimensions and ghost-recipe layout from the active
+ * {@code RecipeBookMenu}.  Keeping this as a distinct subclass lets the EndInv
+ * mixin add the remote inventory contents and pin the panel without replacing
+ * any of vanilla's 1.20.1 recipe-book behaviour.</p>
+ */
+public class EndInvCraftingRecipeBookComponent extends RecipeBookComponent
         implements EndInvRecipeBookComponent {
 
-    private static final WidgetSprites FILTER_BUTTON_SPRITES = new WidgetSprites(
-        Identifier.withDefaultNamespace("recipe_book/filter_enabled"),
-        Identifier.withDefaultNamespace("recipe_book/filter_disabled"),
-        Identifier.withDefaultNamespace("recipe_book/filter_enabled_highlighted"),
-        Identifier.withDefaultNamespace("recipe_book/filter_disabled_highlighted")
-    );
-    private static final Component ONLY_CRAFTABLES_TOOLTIP =
-        Component.translatable("gui.recipebook.toggleRecipes.craftable");
-    private static final List<TabInfo> TABS = List.of(
-        new TabInfo(SearchRecipeBookCategory.CRAFTING),
-        new TabInfo(Items.IRON_AXE, Items.GOLDEN_SWORD, RecipeBookCategories.CRAFTING_EQUIPMENT),
-        new TabInfo(Items.BRICKS, RecipeBookCategories.CRAFTING_BUILDING_BLOCKS),
-        new TabInfo(Items.LAVA_BUCKET, Items.APPLE, RecipeBookCategories.CRAFTING_MISC),
-        new TabInfo(Items.REDSTONE, RecipeBookCategories.CRAFTING_REDSTONE)
-    );
-
     public EndInvCraftingRecipeBookComponent(EndlessInventoryMenu menu) {
-        super(menu, TABS);
-    }
-
-    @Override
-    protected WidgetSprites getFilterButtonTextures() {
-        return FILTER_BUTTON_SPRITES;
-    }
-
-    @Override
-    protected Component getRecipeFilterName() {
-        return ONLY_CRAFTABLES_TOOLTIP;
-    }
-
-    @Override
-    protected boolean isCraftingSlot(Slot slot) {
-        return menu.getResultSlot() == slot || menu.getInputGridSlots().contains(slot);
-    }
-
-    @Override
-    protected void selectMatchingRecipes(RecipeCollection collection, StackedItemContents stackedContents) {
-        collection.selectRecipes(stackedContents, this::canDisplay);
-    }
-
-    private boolean canDisplay(RecipeDisplay display) {
-        int gridWidth = menu.getGridWidth();
-        int gridHeight = menu.getGridHeight();
-        return switch (display) {
-            case ShapedCraftingRecipeDisplay shaped ->
-                gridWidth >= shaped.width() && gridHeight >= shaped.height();
-            case ShapelessCraftingRecipeDisplay shapeless ->
-                gridWidth * gridHeight >= shapeless.ingredients().size();
-            default -> false;
-        };
-    }
-
-    @Override
-    protected void fillGhostRecipe(GhostSlots ghostSlots, RecipeDisplay recipe, ContextMap context) {
-        ghostSlots.setResult(menu.getResultSlot(), context, recipe.result());
-        switch (recipe) {
-            case ShapedCraftingRecipeDisplay shaped -> {
-                List<Slot> inputSlots = menu.getInputGridSlots();
-                PlaceRecipeHelper.placeRecipe(
-                    menu.getGridWidth(), menu.getGridHeight(),
-                    shaped.width(), shaped.height(), shaped.ingredients(),
-                    (ingredient, gridIndex, gridXPos, gridYPos) ->
-                        ghostSlots.setInput(inputSlots.get(gridIndex), context, ingredient)
-                );
-            }
-            case ShapelessCraftingRecipeDisplay shapeless -> {
-                List<Slot> inputSlots = menu.getInputGridSlots();
-                int count = Math.min(shapeless.ingredients().size(), inputSlots.size());
-                for (int i = 0; i < count; i++) {
-                    ghostSlots.setInput(inputSlots.get(i), context, shapeless.ingredients().get(i));
-                }
-            }
-            default -> {}
-        }
+        super();
     }
 }

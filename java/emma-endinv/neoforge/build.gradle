@@ -1,18 +1,17 @@
 plugins {
     id 'multiloader-loader'
-    id 'net.neoforged.moddev'
+    id 'net.neoforged.moddev.legacyforge'
 }
 
-neoForge {
-    version = neoforge_version
-    def at = project(':common').file('src/main/resources/META-INF/accesstransformer.cfg')
-    if (at.exists()) {
-        accessTransformers.from(at.absolutePath)
+legacyForge {
+    enable {
+        neoForgeVersion = legacy_neoforge_version
     }
+
     runs {
         configureEach {
-            systemProperty('neoforge.enabledGameTestNamespaces', mod_id)
-            ideName = "NeoForge ${it.name.capitalize()} (${project.path})"
+            systemProperty('forge.enabledGameTestNamespaces', mod_id)
+            ideName = "Legacy NeoForge ${it.name.capitalize()} (${project.path})"
         }
         client {
             client()
@@ -29,6 +28,12 @@ neoForge {
             sourceSet sourceSets.main
         }
     }
+}
+
+processResources {
+    inputs.properties([
+            legacy_neoforge_version: legacy_neoforge_version
+    ])
 }
 
 def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)

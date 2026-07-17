@@ -1,26 +1,16 @@
 package com.emma.endinv.network.payloads.toClient;
 
-import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.client.CachedSrcInv;
 import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.ModPacketPayload;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * holds various attributes that influent ItemDisplay,
  *  compared to {@link EndInvConfig}
  */
 public record EndInvMetadata(int itemSize, int maxStackSize, boolean infinityMode, EndInvConfig config) implements ModPacketPayload {
-
-    public static final StreamCodec<RegistryFriendlyByteBuf, EndInvMetadata> STREAM_CODEC =
-            StreamCodec.of((buf, value) -> encode(value, buf), EndInvMetadata::decode);
-
-    public static final CustomPacketPayload.Type<EndInvMetadata> TYPE =
-            new CustomPacketPayload.Type<>(AbstractModInitializer.withModLocation("endinv_meta"));
 
     public static void encode(EndInvMetadata endInvMetadata,FriendlyByteBuf o){
         o.writeInt(endInvMetadata.itemSize);
@@ -36,6 +26,11 @@ public record EndInvMetadata(int itemSize, int maxStackSize, boolean infinityMod
                 o.readBoolean(),
                 EndInvConfig.decode(o)
         );
+    }
+
+    @Override
+    public void write(FriendlyByteBuf buffer) {
+        encode(this, buffer);
     }
 
     public static EndInvMetadata getWith(EndlessInventory endInv) {
@@ -60,8 +55,4 @@ public record EndInvMetadata(int itemSize, int maxStackSize, boolean infinityMod
         return "endinv_meta";
     }
 
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
-        return TYPE;
-    }
 }

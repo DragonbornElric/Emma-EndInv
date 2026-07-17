@@ -9,6 +9,12 @@ plugins {
     id 'io.papermc.paperweight.userdev'
 }
 
+paperweight {
+    // Folia 1.20.1 runs the Spigot-obfuscated production namespace.
+    reobfArtifactConfiguration =
+            io.papermc.paperweight.userdev.ReobfArtifactConfiguration.getREOBF_PRODUCTION()
+}
+
 base {
     archivesName = "${mod_id}-folia-${minecraft_version}"
 }
@@ -64,8 +70,14 @@ tasks.named('compileJava', JavaCompile) {
 }
 
 processResources {
-    dependsOn(configurations.commonResources)
-    from(configurations.commonResources)
+    from(rootProject.file('common/src/main/resources'))
+    // Folia replaces the loader mixins with Bukkit/Paper event adapters. Do
+    // not package client-loader metadata that Paper cannot and should not
+    // consume; shared language and image assets remain available.
+    exclude 'endless_inventory.mixins.json'
+    exclude 'endinv.accesswidener'
+    exclude 'META-INF/accesstransformer.cfg'
+    exclude 'pack.mcmeta'
 
     inputs.property('version', project.version)
     filesMatching('paper-plugin.yml') {
@@ -78,6 +90,11 @@ tasks.named('sourcesJar', Jar) {
     from {
         configurations.commonServerJava.collect { zip -> project.zipTree(zip) }
     }
-    dependsOn(configurations.commonResources)
-    from(configurations.commonResources)
+    from(rootProject.file('common/src/main/resources'))
+}
+
+tasks.named('assemble') {
+    // The plain jar is Mojang-mapped and carries a -dev classifier. Folia
+    // 1.20.1 must receive paperweight's Spigot-obfuscated production jar.
+    dependsOn(tasks.named('reobfJar'))
 }

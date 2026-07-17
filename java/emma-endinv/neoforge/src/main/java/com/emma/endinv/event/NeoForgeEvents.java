@@ -16,15 +16,13 @@ import com.emma.endinv.options.ServerConfigs;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.neoforge.event.entity.living.LivingEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.level.LevelEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
-import net.neoforged.neoforge.common.NeoForge;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
+import net.minecraftforge.event.level.LevelEvent;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -37,14 +35,13 @@ public final class NeoForgeEvents {
 
     private NeoForgeEvents() {}
 
-    public static void register(IEventBus modBus) {
-        // Game events go on the NeoForge global bus, not the mod bus
-        NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onRegisterCommands);
-        NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onLevelLoad);
-        NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onServerTick);
-        NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerLogin);
-        NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerLogout);
-        NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerClone);
+    public static void register() {
+        MinecraftForge.EVENT_BUS.addListener(NeoForgeEvents::onRegisterCommands);
+        MinecraftForge.EVENT_BUS.addListener(NeoForgeEvents::onLevelLoad);
+        MinecraftForge.EVENT_BUS.addListener(NeoForgeEvents::onServerTick);
+        MinecraftForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerLogin);
+        MinecraftForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerLogout);
+        MinecraftForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerClone);
     }
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {
@@ -55,46 +52,62 @@ public final class NeoForgeEvents {
     private static void onLevelLoad(LevelEvent.Load event) {
         if (event.getLevel() instanceof ServerLevel level) {
             EndlessInventoryData.init(level);
-            if (level.getServer() != null) {
-                markPlayersForSync(level.getServer());
-            }
+            markPlayersForSync(level.getServer());
         }
     }
 
-    private static void onServerTick(ServerTickEvent.Post event) {
-        flushSync(event.getServer());
+    private static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            flushSync(event.getServer());
+        }
     }
 
     private static void onPlayerLogin(PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer sp) {
-            PENDING_SYNC.add(sp.getUUID());
+        if (event.getEntity() instanceof ServerPlayer player) {
+            PENDING_SYNC.add(player.getUUID());
         }
     }
 
     private static void onPlayerLogout(PlayerLoggedOutEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            if (ServerLevelEndInv.levelEndInvData == null) return;
-            UUID uuid = player.getUUID();
-            for (EndlessInventory endInv : ServerLevelEndInv.levelEndInvData.levelEndInvs) {
-                endInv.viewerIds.remove(uuid);
-            }
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        PENDING_SYNC.remove(player.getUUID());
+        ServerLevelEndInv.PAGE_META_DATA_MANAGER.remove(player);
+        ServerLevelEndInv.TEMP_ENDINV_REG.remove(player);
+
+        if (ServerLevelEndInv.levelEndInvData == null) return;
+        UUID uuid = player.getUUID();
+        for (EndlessInventory endInv : ServerLevelEndInv.levelEndInvData.levelEndInvs) {
+            endInv.viewerIds.remove(uuid);
         }
     }
 
     private static void onPlayerClone(PlayerEvent.Clone event) {
-        if (event.isWasDeath()) return;
-        ServerPlayer oldPlayer = (ServerPlayer) event.getOriginal();
-        ServerPlayer newPlayer = (ServerPlayer) event.getEntity();
-
-        var uuidAttachment = ModRegistries.NbtAttachments.getEndInvUUID();
-        UUID uuid = uuidAttachment.getWith(oldPlayer);
-        if (uuid != null) uuidAttachment.setTo(newPlayer, uuid);
-
-        SyncedConfig config = ModRegistries.NbtAttachments.getSyncedConfig().getWith(oldPlayer);
-        if (config != null) {
-            ModRegistries.NbtAttachments.getSyncedConfig().setTo(newPlayer, config);
-            ModInfo.getPacketDistributor().sendToPlayer(newPlayer, config);
+        if (!(event.getOriginal() instanceof ServerPlayer oldPlayer)
+                || !(event.getEntity() instanceof ServerPlayer newPlayer)) {
+            return;
         }
+
+        /*
+         * NeoForge attachments can opt into copy-on-death. Forge 47 capabilities
+         * cannot, so copy both values for every clone (death and End return).
+         */
+        oldPlayer.reviveCaps();
+        try {
+            UUID uuid = ModRegistries.NbtAttachments.getEndInvUUID().getWith(oldPlayer);
+            if (uuid != null) {
+                ModRegistries.NbtAttachments.getEndInvUUID().setTo(newPlayer, uuid);
+            }
+
+            SyncedConfig config =
+                    ModRegistries.NbtAttachments.getSyncedConfig().getWith(oldPlayer);
+            if (config != null) {
+                ModRegistries.NbtAttachments.getSyncedConfig().setTo(newPlayer, config);
+                ModInfo.getPacketDistributor().sendToPlayer(newPlayer, config);
+            }
+        } finally {
+            oldPlayer.invalidateCaps();
+        }
+
         PENDING_SYNC.add(newPlayer.getUUID());
     }
 
@@ -114,28 +127,30 @@ public final class NeoForgeEvents {
                 iterator.remove();
             }
         }
-        if (ServerLevelEndInv.levelEndInvData != null) {
-            Set<Object> openSourceInventories = new HashSet<>();
-            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                if (p.containerMenu instanceof EndlessInventoryMenu eim) {
-                    openSourceInventories.add(eim.getSourceInventory());
-                }
+
+        if (ServerLevelEndInv.levelEndInvData == null) return;
+
+        Set<Object> openSourceInventories = new HashSet<>();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (player.containerMenu instanceof EndlessInventoryMenu menu) {
+                openSourceInventories.add(menu.getSourceInventory());
             }
-            for (EndlessInventory endInv : ServerLevelEndInv.levelEndInvData.levelEndInvs) {
-                endInv.broadcastChanges(server);
-                if (!openSourceInventories.contains(endInv)) {
-                    UUID ownerUuid = endInv.getOwnerUUID();
-                    if (ownerUuid != null) {
-                        ServerPlayer ownerPlayer = server.getPlayerList().getPlayer(ownerUuid);
-                        if (ownerPlayer != null) {
-                            for (Station st : new Station[]{Station.FURNACE, Station.SMOKER, Station.BLAST_FURNACE}) {
-                                endInv.tickCookingBackground(ownerPlayer.level(), st);
-                            }
-                            endInv.tickBrewingBackground(ownerPlayer.level());
-                        }
-                    }
-                }
+        }
+
+        for (EndlessInventory endInv : ServerLevelEndInv.levelEndInvData.levelEndInvs) {
+            endInv.broadcastChanges(server);
+            if (openSourceInventories.contains(endInv)) continue;
+
+            UUID ownerUuid = endInv.getOwnerUUID();
+            if (ownerUuid == null) continue;
+            ServerPlayer owner = server.getPlayerList().getPlayer(ownerUuid);
+            if (owner == null) continue;
+
+            for (Station station :
+                    new Station[]{Station.FURNACE, Station.SMOKER, Station.BLAST_FURNACE}) {
+                endInv.tickCookingBackground(owner.serverLevel(), station);
             }
+            endInv.tickBrewingBackground(owner.serverLevel());
         }
     }
 
@@ -151,18 +166,22 @@ public final class NeoForgeEvents {
 
         ModInfo.getPacketDistributor().sendToPlayer(player, syncedConfig);
 
-        var menuCfg = ServerConfigs.SPECIFIED_ATTACHABILITY.get();
+        var menuConfig = ServerConfigs.SPECIFIED_ATTACHABILITY.get();
         boolean defaultAttach = ServerConfigs.DEFAULT_ATTACH.get();
-        ModInfo.getPacketDistributor().sendToPlayer(player,
+        ModInfo.getPacketDistributor().sendToPlayer(
+                player,
                 new com.emma.endinv.network.payloads.toClient.MenuAttachabilityPayload(
                         defaultAttach,
-                        menuCfg.isInventoryAttachable(),
-                        menuCfg.getConfigs()
-                ));
+                        menuConfig.isInventoryAttachable(),
+                        menuConfig.getConfigs()
+                )
+        );
 
         ServerLevelEndInv.getEndInvForPlayer(player).ifPresent(endInv -> {
-            ModInfo.getPacketDistributor().sendToPlayer(player, new EndInvContent(endInv.getItemMap()));
-            ModInfo.getPacketDistributor().sendToPlayer(player, EndInvMetadata.getWith(endInv));
+            ModInfo.getPacketDistributor()
+                    .sendToPlayer(player, new EndInvContent(endInv.getItemMap()));
+            ModInfo.getPacketDistributor()
+                    .sendToPlayer(player, EndInvMetadata.getWith(endInv));
         });
     }
 }

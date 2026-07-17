@@ -13,9 +13,9 @@ public record FurnaceState(
 
     public static final Codec<FurnaceState> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
-                    ItemStack.OPTIONAL_CODEC.optionalFieldOf("input", ItemStack.EMPTY).forGetter(FurnaceState::input),
-                    ItemStack.OPTIONAL_CODEC.optionalFieldOf("fuel", ItemStack.EMPTY).forGetter(FurnaceState::fuel),
-                    ItemStack.OPTIONAL_CODEC.optionalFieldOf("result", ItemStack.EMPTY).forGetter(FurnaceState::result),
+                    ItemStack.CODEC.optionalFieldOf("input", ItemStack.EMPTY).forGetter(FurnaceState::input),
+                    ItemStack.CODEC.optionalFieldOf("fuel", ItemStack.EMPTY).forGetter(FurnaceState::fuel),
+                    ItemStack.CODEC.optionalFieldOf("result", ItemStack.EMPTY).forGetter(FurnaceState::result),
                     Codec.INT.optionalFieldOf("lit_time", 0).forGetter(FurnaceState::litTime),
                     Codec.INT.optionalFieldOf("lit_duration", 0).forGetter(FurnaceState::litDuration),
                     Codec.INT.optionalFieldOf("cook_time", 0).forGetter(FurnaceState::cookTime),

@@ -7,8 +7,7 @@ import com.emma.endinv.menu.page.PageType;
 import com.emma.endinv.network.IPacketDistributor;
 import com.emma.endinv.network.payloads.SyncedConfig;
 import net.minecraft.core.Registry;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
@@ -27,8 +26,8 @@ public abstract class AbstractModInitializer {
         <R extends T> Supplier<R> register(String id, Supplier<R> supplier);
     }
 
-    public static Identifier withModLocation(String id){
-        return Identifier.fromNamespaceAndPath(ModInfo.MOD_ID, id);
+    public static ResourceLocation withModLocation(String id){
+        return new ResourceLocation(ModInfo.MOD_ID, id);
     }
 
     protected AbstractModInitializer(){}
@@ -44,9 +43,9 @@ public abstract class AbstractModInitializer {
 
     private void registerItems(RegistryCallback<Item> method){
         ModRegistries.Items.testEndInv = method.register("endinv_accessor",
-                ()->new TestEndInv(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, withModLocation("endinv_accessor")))));
+                () -> new TestEndInv(new Item.Properties()));
         ModRegistries.Items.screenDebugger = method.register("screen_debugger",
-                ()->new ScreenDebugger(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, withModLocation("screen_debugger")))));
+                () -> new ScreenDebugger(new Item.Properties()));
     }
 
     private void registerMenuType(RegistryCallback<MenuType<?>> method){

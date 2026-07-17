@@ -6,12 +6,10 @@ import com.emma.endinv.network.payloads.SyncedConfig;
 import com.emma.endinv.network.payloads.toServer.*;
 import com.mojang.logging.LogUtils;
 import io.netty.buffer.Unpooled;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.PluginMessageListener;
@@ -26,20 +24,20 @@ public final class FoliaIncomingPayloadBridge implements PluginMessageListener {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private interface PayloadDecoder {
-        ModPacketPayload decode(RegistryFriendlyByteBuf buf);
+        ModPacketPayload decode(FriendlyByteBuf buf);
     }
 
     private static final Map<String, PayloadDecoder> DECODERS = Map.ofEntries(
-            Map.entry(channel(ItemClickPayload.TYPE),                decodeWith(ItemClickPayload.STREAM_CODEC)),
-            Map.entry(channel(CreativeItemModPayload.TYPE),          decodeWith(CreativeItemModPayload.STREAM_CODEC)),
-            Map.entry(channel(ItemPageContext.TYPE),                 decodeWith(ItemPageContext.STREAM_CODEC)),
-            Map.entry(channel(OpenEndInvPayload.TYPE),               decodeWith(OpenEndInvPayload.STREAM_CODEC)),
-            Map.entry(channel(QuickMoveToPagePayload.TYPE),          decodeWith(QuickMoveToPagePayload.STREAM_CODEC)),
-            Map.entry(channel(BulkQuickMoveFromPagePayload.TYPE),    decodeWith(BulkQuickMoveFromPagePayload.STREAM_CODEC)),
-            Map.entry(channel(StarItemPayload.TYPE),                 decodeWith(StarItemPayload.STREAM_CODEC)),
-            Map.entry(channel(SetActiveStationPayload.TYPE),         decodeWith(SetActiveStationPayload.STREAM_CODEC)),
-            Map.entry(channel(SwapMenuSlotPayload.TYPE),             decodeWith(SwapMenuSlotPayload.STREAM_CODEC)),
-            Map.entry(channel(SyncedConfig.TYPE),                    decodeWith(SyncedConfig.STREAM_CODEC))
+            Map.entry(channel("item_click"), ItemClickPayload::decode),
+            Map.entry(channel("item_modify"), CreativeItemModPayload::decode),
+            Map.entry(channel("page_context"), ItemPageContext::decode),
+            Map.entry(channel("open_endinv"), OpenEndInvPayload::decode),
+            Map.entry(channel("quick_move_page"), QuickMoveToPagePayload::decode),
+            Map.entry(channel("bulk_quick_move_from_page"), BulkQuickMoveFromPagePayload::decode),
+            Map.entry(channel("star_item"), StarItemPayload::decode),
+            Map.entry(channel("set_active_station"), SetActiveStationPayload::decode),
+            Map.entry(channel("swap_menu_slot"), SwapMenuSlotPayload::decode),
+            Map.entry(channel("endinv_settings"), SyncedConfig::decode)
     );
 
     private final MinecraftServer server;
@@ -70,7 +68,7 @@ public final class FoliaIncomingPayloadBridge implements PluginMessageListener {
             return;
         }
         ServerPlayer serverPlayer = craftPlayer.getHandle();
-        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(message), server.registryAccess());
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.wrappedBuffer(message));
         try {
             ModPacketPayload payload = decoder.decode(buf);
             // Hop to the player's region thread before invoking handle() (Folia requirement).
@@ -82,11 +80,7 @@ public final class FoliaIncomingPayloadBridge implements PluginMessageListener {
         }
     }
 
-    private static <T extends ModPacketPayload> PayloadDecoder decodeWith(StreamCodec<RegistryFriendlyByteBuf, T> codec) {
-        return codec::decode;
-    }
-
-    private static String channel(CustomPacketPayload.Type<?> type) {
-        return type.id().toString();
+    private static String channel(String id) {
+        return "endless_inventory:" + id;
     }
 }

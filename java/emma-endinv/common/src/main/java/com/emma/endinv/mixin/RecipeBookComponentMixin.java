@@ -5,7 +5,7 @@ import com.emma.endinv.client.gui.recipebook.EndInvRecipeBookComponent;
 import com.emma.endinv.util.recipeTransferHelper.RecipeItemProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
-import net.minecraft.world.entity.player.StackedItemContents;
+import net.minecraft.world.entity.player.StackedContents;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -19,7 +19,7 @@ public class RecipeBookComponentMixin {
 
     @Final
     @Shadow
-    private StackedItemContents stackedContents;
+    private StackedContents stackedContents;
     @Shadow
     protected Minecraft minecraft;
     @Shadow
@@ -29,14 +29,14 @@ public class RecipeBookComponentMixin {
     @Unique
     private final CachedSrcInv srcInv = CachedSrcInv.INSTANCE;
 
-    @Inject(method = "initVisuals", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/inventory/RecipeBookMenu;fillCraftSlotsStackedContents(Lnet/minecraft/world/entity/player/StackedItemContents;)V"))
+    @Inject(method = "initVisuals", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/inventory/RecipeBookMenu;fillCraftSlotsStackedContents(Lnet/minecraft/world/entity/player/StackedContents;)V"))
     private void fillEndInvStackedContents(CallbackInfo ci) {
-        RecipeItemProvider.fillStackedItemContents(srcInv.getItemsAsList(), stackedContents);
+        RecipeItemProvider.fillStackedContents(srcInv.getItemsAsList(), stackedContents);
     }
 
-    @Inject(method = "updateStackedContents", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/inventory/RecipeBookMenu;fillCraftSlotsStackedContents(Lnet/minecraft/world/entity/player/StackedItemContents;)V"))
+    @Inject(method = "updateStackedContents", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/inventory/RecipeBookMenu;fillCraftSlotsStackedContents(Lnet/minecraft/world/entity/player/StackedContents;)V"))
     private void updateStackedContentsOfEndInv(CallbackInfo ci) {
-        RecipeItemProvider.fillStackedItemContents(srcInv.getItemsAsList(), stackedContents);
+        RecipeItemProvider.fillStackedContents(srcInv.getItemsAsList(), stackedContents);
     }
 
     // Reposition the panel to the left edge of the screen when opened from EndInv

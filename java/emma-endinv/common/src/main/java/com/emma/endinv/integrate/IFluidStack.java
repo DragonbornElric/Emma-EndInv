@@ -1,6 +1,6 @@
 package com.emma.endinv.integrate;
 
-import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.nbt.CompoundTag;
 
 import java.util.Objects;
 
@@ -13,5 +13,5 @@ public interface IFluidStack {
 
     long amountMB();
 
-    DataComponentPatch component();
+    CompoundTag component();
 }

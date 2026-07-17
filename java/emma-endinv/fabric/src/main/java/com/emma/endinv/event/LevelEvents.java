@@ -1,7 +1,7 @@
 package com.emma.endinv.event;
 
 import com.emma.endinv.data.EndlessInventoryData;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 
@@ -11,7 +11,7 @@ public final class LevelEvents {
     }
 
     public static void register() {
-        ServerLevelEvents.LOAD.register(LevelEvents::onLoad);
+        ServerWorldEvents.LOAD.register(LevelEvents::onLoad);
     }
 
     private static void onLoad(MinecraftServer server, ServerLevel level) {

@@ -1,7 +1,7 @@
 package com.emma.endinv.client.event;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
@@ -26,7 +26,7 @@ public class AutoPickTipper {
         }
         // 尝试合并已有物品
         for (PickupDisplayItem item : pickupQueue) {
-            if (ItemStack.isSameItemSameComponents(item.stack, stack)) {
+            if (ItemStack.isSameItemSameTags(item.stack, stack)) {
                 item.stack.grow(stack.getCount());
                 item.timeLeft = DISPLAY_TICKS;
                 pickupQueue.remove(item);
@@ -42,7 +42,7 @@ public class AutoPickTipper {
         pickupQueue.addFirst(new PickupDisplayItem(stack.copy(), DISPLAY_TICKS));
     }
 
-    public static void onRenderGui(GuiGraphicsExtractor guiGraphics) {
+    public static void onRenderGui(GuiGraphics guiGraphics) {
         if (pickupQueue.isEmpty()) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -55,8 +55,8 @@ public class AutoPickTipper {
             int y = screenHeight - 20 - (index * 18);
             int color = rarityColor(item.stack.getRarity());
 
-            guiGraphics.item(item.stack,x,y);
-            guiGraphics.itemDecorations(Minecraft.getInstance().font, item.stack, x, y);
+            guiGraphics.renderItem(item.stack,x,y);
+            guiGraphics.renderItemDecorations(Minecraft.getInstance().font, item.stack, x, y);
             //guiGraphics.pose().pushPose();
             //guiGraphics.pose().mulPose(new Quaternionf(new AxisAngle4d(Math.PI/2, 1.0, 1.0, 1.0)));
             guiGraphics.fillGradient(x - 48, y, x + 16, y + 16, 0x00000000, color);
@@ -85,7 +85,7 @@ public class AutoPickTipper {
         if (rarity == Rarity.COMMON) {
             return 0x88ffffff;
         } else {
-            var color = rarity.color();
+            var color = rarity.color;
             Integer rgb = color != null ? color.getColor() : null;
             return rgb != null ? (0xff000000 | rgb) : 0x88ffffff;
         }

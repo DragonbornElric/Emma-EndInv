@@ -15,18 +15,20 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionBrewing;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.SingleRecipeInput;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import org.slf4j.Logger;
 
 import org.jetbrains.annotations.Nullable;
@@ -41,11 +43,14 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
     @SuppressWarnings("deprecation")
     public static final Codec<Map<ItemKey, ItemState>> ITEM_MAP_CODEC = Codec.list(
             RecordCodecBuilder.<Map.Entry<ItemKey,ItemState>>create(instance -> instance.group(
-                    Item.CODEC.fieldOf(ITEM_ID_KEY).forGetter(e->e.getKey().item().builtInRegistryHolder()),
-                    DataComponentPatch.CODEC.optionalFieldOf(COMPONENTS_KEY, DataComponentPatch.EMPTY).forGetter(e -> e.getKey().components()),
+                    BuiltInRegistries.ITEM.byNameCodec().fieldOf(ITEM_ID_KEY)
+                            .forGetter(entry -> entry.getKey().item()),
+                    CompoundTag.CODEC.optionalFieldOf(COMPONENTS_KEY)
+                            .forGetter(entry -> Optional.ofNullable(entry.getKey().tag())),
                     Codec.INT.fieldOf(ITEM_COUNT_KEY).forGetter(e -> e.getValue().count()),
                     Codec.LONG.fieldOf(LAST_MOD_TIME_LONG_KEY).forGetter(e -> e.getValue().lastModTime())
-            ).apply(instance, (item, com, c, mod) -> Map.entry(new ItemKey(item, com), new ItemState(c, mod))))
+            ).apply(instance, (item, tag, count, modified) ->
+                    Map.entry(new ItemKey(item, tag.orElse(null)), new ItemState(count, modified))))
     ).xmap(
             lst -> {
                 Map<ItemKey, ItemState> map = new Object2ObjectLinkedOpenHashMap<>(lst.size());
@@ -64,7 +69,8 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                     ITEM_MAP_CODEC.fieldOf(ITEM_LIST_KEY).forGetter(EndlessInventory::getItemMap),
                     EndInvAffinities.CODEC.fieldOf(AFFINITY_KEY).forGetter(endinv->endinv.affinities),
                     UUIDUtil.CODEC.fieldOf(UUID_KEY).forGetter(EndlessInventory::getUuid),
-                    UUIDUtil.CODEC.fieldOf(OWNER_UUID_KEY).forGetter(endinv -> endinv.owner),
+                    UUIDUtil.CODEC.optionalFieldOf(OWNER_UUID_KEY)
+                            .forGetter(endinv -> Optional.ofNullable(endinv.owner)),
                     Codec.list(UUIDUtil.CODEC).fieldOf(WHITE_LIST_KEY).forGetter(ei -> ei.white_list),
                     Codec.STRING.xmap(Accessibility::valueOf, Accessibility::name).fieldOf(ACCESSIBILITY_KEY).forGetter(EndlessInventory::getAccessibility),
                     Codec.INT.fieldOf(MAX_STACK_SIZE_INT_KEY).forGetter(EndlessInventory::getMaxItemStackSize),
@@ -76,7 +82,7 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                         ).apply(instance, (itemMap, aff, uuid, ownerUuid, wLstUid, acc, maxSize, infBool, furnaceState, smokerState, blastState, brewingState) -> {
                             EndlessInventory endInv = new EndlessInventory(uuid, aff);
                                endInv.itemMap.putAll(itemMap);
-                               endInv.owner = ownerUuid;
+                               endInv.owner = ownerUuid.orElse(null);
                                endInv.white_list.addAll(wLstUid);
                                endInv.setAccessibility(acc);
                                endInv.setMaxItemStackSize(maxSize);
@@ -95,8 +101,8 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
 
     private final long[] lastSortedTimes = new long[SortType.values().length];
 
-    public final Set<UUID> viewerIds = new HashSet<>();
-    private boolean dirty = false;
+    public final Set<UUID> viewerIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private volatile boolean dirty = false;
     FurnaceState furnaceState = FurnaceState.EMPTY;
     FurnaceState smokerState = FurnaceState.EMPTY;
     FurnaceState blastFurnaceState = FurnaceState.EMPTY;
@@ -241,22 +247,23 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
 
         if (isLit || (hasFuel && hasIngredient)) {
             if (hasIngredient) {
-                Optional<RecipeHolder<AbstractCookingRecipe>> optRecipe =
+                Optional<? extends AbstractCookingRecipe> optRecipe =
                     getCookingRecipeFor(st, input, level);
                 if (optRecipe.isPresent()) {
-                    AbstractCookingRecipe recipeVal = optRecipe.get().value();
-                    ItemStack burnResult = recipeVal.assemble(new SingleRecipeInput(input));
+                    AbstractCookingRecipe recipeVal = optRecipe.get();
+                    SimpleContainer recipeInput = new SimpleContainer(input);
+                    ItemStack burnResult = recipeVal.assemble(recipeInput, level.registryAccess());
                     if (!burnResult.isEmpty() && canCookingBurn(result, burnResult)) {
                         if (!isLit) {
-                            int newLitTime = level.fuelValues().burnDuration(fuel);
+                            int newLitTime = AbstractFurnaceBlockEntity.getFuel()
+                                    .getOrDefault(fuel.getItem(), 0);
                             if (newLitTime > 0) {
                                 litTime    = newLitTime;
                                 litDuration = newLitTime;
                                 Item fuelItem = fuel.getItem();
                                 fuel.shrink(1);
-                                if (fuel.isEmpty()) {
-                                    ItemStackTemplate rem = fuelItem.getCraftingRemainder();
-                                    fuel = rem != null ? rem.create() : ItemStack.EMPTY;
+                                if (fuel.isEmpty() && fuelItem.hasCraftingRemainingItem()) {
+                                    fuel = new ItemStack(fuelItem.getCraftingRemainingItem());
                                 }
                                 isLit   = true;
                                 changed = true;
@@ -264,10 +271,10 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                         }
                         if (isLit) {
                             cookTime++;
-                            if (cookDuration == 0) cookDuration = recipeVal.cookingTime();
+                            if (cookDuration == 0) cookDuration = recipeVal.getCookingTime();
                             if (cookTime >= cookDuration) {
                                 cookTime    = 0;
-                                cookDuration = recipeVal.cookingTime();
+                                cookDuration = recipeVal.getCookingTime();
                                 if (result.isEmpty()) {
                                     result = burnResult.copy();
                                 } else {
@@ -282,7 +289,7 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                                 input.shrink(1);
                                 ServerPlayer ownerPlayer = level.getServer().getPlayerList().getPlayer(owner);
                                 if (ownerPlayer != null) {
-                                    float xp = recipeVal.experience();
+                                    float xp = recipeVal.getExperience();
                                     if (xp > 0) {
                                         int base = Mth.floor(xp);
                                         if (xp - base > 0 && Math.random() < (xp - base)) base++;
@@ -327,23 +334,22 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
         boolean changed = false;
 
         // Refuel if depleted and blaze powder available
-        if (fuelAmount <= 0 && !fuel.isEmpty() && fuel.is(net.minecraft.tags.ItemTags.BREWING_FUEL)) {
+        if (fuelAmount <= 0 && fuel.is(Items.BLAZE_POWDER)) {
             fuelAmount = 20;
             fuel.shrink(1);
             changed = true;
         }
 
-        net.minecraft.world.item.alchemy.PotionBrewing pb = level.potionBrewing();
-        boolean brewable = isBrewableBackground(pb, ingredient, potion0, potion1, potion2);
+        boolean brewable = isBrewableBackground(ingredient, potion0, potion1, potion2);
 
         if (brewTime > 0) {
             brewTime--;
             if (brewTime == 0) {
                 // doBrew
                 if (!ingredient.isEmpty()) {
-                    if (!potion0.isEmpty()) potion0 = pb.mix(ingredient, potion0);
-                    if (!potion1.isEmpty()) potion1 = pb.mix(ingredient, potion1);
-                    if (!potion2.isEmpty()) potion2 = pb.mix(ingredient, potion2);
+                    if (!potion0.isEmpty()) potion0 = PotionBrewing.mix(ingredient, potion0);
+                    if (!potion1.isEmpty()) potion1 = PotionBrewing.mix(ingredient, potion1);
+                    if (!potion2.isEmpty()) potion2 = PotionBrewing.mix(ingredient, potion2);
                     ingredient.shrink(1);
                 }
                 changed = true;
@@ -366,25 +372,25 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
     }
 
     private static boolean isBrewableBackground(
-            net.minecraft.world.item.alchemy.PotionBrewing pb,
             ItemStack ingredient, ItemStack p0, ItemStack p1, ItemStack p2) {
-        if (ingredient.isEmpty() || !pb.isIngredient(ingredient)) return false;
-        return (!p0.isEmpty() && pb.hasMix(p0, ingredient))
-            || (!p1.isEmpty() && pb.hasMix(p1, ingredient))
-            || (!p2.isEmpty() && pb.hasMix(p2, ingredient));
+        if (ingredient.isEmpty() || !PotionBrewing.isIngredient(ingredient)) return false;
+        return (!p0.isEmpty() && PotionBrewing.hasMix(p0, ingredient))
+            || (!p1.isEmpty() && PotionBrewing.hasMix(p1, ingredient))
+            || (!p2.isEmpty() && PotionBrewing.hasMix(p2, ingredient));
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private Optional<RecipeHolder<AbstractCookingRecipe>> getCookingRecipeFor(
+    private Optional<? extends AbstractCookingRecipe> getCookingRecipeFor(
             Station st, ItemStack input, ServerLevel level) {
-        return (Optional<RecipeHolder<AbstractCookingRecipe>>) (Optional<?>)
-                level.getServer().getRecipeManager()
-                        .getRecipeFor(st.cookingRecipeType, new SingleRecipeInput(input), level);
+        return level.getServer().getRecipeManager().getRecipeFor(
+                st.cookingRecipeType,
+                new SimpleContainer(input),
+                level
+        );
     }
 
     private boolean canCookingBurn(ItemStack current, ItemStack burnResult) {
         if (current.isEmpty()) return true;
-        if (!ItemStack.isSameItemSameComponents(current, burnResult)) return false;
+        if (!ItemStack.isSameItemSameTags(current, burnResult)) return false;
         return current.getCount() + burnResult.getCount() <= Math.min(64, current.getMaxStackSize());
     }
 }

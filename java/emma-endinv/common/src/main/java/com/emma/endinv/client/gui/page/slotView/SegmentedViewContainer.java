@@ -72,7 +72,7 @@ public class SegmentedViewContainer extends PageViewContainer{
                     continue;
                 }
             }
-            slots.add(i, new StandardItemPageSlotView(this, segment.removeFirst(), i, x, y));
+            slots.add(i, new StandardItemPageSlotView(this, segment.remove(0), i, x, y));
         }
     }
 }

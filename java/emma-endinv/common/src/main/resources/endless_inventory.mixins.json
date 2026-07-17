@@ -2,17 +2,17 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.emma.endinv.mixin",
-  "compatibilityLevel": "JAVA_25",
+  "compatibilityLevel": "JAVA_17",
   "mixins": [
     "BlockDropMixin",
     "ExperienceOrbAwardMixin",
     "ItemEntityPickupMixin",
+    "LivingEntityDropMixin",
     "ServerPlaceRecipeMixin"
   ],
   "client": [
     "AbstractContainerScreenAccessor",
     "AbstractContainerScreenMixin",
-    "AbstractRecipeBookScreenAccessor",
     "GuiEventListenerCharTypedMixin",
     "RecipeBookComponentMixin",
     "ScreenAccessor",

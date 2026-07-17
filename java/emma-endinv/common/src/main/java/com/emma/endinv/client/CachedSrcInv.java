@@ -12,11 +12,12 @@ import com.emma.endinv.util.SearchUtil;
 import com.emma.endinv.util.SortType;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.util.Mth;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Unmodifiable;
 
 import org.jetbrains.annotations.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -59,7 +60,10 @@ public class CachedSrcInv extends SourceInventory {
         if(size <= length) startIndex = 0;
         //startIndex = Mth.clamp(startIndex, 0, size - length);
         ret = ret.subList(Mth.clamp(startIndex, 0, size), Math.min(startIndex + length, size));
-        return reverse ? ret.reversed() : ret;
+        if (reverse) {
+            Collections.reverse(ret);
+        }
+        return ret;
     }
 
     /**

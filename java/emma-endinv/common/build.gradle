@@ -1,20 +1,22 @@
 plugins {
     id 'multiloader-common'
-    id 'net.neoforged.moddev'
-}
-
-neoForge {
-    // Vanilla-mode: just Minecraft, no NeoForge APIs — used for common compilation only
-    neoFormVersion = neo_form_version
-    def at = file('src/main/resources/META-INF/accesstransformer.cfg')
-    if (at.exists()) {
-        accessTransformers.from(at.absolutePath)
-    }
+    id 'net.fabricmc.fabric-loom-remap'
 }
 
 dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    mappings loom.officialMojangMappings()
+
     compileOnly group: 'org.spongepowered', name: 'mixin', version: '0.8.5'
     compileOnly group: 'org.ow2.asm', name: 'asm', version: '9.7'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+loom {
+    def aw = file('src/main/resources/endinv.accesswidener')
+    if (aw.exists()) {
+        accessWidenerPath.set(aw)
+    }
 }
 
 configurations {

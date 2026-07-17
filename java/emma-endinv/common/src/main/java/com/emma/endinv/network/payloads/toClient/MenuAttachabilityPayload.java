@@ -1,17 +1,12 @@
 package com.emma.endinv.network.payloads.toClient;
 
-import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.client.option.MenuAttachabilityCache;
 import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.ModPacketPayload;
 import com.emma.endinv.options.SpecifiedMenuAttachingConfig;
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.MenuType;
 
 import java.util.HashMap;
@@ -27,25 +22,6 @@ public record MenuAttachabilityPayload(
         Map<MenuType<?>, Boolean> perMenu
 ) implements ModPacketPayload {
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, MenuAttachabilityPayload> STREAM_CODEC = new StreamCodec<RegistryFriendlyByteBuf, MenuAttachabilityPayload>() {
-        @Override
-        public MenuAttachabilityPayload decode(RegistryFriendlyByteBuf registryFriendlyByteBuf) {
-            return MenuAttachabilityPayload.decode(registryFriendlyByteBuf);
-        }
-
-        @Override
-        public void encode(RegistryFriendlyByteBuf o, MenuAttachabilityPayload menuAttachabilityPayload) {
-            MenuAttachabilityPayload.encode(menuAttachabilityPayload, o);
-        }
-    };
-
-    public static final Type<MenuAttachabilityPayload> TYPE = new Type<>(AbstractModInitializer.withModLocation("menu_attachability"));
-
-    @Override
-    public Type<? extends CustomPacketPayload> type() {
-        return TYPE;
-    }
-
     public static MenuAttachabilityPayload of(boolean defaultAttach, SpecifiedMenuAttachingConfig config) {
         return new MenuAttachabilityPayload(defaultAttach, config.isInventoryAttachable(), new HashMap<>(config.getConfigs()));
     }
@@ -53,11 +29,17 @@ public record MenuAttachabilityPayload(
     public static void encode(MenuAttachabilityPayload payload, FriendlyByteBuf buf) {
         buf.writeBoolean(payload.defaultAttach);
         buf.writeBoolean(payload.inventoryAttach);
-        buf.writeVarInt(payload.perMenu.size());
+        int encodableEntries = 0;
+        for (MenuType<?> menuType : payload.perMenu.keySet()) {
+            if (BuiltInRegistries.MENU.getKey(menuType) != null) {
+                encodableEntries++;
+            }
+        }
+        buf.writeVarInt(encodableEntries);
         for (var e : payload.perMenu.entrySet()) {
-            Identifier id = BuiltInRegistries.MENU.getKey(e.getKey());
+            ResourceLocation id = BuiltInRegistries.MENU.getKey(e.getKey());
             if (id == null) continue;
-            buf.writeIdentifier(id);
+            buf.writeResourceLocation(id);
             buf.writeBoolean(Boolean.TRUE.equals(e.getValue()));
         }
     }
@@ -68,11 +50,19 @@ public record MenuAttachabilityPayload(
         int size = buf.readVarInt();
         Map<MenuType<?>, Boolean> map = new HashMap<>();
         for (int i = 0; i < size; i++) {
-            Identifier id = buf.readIdentifier();
+            ResourceLocation id = buf.readResourceLocation();
             boolean val = buf.readBoolean();
-            BuiltInRegistries.MENU.get(id).map(Holder::value).ifPresent(type -> map.put(type, val));
+            MenuType<?> type = BuiltInRegistries.MENU.get(id);
+            if (type != null) {
+                map.put(type, val);
+            }
         }
         return new MenuAttachabilityPayload(def, inv, map);
+    }
+
+    @Override
+    public void write(FriendlyByteBuf buffer) {
+        encode(this, buffer);
     }
 
     @Override

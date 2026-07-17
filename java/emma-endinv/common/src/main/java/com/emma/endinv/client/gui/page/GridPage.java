@@ -8,7 +8,7 @@ import com.emma.endinv.menu.page.PageType;
 import com.emma.endinv.util.ItemKey;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.world.item.ItemStack;
@@ -109,10 +109,10 @@ public abstract class GridPage extends DisplayPage {//todo support item and flui
                 );
     }
 
-    public void renderEmpty(GuiGraphicsExtractor guiGraphics, int x, int y, ItemStack itemStack){
+    public void renderEmpty(GuiGraphics guiGraphics, int x, int y, ItemStack itemStack){
         ItemStack toRender = itemStack.copyWithCount(1);
-        guiGraphics.item(toRender,x,y,0);
-        guiGraphics.itemDecorations(Minecraft.getInstance().font,toRender,x,y, ChatFormatting.RED + "0");
+        guiGraphics.renderItem(toRender,x,y,0);
+        guiGraphics.renderItemDecorations(Minecraft.getInstance().font,toRender,x,y, ChatFormatting.RED + "0");
     }
 
 }

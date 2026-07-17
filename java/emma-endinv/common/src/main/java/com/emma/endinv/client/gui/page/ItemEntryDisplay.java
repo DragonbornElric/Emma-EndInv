@@ -12,15 +12,14 @@ import com.emma.endinv.client.option.TextureMode;
 import com.emma.endinv.menu.page.PageType;
 import com.emma.endinv.util.ItemKey;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.EnchantedBookItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -67,16 +66,13 @@ public class ItemEntryDisplay extends ItemDisplay{
         }
 
         static Component fromEnch(ItemEntryDisplay page,ItemStack stack){
-            ItemEnchantments itemEnchantments = stack.get(DataComponents.ENCHANTMENTS);
-            if(itemEnchantments == null || itemEnchantments.isEmpty()) itemEnchantments = stack.get(DataComponents.STORED_ENCHANTMENTS);
-            if(itemEnchantments == null || itemEnchantments.isEmpty()) return Component.empty();
+            ListTag enchantments = stack.getEnchantmentTags();
+            if (enchantments.isEmpty() && stack.is(Items.ENCHANTED_BOOK)) {
+                enchantments = EnchantedBookItem.getEnchantments(stack);
+            }
+            if(enchantments.isEmpty()) return Component.empty();
             List<Component> tooltips = new ArrayList<>();
-            itemEnchantments.addToTooltip(
-                    Item.TooltipContext.of(page.mc.level),
-                    tooltips::add,
-                    TooltipFlag.NORMAL,
-                    stack
-            );
+            ItemStack.appendEnchantmentNames(tooltips, enchantments);
             return fromTooltip(page, tooltips, false);
         }
     }
@@ -154,7 +150,7 @@ public class ItemEntryDisplay extends ItemDisplay{
     }
 
     @Override
-    public void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks, int mouseX, int mouseY) {
+    public void renderBg(GuiGraphics guiGraphics, float partialTicks, int mouseX, int mouseY) {
         if (this.renderer == null) renderer = bgRender(framework.SFBgRenderer);
         renderer.renderBg(guiGraphics, partialTicks, mouseX, mouseY);
     }

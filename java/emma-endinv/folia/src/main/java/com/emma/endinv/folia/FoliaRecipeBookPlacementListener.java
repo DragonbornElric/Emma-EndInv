@@ -3,198 +3,243 @@ package com.emma.endinv.folia;
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.util.recipeTransferHelper.RecipeItemProvider;
-import io.papermc.paper.inventory.recipe.ItemOrExact;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.recipebook.PlaceRecipeHelper;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import net.minecraft.recipebook.PlaceRecipe;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.StackedItemContents;
-import net.minecraft.world.inventory.CraftingMenu;
-import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.entity.player.StackedContents;
+import net.minecraft.world.inventory.RecipeBookMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
-import org.bukkit.craftbukkit.util.CraftNamespacedKey;
+import org.bukkit.craftbukkit.v1_20_R1.CraftServer;
+import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R1.util.CraftNamespacedKey;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Iterator;
 
 /**
- * Folia-native replacement for ServerPlaceRecipeMixin.
- *
- * Mirrors Fabric's two-mixin approach:
- *  1. ServerPlaceRecipeMixin adds EndInv to the combined StackedItemContents so canCraft
- *     sees both player inventory and EndInv (split-ingredient recipes work).
- *  2. moveItemToGrid fallback pulls from EndInv when player inventory alone falls short.
- *
- * Here we own the entire placement: drain EndInv first, fall back to player inventory.
+ * Folia-native equivalent of the ServerPlaceRecipe mixins used by the mod
+ * loaders. Minecraft 1.20.1's recipe-book implementation only counts the
+ * player's normal inventory, so this listener owns placement whenever the
+ * player has an Endless Inventory and accounts both stores together.
  */
 public final class FoliaRecipeBookPlacementListener implements Listener {
 
-    private final MinecraftServer mcServer;
+    private final MinecraftServer server;
 
     public FoliaRecipeBookPlacementListener(JavaPlugin plugin) {
-        this.mcServer = ((org.bukkit.craftbukkit.CraftServer) plugin.getServer()).getServer();
+        this.server = ((CraftServer) plugin.getServer()).getServer();
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onRecipeBookClick(com.destroystokyo.paper.event.player.PlayerRecipeBookClickEvent event) {
-        ServerPlayer sp = ((CraftPlayer) event.getPlayer()).getHandle();
-
-        EndlessInventory endInv = ServerLevelEndInv.getEndInvForPlayer(sp).orElse(null);
-        if (endInv == null) return;
-
-        if (!(sp.containerMenu instanceof CraftingMenu) && !(sp.containerMenu instanceof InventoryMenu)) return;
-
-        // Resolve NMS recipe
-        Identifier rl = CraftNamespacedKey.toMinecraft(event.getRecipe());
-        ResourceKey<Recipe<?>> rk = ResourceKey.create(Registries.RECIPE, rl);
-        RecipeHolder<?> holder = mcServer.getRecipeManager().byKey(rk).orElse(null);
-        if (holder == null || !(holder.value() instanceof CraftingRecipe craftRecipe)) return;
-
-        List<Slot> inputSlots = getInputGridSlots(sp.containerMenu);
-
-        // Build combined StackedItemContents from EndInv + player inventory — mirrors
-        // ServerPlaceRecipeMixin's HEAD inject which adds EndInv on top of vanilla's player-inv fill.
-        // This makes canCraft work for split-ingredient cases (e.g. planks in player inv, sticks in EndInv).
-        StackedItemContents combined = new StackedItemContents();
-        combined.initializeExtras(craftRecipe, null);
-        RecipeItemProvider.fillStackedItemContents(endInv.getItemsAsList(), combined);
-        RecipeItemProvider.fillStackedItemContents(playerInvItems(sp), combined);
-        if (!combined.canCraft(craftRecipe, null)) return;
-
-        // We own this placement now.
-        event.setCancelled(true);
-
-        // Calculate amount per ingredient slot (mirrors vanilla calculateAmountToCraft).
-        // Add current grid contents so getBiggestCraftableStack includes them.
-        StackedItemContents contentsWithGrid = new StackedItemContents();
-        contentsWithGrid.initializeExtras(craftRecipe, null);
-        RecipeItemProvider.fillStackedItemContents(endInv.getItemsAsList(), contentsWithGrid);
-        RecipeItemProvider.fillStackedItemContents(playerInvItems(sp), contentsWithGrid);
-        for (Slot s : inputSlots) contentsWithGrid.accountStack(s.getItem(), 1);
-
-        int max = contentsWithGrid.getBiggestCraftableStack(craftRecipe, null);
-        int amount = event.isMakeAll() ? max : 1;
-
-        List<ItemOrExact> items = new ArrayList<>();
-        if (!contentsWithGrid.canCraft(craftRecipe, amount, items::add)) return;
-
-        int clamped = clampToMaxStackSize(amount, items);
-        if (clamped != amount) {
-            items.clear();
-            if (!contentsWithGrid.canCraft(craftRecipe, clamped, items::add)) return;
+        ServerPlayer player = ((CraftPlayer) event.getPlayer()).getHandle();
+        if (!(player.containerMenu instanceof RecipeBookMenu<?> menu)) {
+            return;
         }
 
-        // Return current grid contents to EndInv before placing new ingredients.
-        for (Slot s : inputSlots) {
-            ItemStack cur = s.getItem();
-            if (cur.isEmpty()) continue;
-            s.set(ItemStack.EMPTY);
-            ItemStack remain = endInv.addItem(cur.copy());
-            if (!remain.isEmpty()) {
-                sp.drop(remain, false);
+        EndlessInventory endInv = ServerLevelEndInv.getEndInvForPlayer(player).orElse(null);
+        if (endInv == null) {
+            return;
+        }
+
+        ResourceLocation id = CraftNamespacedKey.toMinecraft(event.getRecipe());
+        Recipe<?> recipe = server.getRecipeManager().byKey(id).orElse(null);
+        if (recipe == null) {
+            return;
+        }
+
+        StackedContents available = new StackedContents();
+        player.getInventory().fillStackedContents(available);
+        menu.fillCraftSlotsStackedContents(available);
+        RecipeItemProvider.fillStackedContents(endInv.getItemsAsList(), available);
+        if (!available.canCraft(recipe, null)) {
+            return;
+        }
+
+        int biggest = available.getBiggestCraftableStack(recipe, null);
+        int amount = calculateAmount(menu, recipe, event.isMakeAll(), biggest);
+        if (amount <= 0) {
+            return;
+        }
+
+        IntList ingredients = new IntArrayList();
+        if (!available.canCraft(recipe, ingredients, amount)) {
+            return;
+        }
+
+        for (int stackingId : ingredients) {
+            ItemStack ingredient = StackedContents.fromStackingIndex(stackingId);
+            amount = Math.min(amount, ingredient.getMaxStackSize());
+        }
+        ingredients.clear();
+        if (amount <= 0 || !available.canCraft(recipe, ingredients, amount)) {
+            return;
+        }
+
+        // Cancel the vanilla player-inventory-only placement and perform the
+        // same grid layout with a combined EndInv/player source.
+        event.setCancelled(true);
+        clearGridToEndInv(player, menu, endInv);
+
+        int finalAmount = amount;
+        PlaceRecipe<Integer> placer = new PlaceRecipe<>() {
+            @Override
+            public void addItemToSlot(Iterator<Integer> ids, int slotIndex, int count, int x, int y) {
+                if (!ids.hasNext()) {
+                    return;
+                }
+                ItemStack prototype = StackedContents.fromStackingIndex(ids.next());
+                if (prototype.isEmpty()) {
+                    return;
+                }
+
+                Slot slot = menu.getSlot(slotIndex);
+                int remaining = moveFromEndInv(endInv, prototype, count, slot);
+                if (remaining > 0) {
+                    moveFromPlayerInventory(player.getInventory(), prototype, remaining, slot);
+                }
+            }
+        };
+        placer.placeRecipe(
+                menu.getGridWidth(),
+                menu.getGridHeight(),
+                menu.getResultSlotIndex(),
+                recipe,
+                ingredients.iterator(),
+                finalAmount
+        );
+
+        Container craftContainer = firstCraftContainer(menu);
+        if (craftContainer != null) {
+            menu.slotsChanged(craftContainer);
+        }
+        player.getInventory().setChanged();
+        menu.broadcastChanges();
+        endInv.broadcastChanges(server);
+    }
+
+    private static int calculateAmount(
+            RecipeBookMenu<?> menu,
+            Recipe<?> recipe,
+            boolean makeAll,
+            int biggest
+    ) {
+        if (makeAll) {
+            return biggest;
+        }
+        if (!recipeMatches(menu, recipe)) {
+            return 1;
+        }
+
+        int amount = 64;
+        for (int slotIndex = 0; slotIndex < menu.getSize(); slotIndex++) {
+            if (!menu.shouldMoveToInventory(slotIndex)) {
+                continue;
+            }
+            ItemStack stack = menu.getSlot(slotIndex).getItem();
+            if (!stack.isEmpty()) {
+                amount = Math.min(amount, stack.getCount());
             }
         }
-
-        // Place ingredients: drain EndInv first, fall back to player inventory for shortfalls.
-        // Mirrors ServerPlaceRecipeMixin's moveItemToGrid fallback (vanilla tries player inv first
-        // there; here we invert priority so EndInv is preferred as the storage source).
-        PlaceRecipeHelper.placeRecipe(
-                gridWidth(sp.containerMenu), gridHeight(sp.containerMenu),
-                craftRecipe, craftRecipe.placementInfo().slotsToIngredientIndex(),
-                (itemIdx, slotIdx, x, y) -> {
-                    if (itemIdx == -1) return;
-                    ItemOrExact ioe = items.get(itemIdx);
-                    ItemStack probe = probeFor(ioe);
-                    Slot slot = inputSlots.get(slotIdx);
-
-                    int remaining = clamped;
-                    // Step 1: drain EndInv (skip if EI doesn't hold this key).
-                    if (endInv.hasItem(probe)) while (remaining > 0) {
-                        ItemStack taken = endInv.takeItem(probe.copy(), remaining);
-                        if (taken.isEmpty()) break;
-                        addToSlot(slot, taken);
-                        remaining -= taken.getCount();
-                    }
-                    // Step 2: fall back to player inventory (mirrors mixin's moveItemToGrid fallback).
-                    if (remaining > 0) {
-                        takeFromPlayerInv(sp, ioe, probe, remaining, slot);
-                    }
-                });
-
-        // Trigger result-slot computation and send slot updates to client.
-        net.minecraft.world.Container craftContainer = inputSlots.get(0).container;
-        sp.containerMenu.slotsChanged(craftContainer);
-        sp.containerMenu.broadcastChanges();
+        return Math.min(biggest, amount + 1);
     }
 
-    private static List<Slot> getInputGridSlots(net.minecraft.world.inventory.AbstractContainerMenu menu) {
-        if (menu instanceof CraftingMenu cm) return cm.getInputGridSlots();
-        if (menu instanceof InventoryMenu im) return im.getInputGridSlots();
-        return List.of();
-    }
-
-    private static int gridWidth(net.minecraft.world.inventory.AbstractContainerMenu menu) {
-        return (menu instanceof CraftingMenu) ? 3 : 2;
-    }
-
-    private static int gridHeight(net.minecraft.world.inventory.AbstractContainerMenu menu) {
-        return (menu instanceof CraftingMenu) ? 3 : 2;
-    }
-
-    private static ItemStack probeFor(ItemOrExact ioe) {
-        return switch (ioe) {
-            case ItemOrExact.Item it -> new ItemStack(it.item());
-            case ItemOrExact.Exact ex -> ex.stack().copy();
-        };
-    }
-
-    private static int clampToMaxStackSize(int n, List<ItemOrExact> items) {
-        for (ItemOrExact ioe : items) n = Math.min(n, ioe.getMaxStackSize());
-        return n;
-    }
-
-    private static List<ItemStack> playerInvItems(ServerPlayer sp) {
-        Inventory inv = sp.getInventory();
-        List<ItemStack> out = new ArrayList<>(36);
-        for (int i = 0; i < 36; i++) {
-            ItemStack s = inv.getItem(i);
-            if (!s.isEmpty()) out.add(s);
+    private static void clearGridToEndInv(
+            ServerPlayer player,
+            RecipeBookMenu<?> menu,
+            EndlessInventory endInv
+    ) {
+        for (int slotIndex = 0; slotIndex < menu.getSize(); slotIndex++) {
+            if (!menu.shouldMoveToInventory(slotIndex)) {
+                continue;
+            }
+            Slot slot = menu.getSlot(slotIndex);
+            ItemStack stack = slot.getItem();
+            if (stack.isEmpty()) {
+                continue;
+            }
+            slot.set(ItemStack.EMPTY);
+            ItemStack remainder = endInv.addItem(stack.copy());
+            if (!remainder.isEmpty()) {
+                player.drop(remainder, false);
+            }
         }
-        return out;
+        menu.clearCraftingContent();
     }
 
-    private static void addToSlot(Slot slot, ItemStack taken) {
-        ItemStack cur = slot.getItem();
-        if (cur.isEmpty()) slot.set(taken);
-        else cur.grow(taken.getCount());
-    }
-
-    private static void takeFromPlayerInv(ServerPlayer sp, ItemOrExact ioe, ItemStack probe, int wanted, Slot slot) {
-        Inventory inv = sp.getInventory();
-        for (int i = 0; i < 36 && wanted > 0; i++) {
-            ItemStack invStack = inv.getItem(i);
-            if (invStack.isEmpty()) continue;
-            boolean matches = switch (ioe) {
-                case ItemOrExact.Item it -> invStack.is(it.item());
-                case ItemOrExact.Exact ex -> ItemStack.isSameItemSameComponents(invStack, ex.stack());
-            };
-            if (!matches) continue;
-            int take = Math.min(wanted, invStack.getCount());
-            invStack.shrink(take);
-            addToSlot(slot, probe.copyWithCount(take));
-            wanted -= take;
+    private static int moveFromEndInv(
+            EndlessInventory endInv,
+            ItemStack prototype,
+            int wanted,
+            Slot destination
+    ) {
+        int remaining = wanted;
+        while (remaining > 0 && endInv.hasItem(prototype)) {
+            ItemStack taken = endInv.takeItem(prototype.copy(), remaining);
+            if (taken.isEmpty()) {
+                break;
+            }
+            addToSlot(destination, taken);
+            remaining -= taken.getCount();
         }
+        return remaining;
+    }
+
+    private static void moveFromPlayerInventory(
+            Inventory inventory,
+            ItemStack prototype,
+            int wanted,
+            Slot destination
+    ) {
+        int remaining = wanted;
+        while (remaining > 0) {
+            int index = inventory.findSlotMatchingUnusedItem(prototype);
+            if (index == Inventory.NOT_FOUND_INDEX) {
+                return;
+            }
+            ItemStack source = inventory.getItem(index);
+            int count = Math.min(remaining, source.getCount());
+            ItemStack moved = source.copyWithCount(count);
+            source.shrink(count);
+            if (source.isEmpty()) {
+                inventory.setItem(index, ItemStack.EMPTY);
+            }
+            addToSlot(destination, moved);
+            remaining -= count;
+        }
+    }
+
+    private static void addToSlot(Slot slot, ItemStack stack) {
+        ItemStack existing = slot.getItem();
+        if (existing.isEmpty()) {
+            slot.set(stack.copy());
+        } else {
+            existing.grow(stack.getCount());
+            slot.setChanged();
+        }
+    }
+
+    private static Container firstCraftContainer(RecipeBookMenu<?> menu) {
+        for (int slotIndex = 0; slotIndex < menu.getSize(); slotIndex++) {
+            if (menu.shouldMoveToInventory(slotIndex)) {
+                return menu.getSlot(slotIndex).container;
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static boolean recipeMatches(RecipeBookMenu<?> menu, Recipe<?> recipe) {
+        return ((RecipeBookMenu) menu).recipeMatches((Recipe) recipe);
     }
 }

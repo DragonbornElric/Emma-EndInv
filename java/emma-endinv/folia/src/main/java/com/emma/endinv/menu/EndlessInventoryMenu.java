@@ -14,11 +14,9 @@ import com.emma.endinv.util.SortType;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
-import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
-import net.minecraft.recipebook.ServerPlaceRecipe;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
@@ -29,15 +27,18 @@ import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.player.StackedItemContents;
+import net.minecraft.world.entity.player.StackedContents;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.inventory.RecipeBookType;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.phys.Vec3;
+import org.bukkit.craftbukkit.v1_20_R1.inventory.CraftInventory;
+import org.bukkit.craftbukkit.v1_20_R1.inventory.CraftInventoryView;
+import org.bukkit.inventory.InventoryView;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.TestOnly;
 
@@ -47,43 +48,68 @@ import static com.emma.endinv.ModRegistries.Items;
 import static com.emma.endinv.ModRegistries.Menus;
 import static com.emma.endinv.ServerLevelEndInv.getEndInvForPlayer;
 
-public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaDataManager, PageQuickMoveHandler.PageQuickMoveOverride {
+/**The menu who links to EndlessInventory
+ * Implementation: maybe let EIS implements them
+ */
+public class EndlessInventoryMenu extends RecipeBookMenu<CraftingContainer>
+        implements PageMetaDataManager, PageQuickMoveHandler.PageQuickMoveOverride {
+
+    @Nullable
+    private InventoryView bukkitView;
 
     @Override
-    @Nullable
-    public org.bukkit.inventory.InventoryView getBukkitView() {
-        return null;
+    public InventoryView getBukkitView() {
+        if (bukkitView == null) {
+            if (!(player instanceof ServerPlayer serverPlayer)) {
+                throw new IllegalStateException("Folia menu Bukkit view requires a server player");
+            }
+            bukkitView = new CraftInventoryView(
+                    serverPlayer.getBukkitEntity(),
+                    new CraftInventory(new SimpleContainer(BREWING_SLOT_END)),
+                    this
+            );
+        }
+        return bukkitView;
     }
+
 
     private final SourceInventory sourceInventory;
 
     private final CraftingContainer craftMatrix = new TransientCraftingContainer(this, 3, 3);
     private final ResultContainer craftResult = new ResultContainer();
 
+    // Cooking stations — 3 slots each (0=input, 1=fuel, 2=result), 3 stations = 9 slots total
+    // Station.cookingSlotBase: FURNACE=0, SMOKER=3, BLAST_FURNACE=6
+    // Actual menu slot index = COOKING_SLOT_START + station.cookingSlotBase + [0|1|2]
     public static final Station[] COOKING_STATIONS = {Station.FURNACE, Station.SMOKER, Station.BLAST_FURNACE};
     private final java.util.EnumMap<Station, SimpleContainer> cookingContainers = new java.util.EnumMap<>(Station.class);
     private final java.util.EnumMap<Station, DataSlot[]> cookingDataSlots = new java.util.EnumMap<>(Station.class);
-    private final java.util.EnumMap<Station, Map<ResourceKey<Recipe<?>>, Integer>> cookingRecipesUsed = new java.util.EnumMap<>(Station.class);
+    private final java.util.EnumMap<Station, Map<ResourceLocation, Integer>> cookingRecipesUsed =
+            new java.util.EnumMap<>(Station.class);
 
+    // Stonecutter
     private final SimpleContainer stonecutterInput = new SimpleContainer(1) {
         @Override public void setChanged() { super.setChanged(); EndlessInventoryMenu.this.slotsChanged(this); }
     };
     private final SimpleContainer stonecutterResult = new SimpleContainer(1);
-    private List<SelectableRecipe.SingleInputEntry<StonecutterRecipe>> stonecutterRecipes = List.of();
+    private List<StonecutterRecipe> stonecutterRecipes = List.of();
     private ItemStack stonecutterLastInput = ItemStack.EMPTY;
     private final DataSlot stonecutterSelectedRecipe = DataSlot.standalone();
 
+    // Grindstone
     private final SimpleContainer grindstoneRepairSlots = new SimpleContainer(2) {
         @Override public void setChanged() { super.setChanged(); EndlessInventoryMenu.this.slotsChanged(this); }
     };
     private final SimpleContainer grindstoneResult = new SimpleContainer(1);
     private int grindstoneXpReward = 0;
 
+    // Smithing
     private final SimpleContainer smithingInput = new SimpleContainer(3) {
         @Override public void setChanged() { super.setChanged(); EndlessInventoryMenu.this.slotsChanged(this); }
     };
     private final SimpleContainer smithingResult = new SimpleContainer(1);
 
+    // Brewing
     private final SimpleContainer brewingContainer = new SimpleContainer(5);
     private final DataSlot brewingTimeSlot = DataSlot.standalone();
     private final DataSlot brewingFuelSlot = DataSlot.standalone();
@@ -93,41 +119,41 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     private static final int RESULT_SLOT_INDEX = 0;
     private static final int CRAFT_SLOT_START = RESULT_SLOT_INDEX + 1;
     private static final int CRAFT_SLOT_COUNT = CRAFT_GRID_WIDTH * CRAFT_GRID_HEIGHT;
-    private static final int CRAFT_SLOT_END = CRAFT_SLOT_START + CRAFT_SLOT_COUNT;
+    private static final int CRAFT_SLOT_END = CRAFT_SLOT_START + CRAFT_SLOT_COUNT;         // = 10
 
-    private static final int COOKING_SLOT_START = CRAFT_SLOT_END;
-    private static final int COOKING_SLOT_END   = COOKING_SLOT_START + 9;
+    private static final int COOKING_SLOT_START = CRAFT_SLOT_END;                          // = 10
+    private static final int COOKING_SLOT_END   = COOKING_SLOT_START + 9;                  // = 19
 
-    private static final int STONECUTTER_SLOT_START = COOKING_SLOT_END;
-    private static final int STONECUTTER_INPUT      = STONECUTTER_SLOT_START;
-    private static final int STONECUTTER_RESULT     = STONECUTTER_SLOT_START + 1;
-    private static final int STONECUTTER_SLOT_END   = STONECUTTER_SLOT_START + 2;
+    private static final int STONECUTTER_SLOT_START = COOKING_SLOT_END;                    // = 19
+    private static final int STONECUTTER_INPUT      = STONECUTTER_SLOT_START;              // = 19
+    private static final int STONECUTTER_RESULT     = STONECUTTER_SLOT_START + 1;          // = 20
+    private static final int STONECUTTER_SLOT_END   = STONECUTTER_SLOT_START + 2;          // = 21
 
-    private static final int GRINDSTONE_SLOT_START  = STONECUTTER_SLOT_END;
-    private static final int GRINDSTONE_INPUT1      = GRINDSTONE_SLOT_START;
-    private static final int GRINDSTONE_INPUT2      = GRINDSTONE_SLOT_START + 1;
-    private static final int GRINDSTONE_RESULT      = GRINDSTONE_SLOT_START + 2;
-    private static final int GRINDSTONE_SLOT_END    = GRINDSTONE_SLOT_START + 3;
+    private static final int GRINDSTONE_SLOT_START  = STONECUTTER_SLOT_END;                // = 21
+    private static final int GRINDSTONE_INPUT1      = GRINDSTONE_SLOT_START;               // = 21
+    private static final int GRINDSTONE_INPUT2      = GRINDSTONE_SLOT_START + 1;           // = 22
+    private static final int GRINDSTONE_RESULT      = GRINDSTONE_SLOT_START + 2;           // = 23
+    private static final int GRINDSTONE_SLOT_END    = GRINDSTONE_SLOT_START + 3;           // = 24
 
-    private static final int SMITHING_SLOT_START    = GRINDSTONE_SLOT_END;
-    private static final int SMITHING_TEMPLATE      = SMITHING_SLOT_START;
-    private static final int SMITHING_BASE          = SMITHING_SLOT_START + 1;
-    private static final int SMITHING_ADDITION      = SMITHING_SLOT_START + 2;
-    private static final int SMITHING_RESULT        = SMITHING_SLOT_START + 3;
-    private static final int SMITHING_SLOT_END      = SMITHING_SLOT_START + 4;
+    private static final int SMITHING_SLOT_START    = GRINDSTONE_SLOT_END;                 // = 24
+    private static final int SMITHING_TEMPLATE      = SMITHING_SLOT_START;                 // = 24
+    private static final int SMITHING_BASE          = SMITHING_SLOT_START + 1;             // = 25
+    private static final int SMITHING_ADDITION      = SMITHING_SLOT_START + 2;             // = 26
+    private static final int SMITHING_RESULT        = SMITHING_SLOT_START + 3;             // = 27
+    private static final int SMITHING_SLOT_END      = SMITHING_SLOT_START + 4;             // = 28
 
-    private static final int BREWING_SLOT_START     = SMITHING_SLOT_END;
-    private static final int BREWING_POTION0        = BREWING_SLOT_START;
-    private static final int BREWING_POTION1        = BREWING_SLOT_START + 1;
-    private static final int BREWING_POTION2        = BREWING_SLOT_START + 2;
-    private static final int BREWING_INGREDIENT     = BREWING_SLOT_START + 3;
-    private static final int BREWING_FUEL_SLOT      = BREWING_SLOT_START + 4;
-    private static final int BREWING_SLOT_END       = BREWING_SLOT_START + 5;
+    private static final int BREWING_SLOT_START     = SMITHING_SLOT_END;                   // = 28
+    private static final int BREWING_POTION0        = BREWING_SLOT_START;                  // = 28
+    private static final int BREWING_POTION1        = BREWING_SLOT_START + 1;              // = 29
+    private static final int BREWING_POTION2        = BREWING_SLOT_START + 2;              // = 30
+    private static final int BREWING_INGREDIENT     = BREWING_SLOT_START + 3;              // = 31
+    private static final int BREWING_FUEL_SLOT      = BREWING_SLOT_START + 4;              // = 32
+    private static final int BREWING_SLOT_END       = BREWING_SLOT_START + 5;              // = 33
 
     private static final int PLAYER_INV_SLOT_COUNT = 27;
     private static final int HOTBAR_SLOT_COUNT = 9;
-    private static final int PLAYER_INV_START = BREWING_SLOT_END;
-    private static final int PLAYER_INV_END = PLAYER_INV_START + PLAYER_INV_SLOT_COUNT + HOTBAR_SLOT_COUNT;
+    private static final int PLAYER_INV_START = BREWING_SLOT_END;                          // = 33
+    private static final int PLAYER_INV_END = PLAYER_INV_START + PLAYER_INV_SLOT_COUNT + HOTBAR_SLOT_COUNT; // = 69
 
     public final Player player;
     int quickcraftStatus;
@@ -149,7 +175,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     public String searching;
     private boolean reverseSort;
 
-    public static MenuProvider provide(int rows) {
+    public static MenuProvider provide(int rows){
         return new MenuProvider() {
             @Override
             public Component getDisplayName() {
@@ -158,27 +184,28 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
 
             @Override @Nullable
             public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
-                return createServer(id, inventory, player, rows);
+                return createServer(id,inventory,player,rows);
             }
         };
     }
 
+    //Server constructor
     @Nullable
     public static AbstractContainerMenu createServer(int i, Inventory inventory, Player player, int rows) {
         EndlessInventory endlessInventory = getEndInvForPlayer(player).orElse(null);
-        if (endlessInventory == null) return null;
+        if(endlessInventory==null) return null;
         var ret = new EndlessInventoryMenu(i, inventory, endlessInventory);
-        ret.init(new PageData(rows, 9));
+        ret.init(new PageData(rows,9));
         ret.buildSlotLayout(inventory);
         ret.loadCookingStates();
         ret.loadBrewingState();
         return ret;
     }
 
-    public static EndlessInventoryMenu createWithTemp(int i, Inventory inventory, Player player) {
+    public static EndlessInventoryMenu createWithTemp(int i,Inventory inventory, Player player){
         EndlessInventory endInv = ServerLevelEndInv.TEMP_ENDINV_REG.get((ServerPlayer) player);
-        if (endInv == null) throw new IllegalStateException("Try to create tmp menu without tmp EndInv.");
-        var ret = new EndlessInventoryMenu(i, inventory, endInv);
+        if(endInv==null) throw new IllegalStateException("Try to create tmp menu without tmp EndInv.");
+        var ret = new EndlessInventoryMenu(i,inventory,endInv);
         ret.init(PageData.DEFAULT);
         ret.buildSlotLayout(inventory);
         ret.loadCookingStates();
@@ -186,8 +213,9 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return ret;
     }
 
-    public EndlessInventoryMenu(int id, Inventory playerInv, @Nullable EndlessInventory endlessInventory) {
-        super(Menus.getEndInvMenuType(), id);
+    //Common constructor
+    public EndlessInventoryMenu(int id , Inventory playerInv,@Nullable EndlessInventory endlessInventory){
+        super(Menus.getEndInvMenuType(),id);
         this.player = playerInv.player;
         this.sourceInventory = endlessInventory != null ? endlessInventory : new SourceInventory.Empty();
 
@@ -202,14 +230,17 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         this.displayingPageId = initialType.registerName;
         this.displayingPageIndex = Math.max(0, PageTypeRegistry.getIndexOf(this.displayingPageId));
 
-        itemSize.set(endlessInventory != null ? endlessInventory.getItemSize() : 0);
-        maxStackSize.set(endlessInventory != null ? endlessInventory.getMaxItemStackSize() : Integer.MAX_VALUE);
-        infinityMode.set(endlessInventory != null && endlessInventory.isInfinityMode() ? 1 : 0);
+        // pages are client-side; slots are built after layout initialization
+        //build data slots
+        itemSize.set( endlessInventory!=null ? endlessInventory.getItemSize() : 0);
+        maxStackSize.set(endlessInventory!=null? endlessInventory.getMaxItemStackSize() : Integer.MAX_VALUE);
+        infinityMode.set(endlessInventory!=null && endlessInventory.isInfinityMode() ? 1 : 0);
         addDataSlot(rowsData);
         addDataSlot(itemSize);
         addDataSlot(maxStackSize);
         addDataSlot(infinityMode);
 
+        // Initialise per-station cooking containers and their 4 DataSlots (litTime, litDuration, cookTime, cookDuration)
         for (Station st : COOKING_STATIONS) {
             cookingContainers.put(st, new SimpleContainer(3));
             DataSlot[] ds = {DataSlot.standalone(), DataSlot.standalone(), DataSlot.standalone(), DataSlot.standalone()};
@@ -223,11 +254,11 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         addDataSlot(brewingFuelSlot);
     }
 
-    public void applyPageData(PageData pageData) {
+    public void applyPageData(PageData pageData){
         init(pageData);
     }
 
-    private void init(PageData pageData) {
+    private void init(PageData pageData){
         int rows = Math.max(1, pageData.rows());
         this.baseRows = rows;
         int stationRows = (activeStation != Station.NONE) ? CRAFTING_ROWS : 0;
@@ -248,6 +279,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         int resultX = craftX + CRAFT_GRID_WIDTH * 18 + 40;
         int resultY = craftY + 18;
 
+        // Crafting slots (slots 0–9)
         this.addSlot(new CraftingResultSlot(this.player, this.craftMatrix, this.craftResult, 0, resultX, resultY));
         for (int row = 0; row < CRAFT_GRID_HEIGHT; ++row) {
             for (int col = 0; col < CRAFT_GRID_WIDTH; ++col) {
@@ -255,6 +287,9 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
             }
         }
 
+        // Cooking slots (slots 10–18): 3 stations × 3 slots, all mapped to the same screen position.
+        // Only the active station's slots are visible (isActive() returns true for the matching station).
+        // Slot layout within each station matches furnace.png: input=(56,craftY), fuel=(56,craftY+36), result=(116,craftY+18)
         for (Station st : COOKING_STATIONS) {
             SimpleContainer container = cookingContainers.get(st);
             this.addSlot(new EICookingResultSlot(container, 2, 116, craftY + 18, st));
@@ -262,18 +297,25 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
             this.addSlot(new EICookingFuelSlot(container, 1, 56, craftY + 36, st));
         }
 
+        // Stonecutter slots (19–20). Texture positions: input=(20,33), result=(143,33) from texture top.
+        // stationY = craftY - 5; slot.y = stationY + textureY = craftY - 5 + textureY
         this.addSlot(new EIStonecutterInputSlot(stonecutterInput, 0, 20, craftY + 28));
         this.addSlot(new EIStonecutterResultSlot(stonecutterResult, 0, 143, craftY + 28));
 
+        // Grindstone slots (21–23). Texture positions: input1=(49,19), input2=(49,40), result=(129,34)
         this.addSlot(new EIGrindstoneInputSlot(grindstoneRepairSlots, 0, 49, craftY + 14));
         this.addSlot(new EIGrindstoneInputSlot(grindstoneRepairSlots, 1, 49, craftY + 35));
         this.addSlot(new EIGrindstoneResultSlot(grindstoneResult, 0, 129, craftY + 29));
 
+        // Smithing slots (24–27). Texture positions: template=(8,48), base=(26,48), addition=(44,48), result=(98,48)
         this.addSlot(new EISmithingInputSlot(smithingInput, 0, 8,  craftY + 43, Station.SMITHING));
         this.addSlot(new EISmithingInputSlot(smithingInput, 1, 26, craftY + 43, Station.SMITHING));
         this.addSlot(new EISmithingInputSlot(smithingInput, 2, 44, craftY + 43, Station.SMITHING));
         this.addSlot(new EISmithingResultSlot(smithingResult, 0, 98, craftY + 43));
 
+        // Brewing slots (28–32). Texture positions: ingredient=(79,17), fuel=(17,17),
+        //   potion0=(56,51), potion1=(79,58), potion2=(102,51).
+        // Potions shifted to craftY+44 to stay within the 62-px station area; minor visual offset accepted.
         this.addSlot(new EIBrewingPotionSlot(brewingContainer, 0, 56,  craftY + 44));
         this.addSlot(new EIBrewingPotionSlot(brewingContainer, 1, 79,  craftY + 44));
         this.addSlot(new EIBrewingPotionSlot(brewingContainer, 2, 102, craftY + 44));
@@ -284,6 +326,8 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         addStandardInventorySlots(playerInventory, 8, invY);
     }
 
+    // ── Slot index helpers ───────────────────────────────────────────────────
+
     private int cookingResultIdx(Station st) { return COOKING_SLOT_START + st.cookingSlotBase; }
     private int cookingInputIdx(Station st)  { return COOKING_SLOT_START + st.cookingSlotBase + 1; }
     private int cookingFuelIdx(Station st)   { return COOKING_SLOT_START + st.cookingSlotBase + 2; }
@@ -292,11 +336,11 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     public Slot getCookingInputSlot(Station st)  { return slots.get(cookingInputIdx(st)); }
     public Slot getCookingFuelSlot(Station st)   { return slots.get(cookingFuelIdx(st)); }
 
-    public List<Slot> getCraftingSlots() {
+    public List<Slot> getCraftingSlots(){
         return slots.subList(CRAFT_SLOT_START, CRAFT_SLOT_END);
     }
 
-    public List<Slot> getPlayerInvSlots() {
+    public List<Slot> getPlayerInvSlots(){
         return slots.subList(PLAYER_INV_START, PLAYER_INV_END);
     }
 
@@ -304,6 +348,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return slots.get(RESULT_SLOT_INDEX);
     }
 
+    // Backward-compat furnace accessors used by the recipe book component
     public Slot getFurnaceResultSlot() { return getCookingResultSlot(Station.FURNACE); }
     public Slot getFurnaceInputSlot()  { return getCookingInputSlot(Station.FURNACE); }
     public Slot getFurnaceFuelSlot()   { return getCookingFuelSlot(Station.FURNACE); }
@@ -321,18 +366,18 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     }
 
     @TestOnly
-    public boolean validateSlotStatus() throws IllegalStateException {
-        for (Slot slot : getCraftingSlots()) {
-            if (!(slot instanceof CraftingGridSlot)) throw new IllegalStateException("getCraftingSlots do not correspond menu's crafter slots.");
+    public boolean validateSlotStatus() throws IllegalStateException{
+        for(Slot slot : getCraftingSlots()){
+            if(!(slot instanceof CraftingGridSlot)) throw new IllegalStateException("getCraftingSlots do not correspond menu's crafter slots.");
         }
-        for (Slot slot : getPlayerInvSlots()) {
-            if (!(slot.container instanceof Inventory)) throw new IllegalStateException("getPlayerInvSlots contains slots whose container is not inventory");
+        for(Slot slot : getPlayerInvSlots()){
+            if(!(slot.container instanceof Inventory)) throw new IllegalStateException("getPlayerInvSlots contains slots whose container is not inventory");
         }
-        if (!(slots.get(RESULT_SLOT_INDEX) instanceof CraftingResultSlot)) throw new IllegalStateException("the first slot is not the crafting result slot, check ADD SLOT process");
+        if(!(slots.get(RESULT_SLOT_INDEX) instanceof CraftingResultSlot)) throw new IllegalStateException("the first slot is not the crafting result slot, check ADD SLOT process");
         return true;
     }
 
-    public boolean isCrafterEnabled() {
+    public boolean isCrafterEnabled(){
         return true;
     }
 
@@ -343,7 +388,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     }
 
     @Override
-    public void fillCraftSlotsStackedContents(StackedItemContents stackedContents) {
+    public void fillCraftSlotsStackedContents(StackedContents stackedContents) {
         if (activeStation.isCooking()) {
             SimpleContainer cont = cookingContainers.get(activeStation);
             stackedContents.accountStack(cont.getItem(0), 1);
@@ -354,62 +399,109 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     }
 
     @Override
-    public PostPlaceAction handlePlacement(boolean useMaxItems, boolean allowDroppingItemsToClear,
-                                           RecipeHolder<?> recipe, ServerLevel level, Inventory inventory) {
-        if (recipe.value() instanceof CraftingRecipe) {
-            return handleCraftingPlacement(recipe, level, inventory, useMaxItems, allowDroppingItemsToClear);
-        } else if (recipe.value() instanceof AbstractCookingRecipe) {
-            return handleFurnacePlacement(recipe, level, inventory, useMaxItems, allowDroppingItemsToClear);
+    public void handlePlacement(boolean craftAll, Recipe<?> recipe, ServerPlayer player) {
+        if (activeStation.isCooking() && recipe instanceof AbstractCookingRecipe cookingRecipe) {
+            placeCookingRecipe(craftAll, cookingRecipe, player);
+            return;
         }
-        return PostPlaceAction.NOTHING;
+        super.handlePlacement(craftAll, recipe, player);
     }
 
-    @SuppressWarnings("unchecked")
-    private PostPlaceAction handleCraftingPlacement(RecipeHolder<?> recipe, ServerLevel level, Inventory inventory,
-                                                    boolean useMaxItems, boolean allowDroppingItemsToClear) {
-        RecipeHolder<CraftingRecipe> typedRecipe = (RecipeHolder<CraftingRecipe>) recipe;
-        List<Slot> inputSlots = getCraftingSlots();
-        return ServerPlaceRecipe.placeRecipe(new ServerPlaceRecipe.CraftingMenuAccess<CraftingRecipe>() {
-            @Override
-            public void fillCraftSlotsStackedContents(StackedItemContents contents) {
-                EndlessInventoryMenu.this.fillCraftSlotsStackedContents(contents);
-            }
-            @Override
-            public void clearCraftingContent() {
-                craftResult.clearContent();
-                craftMatrix.clearContent();
-            }
-            @Override
-            public boolean recipeMatches(RecipeHolder<CraftingRecipe> r) {
-                return r.value().matches(craftMatrix.asCraftInput(), level);
-            }
-        }, 3, 3, inputSlots, inputSlots, inventory, typedRecipe, useMaxItems, allowDroppingItemsToClear);
-    }
-
-    @SuppressWarnings("unchecked")
-    private PostPlaceAction handleFurnacePlacement(RecipeHolder<?> recipe, ServerLevel level, Inventory inventory,
-                                                   boolean useMaxItems, boolean allowDroppingItemsToClear) {
-        RecipeHolder<AbstractCookingRecipe> typedRecipe = (RecipeHolder<AbstractCookingRecipe>) recipe;
+    private void placeCookingRecipe(
+            boolean craftAll, AbstractCookingRecipe recipe, ServerPlayer serverPlayer) {
+        if (recipe.getIngredients().isEmpty()) return;
+        net.minecraft.world.item.crafting.Ingredient ingredient = recipe.getIngredients().get(0);
         SimpleContainer container = cookingContainers.get(activeStation);
-        Slot inputSlot = getCookingInputSlot(activeStation);
-        Slot resultSlot = getCookingResultSlot(activeStation);
-        List<Slot> slotsToClear = List.of(inputSlot, resultSlot);
-        return ServerPlaceRecipe.placeRecipe(new ServerPlaceRecipe.CraftingMenuAccess<AbstractCookingRecipe>() {
-            @Override
-            public void fillCraftSlotsStackedContents(StackedItemContents contents) {
-                contents.accountStack(container.getItem(0), 1);
-                contents.accountStack(container.getItem(1), 1);
-            }
-            @Override
-            public void clearCraftingContent() {
-                slotsToClear.forEach(s -> s.set(ItemStack.EMPTY));
-            }
-            @Override
-            public boolean recipeMatches(RecipeHolder<AbstractCookingRecipe> r) {
-                return r.value().matches(new SingleRecipeInput(container.getItem(0)), level);
-            }
-        }, 1, 1, List.of(inputSlot), slotsToClear, inventory, typedRecipe, useMaxItems, allowDroppingItemsToClear);
+        Inventory inventory = serverPlayer.getInventory();
+
+        ItemStack current = container.getItem(0);
+        ItemStack template = current.isEmpty() ? findCookingIngredient(ingredient, inventory) : current.copy();
+        if (template.isEmpty() || !ingredient.test(template)) return;
+
+        if (!current.isEmpty() && !ItemStack.isSameItemSameTags(current, template)) {
+            inventory.placeItemBackInInventory(container.removeItemNoUpdate(0));
+            current = ItemStack.EMPTY;
+        }
+        ItemStack result = container.getItem(2);
+        if (!result.isEmpty()) {
+            inventory.placeItemBackInInventory(container.removeItemNoUpdate(2));
+        }
+
+        int capacity = template.getMaxStackSize() - current.getCount();
+        int requested = craftAll ? capacity : Math.min(1, capacity);
+        if (requested <= 0) return;
+        int moved = takeCookingIngredient(template, requested, inventory);
+        if (moved <= 0) return;
+        if (current.isEmpty()) {
+            container.setItem(0, template.copyWithCount(moved));
+        } else {
+            current.grow(moved);
+        }
+        container.setChanged();
     }
+
+    private ItemStack findCookingIngredient(
+            net.minecraft.world.item.crafting.Ingredient ingredient, Inventory inventory) {
+        for (ItemStack stack : inventory.items) {
+            if (!stack.isEmpty() && ingredient.test(stack)) return stack.copyWithCount(1);
+        }
+        for (ItemStack stack : sourceInventory.getItemsAsList()) {
+            if (!stack.isEmpty() && ingredient.test(stack)) return stack.copyWithCount(1);
+        }
+        return ItemStack.EMPTY;
+    }
+
+    private int takeCookingIngredient(ItemStack template, int requested, Inventory inventory) {
+        int remaining = requested;
+        for (int slot = 0; slot < inventory.items.size() && remaining > 0; slot++) {
+            ItemStack stack = inventory.items.get(slot);
+            if (!ItemStack.isSameItemSameTags(template, stack)) continue;
+            int removed = Math.min(remaining, stack.getCount());
+            stack.shrink(removed);
+            remaining -= removed;
+        }
+        if (remaining > 0) {
+            ItemStack fromEndInv = sourceInventory.takeItem(template, remaining);
+            remaining -= fromEndInv.getCount();
+        }
+        inventory.setChanged();
+        sourceInventory.setChanged();
+        return requested - remaining;
+    }
+
+    @Override
+    public void clearCraftingContent() {
+        craftResult.clearContent();
+        craftMatrix.clearContent();
+    }
+
+    @Override
+    public boolean recipeMatches(Recipe<? super CraftingContainer> recipe) {
+        if (recipe instanceof CraftingRecipe craftingRecipe) {
+            return craftingRecipe.matches(craftMatrix, player.level());
+        }
+        if (activeStation.isCooking() && recipe instanceof AbstractCookingRecipe cookingRecipe) {
+            return cookingRecipe.matches(cookingContainers.get(activeStation), player.level());
+        }
+        return false;
+    }
+
+    @Override
+    public int getResultSlotIndex() {
+        return RESULT_SLOT_INDEX;
+    }
+
+    @Override
+    public int getSize() {
+        return CRAFT_SLOT_END;
+    }
+
+    @Override
+    public boolean shouldMoveToInventory(int slotIndex) {
+        return slotIndex >= CRAFT_SLOT_START && slotIndex < CRAFT_SLOT_END;
+    }
+
+    // ── Active station ───────────────────────────────────────────────────────
 
     public void setActiveStation(Station newStation) {
         if (this.activeStation == newStation) return;
@@ -439,10 +531,13 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return activeStation == Station.FURNACE;
     }
 
+    /** Returns the active station if it is a cooking station, null otherwise. */
     @Nullable
     public Station getActiveCookingStation() {
         return activeStation.isCooking() ? activeStation : null;
     }
+
+    // ── Cooking tick (called every server tick via broadcastChanges) ──────────
 
     @Override
     public void broadcastChanges() {
@@ -452,7 +547,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
 
     private void tickCookingStations() {
         if (!(player instanceof ServerPlayer serverPlayer)) return;
-        ServerLevel level = serverPlayer.level();
+        ServerLevel level = serverPlayer.serverLevel();
         for (Station st : COOKING_STATIONS) {
             tickStation(st, level);
         }
@@ -463,7 +558,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     private void tickStation(Station st, ServerLevel level) {
         SimpleContainer container = cookingContainers.get(st);
         DataSlot[] ds = cookingDataSlots.get(st);
-        Map<ResourceKey<Recipe<?>>, Integer> recipesUsed = cookingRecipesUsed.get(st);
+        Map<ResourceLocation, Integer> recipesUsed = cookingRecipesUsed.get(st);
 
         ItemStack fuel = container.getItem(1);
         ItemStack ingredient = container.getItem(0);
@@ -485,16 +580,16 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
 
         if (isLit || (hasFuel && hasIngredient)) {
             if (hasIngredient) {
-                Optional<RecipeHolder<AbstractCookingRecipe>> optRecipe =
-                    (Optional<RecipeHolder<AbstractCookingRecipe>>) (Optional<?>)
+                Optional<? extends AbstractCookingRecipe> optRecipe =
                         level.getServer().getRecipeManager()
-                             .getRecipeFor(st.cookingRecipeType, new SingleRecipeInput(ingredient), level);
+                                .getRecipeFor(st.cookingRecipeType, container, level);
                 if (optRecipe.isPresent()) {
-                    AbstractCookingRecipe recipeVal = optRecipe.get().value();
-                    ItemStack burnResult = recipeVal.assemble(new SingleRecipeInput(ingredient));
+                    AbstractCookingRecipe recipeVal = optRecipe.get();
+                    ItemStack burnResult = recipeVal.assemble(container, level.registryAccess());
                     if (!burnResult.isEmpty() && canCookingBurn(container, burnResult)) {
                         if (!isLit) {
-                            int newLitTime = level.fuelValues().burnDuration(fuel);
+                            int newLitTime = AbstractFurnaceBlockEntity.getFuel()
+                                    .getOrDefault(fuel.getItem(), 0);
                             if (newLitTime > 0) {
                                 litTime = newLitTime;
                                 litDuration = newLitTime;
@@ -504,12 +599,12 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
                         }
                         if (isLit) {
                             cookTime++;
-                            if (cookDuration == 0) cookDuration = recipeVal.cookingTime();
+                            if (cookDuration == 0) cookDuration = recipeVal.getCookingTime();
                             if (cookTime >= cookDuration) {
                                 cookTime = 0;
-                                cookDuration = recipeVal.cookingTime();
+                                cookDuration = recipeVal.getCookingTime();
                                 completeCookingBurn(container, ingredient, burnResult, st);
-                                recipesUsed.merge(optRecipe.get().id(), 1, Integer::sum);
+                                recipesUsed.merge(recipeVal.getId(), 1, Integer::sum);
                             }
                         } else {
                             cookTime = 0;
@@ -534,7 +629,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     private boolean canCookingBurn(SimpleContainer container, ItemStack burnResult) {
         ItemStack current = container.getItem(2);
         if (current.isEmpty()) return true;
-        if (!ItemStack.isSameItemSameComponents(current, burnResult)) return false;
+        if (!ItemStack.isSameItemSameTags(current, burnResult)) return false;
         int merged = current.getCount() + burnResult.getCount();
         return merged <= Math.min(64, current.getMaxStackSize());
     }
@@ -544,8 +639,8 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         Item fuelItem = fuel.getItem();
         fuel.shrink(1);
         if (fuel.isEmpty()) {
-            ItemStackTemplate remainder = fuelItem.getCraftingRemainder();
-            container.setItem(1, remainder != null ? remainder.create() : ItemStack.EMPTY);
+            Item remainder = fuelItem.getCraftingRemainingItem();
+            container.setItem(1, remainder != null ? new ItemStack(remainder) : ItemStack.EMPTY);
         }
     }
 
@@ -566,16 +661,16 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     }
 
     public void awardCookingXP(Station st, Player player) {
-        Map<ResourceKey<Recipe<?>>, Integer> recipesUsed = cookingRecipesUsed.get(st);
+        Map<ResourceLocation, Integer> recipesUsed = cookingRecipesUsed.get(st);
         if (recipesUsed == null || recipesUsed.isEmpty()) return;
         if (!(player instanceof ServerPlayer serverPlayer)) return;
-        ServerLevel level = serverPlayer.level();
-        List<RecipeHolder<?>> toAward = new ArrayList<>();
+        ServerLevel level = serverPlayer.serverLevel();
+        List<Recipe<?>> toAward = new ArrayList<>();
         for (var entry : recipesUsed.entrySet()) {
-            level.recipeAccess().byKey(entry.getKey()).ifPresent(recipe -> {
+            level.getServer().getRecipeManager().byKey(entry.getKey()).ifPresent(recipe -> {
                 toAward.add(recipe);
                 spawnCookingExperience(level, serverPlayer.position(), entry.getValue(),
-                    ((AbstractCookingRecipe) recipe.value()).experience());
+                    ((AbstractCookingRecipe) recipe).getExperience());
             });
         }
         serverPlayer.awardRecipes(toAward);
@@ -609,6 +704,8 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return total == 0 ? 0f : ds[2].get() / (float) total;
     }
 
+    // ── Crafting result update ───────────────────────────────────────────────
+
     public void setCraftingVisible(boolean visible) {
         setActiveStation(visible ? Station.CRAFTING : Station.NONE);
     }
@@ -624,7 +721,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
                 break;
             }
         }
-        if (container == stonecutterInput)      updateStonecutterResult();
+        if (container == stonecutterInput)    updateStonecutterResult();
         if (container == grindstoneRepairSlots) computeGrindstoneResult();
         if (container == smithingInput)         updateSmithingResult();
         super.slotsChanged(container);
@@ -632,13 +729,13 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
 
     private void updateCookingTime(Station st) {
         if (!(player instanceof ServerPlayer serverPlayer)) return;
-        ServerLevel level = serverPlayer.level();
+        ServerLevel level = serverPlayer.serverLevel();
         ItemStack input = cookingContainers.get(st).getItem(0);
         DataSlot[] ds = cookingDataSlots.get(st);
         if (!input.isEmpty()) {
             var optRecipe = level.getServer().getRecipeManager()
-                .getRecipeFor(st.cookingRecipeType, new SingleRecipeInput(input), level);
-            ds[3].set(optRecipe.map(r -> r.value().cookingTime()).orElse(200));
+                .getRecipeFor(st.cookingRecipeType, cookingContainers.get(st), level);
+            ds[3].set(optRecipe.map(AbstractCookingRecipe::getCookingTime).orElse(200));
         } else {
             ds[3].set(0);
         }
@@ -656,19 +753,23 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
                 inventory.placeItemBackInInventory(stack);
             }
         }
+        // Clear the result slot without returning it to the player to avoid duplication on close
         craftResult.removeItemNoUpdate(RESULT_SLOT_INDEX);
         craftMatrix.setChanged();
         craftResult.setChanged();
     }
 
+    // ── Stonecutter ──────────────────────────────────────────────────────────
+
     private void updateStonecutterResult() {
         ItemStack input = stonecutterInput.getItem(0);
-        if (ItemStack.isSameItemSameComponents(input, stonecutterLastInput)) return;
+        if (ItemStack.isSameItemSameTags(input, stonecutterLastInput)) return;
         stonecutterLastInput = input.copy();
         if (input.isEmpty()) {
             stonecutterRecipes = List.of();
         } else {
-            stonecutterRecipes = player.level().recipeAccess().stonecutterRecipes().selectByInput(input).entries();
+            stonecutterRecipes = player.level().getRecipeManager()
+                    .getRecipesFor(RecipeType.STONECUTTING, stonecutterInput, player.level());
         }
         if (player instanceof ServerPlayer) {
             if (input.isEmpty() || stonecutterRecipes.isEmpty()) {
@@ -686,10 +787,9 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
             stonecutterResult.setItem(0, ItemStack.EMPTY);
             return;
         }
-        stonecutterRecipes.get(index).recipe().recipe().ifPresent(holder -> {
-            ItemStack result = holder.value().assemble(new SingleRecipeInput(stonecutterInput.getItem(0)));
-            stonecutterResult.setItem(0, result);
-        });
+        StonecutterRecipe recipe = stonecutterRecipes.get(index);
+        stonecutterResult.setItem(0,
+                recipe.assemble(stonecutterInput, player.level().registryAccess()));
     }
 
     @Override
@@ -702,9 +802,11 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return super.clickMenuButton(player, id);
     }
 
-    public List<SelectableRecipe.SingleInputEntry<StonecutterRecipe>> getStonecutterRecipes() { return stonecutterRecipes; }
+    public List<StonecutterRecipe> getStonecutterRecipes() { return stonecutterRecipes; }
     public int getSelectedStonecutterRecipe() { return stonecutterSelectedRecipe.get(); }
     public boolean hasStonecutterInput() { return !stonecutterInput.getItem(0).isEmpty(); }
+
+    // ── Grindstone ───────────────────────────────────────────────────────────
 
     private void computeGrindstoneResult() {
         if (!(player instanceof ServerPlayer)) return;
@@ -732,7 +834,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     }
 
     private @Nullable ItemStack mergeGrindstoneItems(ItemStack top, ItemStack bottom) {
-        if (top.getItem() != bottom.getItem() || !top.has(net.minecraft.core.component.DataComponents.MAX_DAMAGE)) return null;
+        if (top.getItem() != bottom.getItem() || !top.isDamageableItem()) return null;
         int topHealth = top.getMaxDamage() - top.getDamageValue();
         int botHealth = bottom.getMaxDamage() - bottom.getDamageValue();
         int merged    = topHealth + botHealth + top.getMaxDamage() / 20;
@@ -743,45 +845,40 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
 
     private ItemStack removeNonCurses(ItemStack stack) {
         ItemStack copy = stack.copy();
-        copy.remove(net.minecraft.core.component.DataComponents.ENCHANTMENTS);
-        copy.remove(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
-        var enchants = stack.getOrDefault(net.minecraft.core.component.DataComponents.ENCHANTMENTS, net.minecraft.world.item.enchantment.ItemEnchantments.EMPTY);
-        for (var e : enchants.entrySet()) {
-            if (e.getKey().is(net.minecraft.tags.EnchantmentTags.CURSE)) copy.enchant(e.getKey(), e.getValue());
+        Map<net.minecraft.world.item.enchantment.Enchantment, Integer> curses = new HashMap<>();
+        for (var entry : net.minecraft.world.item.enchantment.EnchantmentHelper
+                .getEnchantments(stack).entrySet()) {
+            if (entry.getKey().isCurse()) curses.put(entry.getKey(), entry.getValue());
         }
-        var stored = stack.getOrDefault(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS, net.minecraft.world.item.enchantment.ItemEnchantments.EMPTY);
-        if (!stored.isEmpty()) {
-            var mutable = new net.minecraft.world.item.enchantment.ItemEnchantments.Mutable(net.minecraft.world.item.enchantment.ItemEnchantments.EMPTY);
-            for (var e : stored.entrySet()) {
-                if (e.getKey().is(net.minecraft.tags.EnchantmentTags.CURSE)) mutable.upgrade(e.getKey(), e.getValue());
-            }
-            net.minecraft.world.item.enchantment.ItemEnchantments result = mutable.toImmutable();
-            if (!result.isEmpty()) copy.set(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS, result);
-        }
+        copy.removeTagKey("Enchantments");
+        copy.removeTagKey("StoredEnchantments");
+        net.minecraft.world.item.enchantment.EnchantmentHelper.setEnchantments(curses, copy);
         return copy;
     }
 
     private int getGrindstoneEnchantValue(ItemStack stack) {
         int total = 0;
-        for (var e : stack.getOrDefault(net.minecraft.core.component.DataComponents.ENCHANTMENTS, net.minecraft.world.item.enchantment.ItemEnchantments.EMPTY).entrySet())
-            if (!e.getKey().is(net.minecraft.tags.EnchantmentTags.CURSE)) total += e.getValue();
-        for (var e : stack.getOrDefault(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS, net.minecraft.world.item.enchantment.ItemEnchantments.EMPTY).entrySet())
-            if (!e.getKey().is(net.minecraft.tags.EnchantmentTags.CURSE)) total += e.getValue();
+        for (var entry : net.minecraft.world.item.enchantment.EnchantmentHelper
+                .getEnchantments(stack).entrySet()) {
+            if (!entry.getKey().isCurse()) total += entry.getValue();
+        }
         return total;
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    // ── Smithing ─────────────────────────────────────────────────────────────
+
     private void updateSmithingResult() {
         if (!(player instanceof ServerPlayer sp)) return;
-        ItemStack template = smithingInput.getItem(0);
         ItemStack base     = smithingInput.getItem(1);
-        ItemStack addition = smithingInput.getItem(2);
         if (base.isEmpty()) { smithingResult.setItem(0, ItemStack.EMPTY); return; }
-        SmithingRecipeInput input = new SmithingRecipeInput(template, base, addition);
-        var opt = (Optional<RecipeHolder<SmithingRecipe>>) (Optional<?>)
-                sp.level().getServer().getRecipeManager().getRecipeFor(RecipeType.SMITHING, input, sp.level());
-        smithingResult.setItem(0, opt.map(r -> r.value().assemble(input)).orElse(ItemStack.EMPTY));
+        Optional<SmithingRecipe> recipe = sp.serverLevel().getServer().getRecipeManager()
+                .getRecipeFor(RecipeType.SMITHING, smithingInput, sp.serverLevel());
+        smithingResult.setItem(0, recipe
+                .map(value -> value.assemble(smithingInput, sp.serverLevel().registryAccess()))
+                .orElse(ItemStack.EMPTY));
     }
+
+    // ── Brewing state ────────────────────────────────────────────────────────
 
     private void loadBrewingState() {
         if (!(sourceInventory instanceof EndlessInventory endInv)) return;
@@ -810,18 +907,17 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         int brewTime = brewingTimeSlot.get();
         ItemStack fuelStack = brewingContainer.getItem(4);
 
-        if (fuel <= 0 && !fuelStack.isEmpty() && fuelStack.is(net.minecraft.tags.ItemTags.BREWING_FUEL)) {
+        if (fuel <= 0 && fuelStack.is(net.minecraft.world.item.Items.BLAZE_POWDER)) {
             fuel = 20;
             fuelStack.shrink(1);
         }
 
-        var pb = level.potionBrewing();
-        boolean brewable = isBrewingBrewableMenu(pb);
+        boolean brewable = isBrewingBrewableMenu();
 
         if (brewTime > 0) {
             brewTime--;
             if (brewTime == 0) {
-                doBrewMenu(pb);
+                doBrewMenu();
             } else if (!brewable) {
                 brewTime = 0;
             }
@@ -834,22 +930,25 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         brewingTimeSlot.set(brewTime);
     }
 
-    private boolean isBrewingBrewableMenu(net.minecraft.world.item.alchemy.PotionBrewing pb) {
+    private boolean isBrewingBrewableMenu() {
         ItemStack ingredient = brewingContainer.getItem(3);
-        if (ingredient.isEmpty() || !pb.isIngredient(ingredient)) return false;
+        if (ingredient.isEmpty()
+                || !net.minecraft.world.item.alchemy.PotionBrewing.isIngredient(ingredient)) return false;
         for (int i = 0; i < 3; i++) {
             ItemStack potion = brewingContainer.getItem(i);
-            if (!potion.isEmpty() && pb.hasMix(potion, ingredient)) return true;
+            if (!potion.isEmpty()
+                    && net.minecraft.world.item.alchemy.PotionBrewing.hasMix(potion, ingredient)) return true;
         }
         return false;
     }
 
-    private void doBrewMenu(net.minecraft.world.item.alchemy.PotionBrewing pb) {
+    private void doBrewMenu() {
         ItemStack ingredient = brewingContainer.getItem(3);
         if (!ingredient.isEmpty()) {
             for (int i = 0; i < 3; i++) {
                 ItemStack p = brewingContainer.getItem(i);
-                if (!p.isEmpty()) brewingContainer.setItem(i, pb.mix(ingredient, p));
+                if (!p.isEmpty()) brewingContainer.setItem(
+                        i, net.minecraft.world.item.alchemy.PotionBrewing.mix(ingredient, p));
             }
             ingredient.shrink(1);
             brewingContainer.setItem(3, ingredient);
@@ -859,6 +958,8 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     public boolean isBrewingActive() { return activeStation == Station.BREWING; }
     public float getBrewingProgress() { int t = brewingTimeSlot.get(); return t <= 0 ? 0f : t / 400f; }
     public float getBrewingFuelProgress() { int f = brewingFuelSlot.get(); return f <= 0 ? 0f : f / 20f; }
+
+    // ── Instant station return ────────────────────────────────────────────────
 
     private void returnInstantStationToPlayer(Station st) {
         if (player.level().isClientSide()) return;
@@ -929,19 +1030,21 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return baseRows;
     }
 
-    private void addStandardInventorySlots(Inventory playerInventory, int x, int y) {
+    private void addStandardInventorySlots(Inventory playerInventory, int x, int y){
         for (int l = 0; l < 3; l++) {
             for (int j1 = 0; j1 < 9; j1++) {
-                this.addSlot(new Slot(playerInventory, j1 + l * 9 + 9, x + j1 * 18, y + l * 18));
+                this.addSlot(new Slot(playerInventory, j1 + l * 9 + 9, x + j1 * 18, y + l * 18 ));
             }
         }
+
         for (int i1 = 0; i1 < 9; i1++) {
-            this.addSlot(new Slot(playerInventory, i1, x + i1 * 18, y + 58));
+            this.addSlot(new Slot(playerInventory, i1, x + i1 * 18, y+58));
         }
     }
 
-    public void switchPageWithIndex(int index) {
-        if (index < 0 || index >= PageTypeRegistry.size()) {
+    //supposed to be the only method to change displaying page and index value; to sync.
+    public void switchPageWithIndex(int index){
+        if(index < 0 || index >= PageTypeRegistry.size()) {
             return;
         }
         PageType type = PageTypeRegistry.byIndex(index);
@@ -950,25 +1053,25 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         }
     }
 
-    private void applySelectedPage(PageType type) {
+    private void applySelectedPage(PageType type){
         this.displayingPageType = type;
         this.displayingPageId = type.registerName;
         this.displayingPageIndex = Math.max(0, PageTypeRegistry.getIndexOf(this.displayingPageId));
     }
 
-    public int getItemSize() {
+    public int getItemSize(){
         return itemSize.get();
     }
 
-    public void setItemSize(int i) {
+    public void setItemSize(int i){
         this.itemSize.set(i);
     }
 
-    public boolean enableInfinity() {
+    public boolean enableInfinity(){
         return infinityMode.get() > 0;
     }
 
-    public int getMaxStackSize() {
+    public int getMaxStackSize(){
         return maxStackSize.get();
     }
 
@@ -977,7 +1080,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return this;
     }
 
-    public SourceInventory getSourceInventory() {
+    public SourceInventory getSourceInventory(){
         return this.sourceInventory;
     }
 
@@ -986,7 +1089,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return player;
     }
 
-    public int rows() {
+    public int rows(){
         return this.visibleRows;
     }
 
@@ -995,29 +1098,37 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return 9;
     }
 
-    public void clicked(int slotId, int button, ContainerInput clickType, Player player) {
+    /**Override {@link AbstractContainerMenu#clicked(int, int, ClickType, Player)}
+     * Invoked when Client click in container screen/Server handle click packet.
+     * for details see below.
+     * @param slotId index
+     * @param button ...0: left 1: right 2: middle ? Is there anyone who can explain?
+     * @param clickType {@link ClickType}
+     * @param player player performing menu click
+     */
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
         try {
-            if (clickType == ContainerInput.QUICK_CRAFT) {
-                MenuClickHandler.handleQuickCraft(this, slotId, button, player);
-            } else if (this.quickcraftStatus != 0) {
+            if(clickType==ClickType.QUICK_CRAFT){
+                MenuClickHandler.handleQuickCraft(this,slotId,button,player);
+            }else if(this.quickcraftStatus!=0){
                 this.resetQuickCraft();
             }
-            if (clickType == ContainerInput.PICKUP) {
+            if (clickType == ClickType.PICKUP) {
                 MenuClickHandler.handlePickup(this, slotId, button, player);
-            } else if (clickType == ContainerInput.QUICK_MOVE) {
+            } else if (clickType == ClickType.QUICK_MOVE) {
                 MenuClickHandler.handleQuickMove(this, slotId, button, player);
-            } else if (clickType == ContainerInput.SWAP) {
+            } else if (clickType == ClickType.SWAP) {
                 MenuClickHandler.handleSwap(this, slotId, button, player);
-            } else if (clickType == ContainerInput.THROW) {
+            } else if (clickType == ClickType.THROW) {
                 MenuClickHandler.handleThrow(this, slotId, button, player);
-            } else if (clickType == ContainerInput.CLONE) {
+            } else if (clickType == ClickType.CLONE) {
                 MenuClickHandler.handleClone(this, slotId, button, player);
-            } else if (clickType == ContainerInput.PICKUP_ALL) {
+            } else if (clickType == ClickType.PICKUP_ALL) {
                 this.handlePickupAll(slotId, button, player);
             } else {
                 return;
             }
-            if (this.getSourceInventory() instanceof EndlessInventory endinv) {
+            if(this.getSourceInventory() instanceof EndlessInventory endinv){
                 this.setItemSize(endinv.getItemSize());
             }
         } catch (Exception exception) {
@@ -1034,10 +1145,13 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     }
 
     boolean tryItemClickBehaviourOverride(Player player, ClickAction action, Slot slot, ItemStack clickedItem, ItemStack carriedItem) {
+        // Neo: Fire the ItemStackedOnOtherEvent, and return true if it was cancelled (meaning the event was handled). Returning true will trigger the container to stop processing further logic.
         if (ModInfo.platformContext.onItemStackedOn(clickedItem, carriedItem, slot, action, player, createCarriedSlotAccess())) {
             return true;
         }
+
         FeatureFlagSet featureflagset = player.level().enabledFeatures();
+        //item combining in menu, bundle, etc
         return carriedItem.isItemEnabled(featureflagset) && carriedItem.overrideStackedOnOther(slot, action, player)
                 || clickedItem.isItemEnabled(featureflagset)
                     && clickedItem.overrideOtherStackedOnMe(carriedItem, slot, action, player, this.createCarriedSlotAccess());
@@ -1058,6 +1172,10 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         };
     }
 
+    /**
+     * Handles vanilla quick-move (shift-click) transfers, prioritising crafter/furnace slots before the player inventory
+     * and falling back to the endless inventory page when needed.
+     */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         Slot slot = this.slots.get(index);
@@ -1111,6 +1229,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         }
 
         return original;
+
     }
 
     private boolean isPlayerInventorySlot(int index) {
@@ -1145,6 +1264,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         if (!moved || stack.getCount() == before) {
             return false;
         }
+        // Prevent ghost copies on the client by only flagging a move when the stack actually shrank.
         craftMatrix.setChanged();
         updateCraftingResult();
         return true;
@@ -1189,8 +1309,8 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
             int step = button == 0 ? 1 : -1;
 
             for (int pass = 0; pass < 2; pass++) {
-                for (int idx = startIndex; idx >= 0 && idx < this.slots.size() && carried.getCount() < carried.getMaxStackSize(); idx += step) {
-                    Slot scanningSlot = this.slots.get(idx);
+                for (int index = startIndex; index >= 0 && index < this.slots.size() && carried.getCount() < carried.getMaxStackSize(); index += step) {
+                    Slot scanningSlot = this.slots.get(index);
                     if (AbstractContainerMenu.canItemQuickReplace(scanningSlot, carried, true)
                             && scanningSlot.mayPickup(player)
                             && this.canTakeItemForPickAll(carried, scanningSlot)) {
@@ -1219,6 +1339,9 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return this.sourceInventory.takeItem(request, count);
     }
 
+    /**
+     * Send stacks from the current page into the active station (when visible) and then the player inventory.
+     */
     public ItemStack quickMoveFromPage(ItemStack stack) {
         if (stack.isEmpty()) {
             return stack;
@@ -1229,7 +1352,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
             stationAccepted = moveStackIntoCrafter(stack);
         } else if (activeStation.isCooking()) {
             stationAccepted = moveStackIntoCookingInput(activeStation, stack);
-            if (!stationAccepted && player.level().fuelValues().isFuel(stack)) {
+            if (!stationAccepted && AbstractFurnaceBlockEntity.isFuel(stack)) {
                 int fuelIdx = cookingFuelIdx(activeStation);
                 stationAccepted = this.moveItemStackTo(stack, fuelIdx, fuelIdx + 1, false);
             }
@@ -1237,18 +1360,18 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
             stationAccepted = this.moveItemStackTo(stack, STONECUTTER_INPUT, STONECUTTER_INPUT + 1, false);
         } else if (activeStation == Station.GRINDSTONE) {
             stationAccepted = this.moveItemStackTo(stack, GRINDSTONE_SLOT_START, GRINDSTONE_RESULT, false);
-        } else if (activeStation == Station.SMITHING && player instanceof ServerPlayer sp) {
-            var ra = sp.level().recipeAccess();
-            if (!stationAccepted && ra.propertySet(RecipePropertySet.SMITHING_TEMPLATE).test(stack))
+        } else if (activeStation == Station.SMITHING) {
+            if (!stationAccepted && matchesSmithingSlot(stack, 0))
                 stationAccepted = this.moveItemStackTo(stack, SMITHING_TEMPLATE, SMITHING_TEMPLATE + 1, false);
-            if (!stationAccepted && ra.propertySet(RecipePropertySet.SMITHING_BASE).test(stack))
+            if (!stationAccepted && matchesSmithingSlot(stack, 1))
                 stationAccepted = this.moveItemStackTo(stack, SMITHING_BASE, SMITHING_BASE + 1, false);
-            if (!stationAccepted && ra.propertySet(RecipePropertySet.SMITHING_ADDITION).test(stack))
+            if (!stationAccepted && matchesSmithingSlot(stack, 2))
                 stationAccepted = this.moveItemStackTo(stack, SMITHING_ADDITION, SMITHING_ADDITION + 1, false);
         } else if (activeStation == Station.BREWING) {
-            if (!stationAccepted && stack.is(net.minecraft.tags.ItemTags.BREWING_FUEL))
+            if (!stationAccepted && stack.is(net.minecraft.world.item.Items.BLAZE_POWDER))
                 stationAccepted = this.moveItemStackTo(stack, BREWING_FUEL_SLOT, BREWING_FUEL_SLOT + 1, false);
-            if (!stationAccepted && player instanceof ServerPlayer sp && sp.level().potionBrewing().isIngredient(stack))
+            if (!stationAccepted
+                    && net.minecraft.world.item.alchemy.PotionBrewing.isIngredient(stack))
                 stationAccepted = this.moveItemStackTo(stack, BREWING_INGREDIENT, BREWING_INGREDIENT + 1, false);
             if (!stationAccepted)
                 stationAccepted = this.moveItemStackTo(stack, BREWING_POTION0, BREWING_POTION0 + 3, false);
@@ -1262,6 +1385,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         }
         return stationAccepted && stack.isEmpty() ? ItemStack.EMPTY : stack;
     }
+
 
     @Override
     public SortType sortType() {
@@ -1280,7 +1404,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
 
     @Override
     public void switchSortReversed() {
-        reverseSort = !reverseSort;
+        reverseSort=!reverseSort;
     }
 
     @Override
@@ -1298,6 +1422,9 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         this.searching = searching;
     }
 
+    /**
+     * Send operation will be accomplished in {@link AbstractContainerMenu#broadcastChanges()}
+     */
     @Override
     public PageData getPageData() {
         return new PageData(getDisplayingPageId(), baseRows, columns(), sortType(), isSortReversed(), searching());
@@ -1336,6 +1463,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     public boolean stillValid(Player player) {
         return true;
     }
+
 
     private int insertStackIntoPage(ItemStack stack) {
         if (stack.isEmpty()) {
@@ -1377,7 +1505,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         }
         if (activeStation.isCooking()) {
             boolean moved = moveStackIntoCookingInput(activeStation, stack);
-            if (!moved && player.level().fuelValues().isFuel(stack)) {
+            if (!moved && AbstractFurnaceBlockEntity.isFuel(stack)) {
                 int fuelIdx = cookingFuelIdx(activeStation);
                 moved = this.moveItemStackTo(stack, fuelIdx, fuelIdx + 1, false);
             }
@@ -1390,22 +1518,20 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
             return this.moveItemStackTo(stack, GRINDSTONE_SLOT_START, GRINDSTONE_RESULT, false);
         }
         if (activeStation == Station.SMITHING) {
-            if (!(player instanceof ServerPlayer sp)) return false;
-            var ra = sp.level().recipeAccess();
             boolean moved = false;
-            if (!moved && ra.propertySet(RecipePropertySet.SMITHING_TEMPLATE).test(stack))
+            if (!moved && matchesSmithingSlot(stack, 0))
                 moved = this.moveItemStackTo(stack, SMITHING_TEMPLATE, SMITHING_TEMPLATE + 1, false);
-            if (!moved && ra.propertySet(RecipePropertySet.SMITHING_BASE).test(stack))
+            if (!moved && matchesSmithingSlot(stack, 1))
                 moved = this.moveItemStackTo(stack, SMITHING_BASE, SMITHING_BASE + 1, false);
-            if (!moved && ra.propertySet(RecipePropertySet.SMITHING_ADDITION).test(stack))
+            if (!moved && matchesSmithingSlot(stack, 2))
                 moved = this.moveItemStackTo(stack, SMITHING_ADDITION, SMITHING_ADDITION + 1, false);
             return moved;
         }
         if (activeStation == Station.BREWING) {
             boolean moved = false;
-            if (!moved && stack.is(net.minecraft.tags.ItemTags.BREWING_FUEL))
+            if (!moved && stack.is(net.minecraft.world.item.Items.BLAZE_POWDER))
                 moved = this.moveItemStackTo(stack, BREWING_FUEL_SLOT, BREWING_FUEL_SLOT + 1, false);
-            if (!moved && player instanceof ServerPlayer sp && sp.level().potionBrewing().isIngredient(stack))
+            if (!moved && net.minecraft.world.item.alchemy.PotionBrewing.isIngredient(stack))
                 moved = this.moveItemStackTo(stack, BREWING_INGREDIENT, BREWING_INGREDIENT + 1, false);
             if (!moved)
                 moved = this.moveItemStackTo(stack, BREWING_POTION0, BREWING_POTION0 + 3, false);
@@ -1414,31 +1540,35 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return insertStackIntoPage(stack) > 0;
     }
 
+    private boolean matchesSmithingSlot(ItemStack stack, int slot) {
+        if (!(player instanceof ServerPlayer serverPlayer)) return false;
+        for (SmithingRecipe recipe : serverPlayer.serverLevel().getServer().getRecipeManager()
+                .getAllRecipesFor(RecipeType.SMITHING)) {
+            boolean matches = switch (slot) {
+                case 0 -> recipe.isTemplateIngredient(stack);
+                case 1 -> recipe.isBaseIngredient(stack);
+                case 2 -> recipe.isAdditionIngredient(stack);
+                default -> false;
+            };
+            if (matches) return true;
+        }
+        return false;
+    }
+
     private void updateCraftingResult() {
         if (!(this.player instanceof ServerPlayer serverPlayer)) {
             return;
         }
-        var level = serverPlayer.level();
+        ServerLevel level = serverPlayer.serverLevel();
         ItemStack resultStack = ItemStack.EMPTY;
-        int w = CRAFT_GRID_WIDTH;
-        int h = CRAFT_GRID_HEIGHT;
-        NonNullList<ItemStack> items = NonNullList.withSize(w * h, ItemStack.EMPTY);
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                int idx = y * w + x;
-                items.set(idx, this.craftMatrix.getItem(idx));
-            }
-        }
-        CraftingInput input = CraftingInput.of(w, h, items);
-        Optional<RecipeHolder<CraftingRecipe>> optional = ((net.minecraft.server.level.ServerLevel) level).getServer().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, level);
+        Optional<CraftingRecipe> optional = level.getServer().getRecipeManager()
+                .getRecipeFor(RecipeType.CRAFTING, craftMatrix, level);
         if (optional.isPresent()) {
-            RecipeHolder<CraftingRecipe> holder = optional.get();
-            CraftingRecipe recipe = holder.value();
-            if (this.craftResult.setRecipeUsed(serverPlayer, holder)) {
-                ItemStack assembled = recipe.assemble(input);
-                if (assembled.isItemEnabled(level.enabledFeatures())) {
-                    resultStack = assembled;
-                }
+            CraftingRecipe recipe = optional.get();
+            this.craftResult.setRecipeUsed(recipe);
+            ItemStack assembled = recipe.assemble(craftMatrix, level.registryAccess());
+            if (assembled.isItemEnabled(level.enabledFeatures())) {
+                resultStack = assembled;
             }
         }
         this.craftResult.setItem(RESULT_SLOT_INDEX, resultStack);
@@ -1499,7 +1629,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return player.level().fuelValues().isFuel(stack) || FurnaceFuelSlot.isBucket(stack);
+            return AbstractFurnaceBlockEntity.isFuel(stack) || FurnaceFuelSlot.isBucket(stack);
         }
 
         @Override
@@ -1538,6 +1668,8 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         }
     }
 
+    // ── Inner slot classes for new stations ──────────────────────────────────
+
     private class EIStonecutterInputSlot extends Slot {
         EIStonecutterInputSlot(SimpleContainer c, int slot, int x, int y) { super(c, slot, x, y); }
         @Override public boolean mayPlace(ItemStack stack) { return true; }
@@ -1570,7 +1702,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         public void onTake(Player player, ItemStack carried) {
             if (player instanceof ServerPlayer sp) {
                 int xp = grindstoneXpReward;
-                if (xp > 0) ExperienceOrb.award(sp.level(), sp.position(), xp);
+                if (xp > 0) ExperienceOrb.award(sp.serverLevel(), sp.position(), xp);
             }
             grindstoneRepairSlots.setItem(0, ItemStack.EMPTY);
             grindstoneRepairSlots.setItem(1, ItemStack.EMPTY);
@@ -1610,8 +1742,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     private class EIBrewingIngredientSlot extends Slot {
         EIBrewingIngredientSlot(SimpleContainer c, int slot, int x, int y) { super(c, slot, x, y); }
         @Override public boolean mayPlace(ItemStack stack) {
-            if (!(player instanceof ServerPlayer sp)) return true;
-            return sp.level().potionBrewing().isIngredient(stack);
+            return net.minecraft.world.item.alchemy.PotionBrewing.isIngredient(stack);
         }
         @Override public boolean isActive() { return activeStation == Station.BREWING; }
     }
@@ -1619,19 +1750,26 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     private class EIBrewingFuelSlot extends Slot {
         EIBrewingFuelSlot(SimpleContainer c, int slot, int x, int y) { super(c, slot, x, y); }
         @Override public boolean mayPlace(ItemStack stack) {
-            return stack.is(net.minecraft.tags.ItemTags.BREWING_FUEL);
+            return stack.is(net.minecraft.world.item.Items.BLAZE_POWDER);
         }
         @Override public boolean isActive() { return activeStation == Station.BREWING; }
     }
 
     public interface ClientPageBinding {
         String pageId();
+
         PageType pageType();
+
         void onPageSelected();
+
         void scrollTo(float pos);
+
         ItemStack quickMoveIntoPage(ItemStack stack);
+
         void markPageChanged();
+
         ItemStack extractItemFromPage(ItemStack template, int maxCount);
+
         void refreshAfterMenuInteraction(SourceInventory source);
     }
 }

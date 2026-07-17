@@ -10,18 +10,16 @@ import com.emma.endinv.menu.page.PageType;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -61,7 +59,7 @@ public abstract class DisplayPage{
     @Nullable
     protected final Predicate<ItemStack> itemClassify;
     @Nullable
-    public Identifier icon = null;
+    public ResourceLocation icon = null;
     //displayed when hovering on Page switch bar.
     public Component name;
 
@@ -129,7 +127,7 @@ public abstract class DisplayPage{
     /**Render page icon with page's {@link #icon}
      * icon can be an item location or sprite location with 16*16 size.
      */@Nullable
-    public Identifier getIcon(){
+    public ResourceLocation getIcon(){
         return icon;
     }
 
@@ -209,7 +207,7 @@ public abstract class DisplayPage{
 
 
     //page renderer
-    public void renderBg(GuiGraphicsExtractor guiGraphics, float partialTick, int mouseX, int mouseY) {
+    public void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         framework.SFBgRenderer.getDefaultPageBgRenderer().ifPresent(bgRenderer -> bgRenderer.renderBg(guiGraphics, partialTick, mouseX, mouseY));
     }
 
@@ -227,9 +225,9 @@ public abstract class DisplayPage{
     public void resize(int rows) {
     }
 
-    public abstract void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks);
+    public abstract void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks);
 
-    public void renderHoverOverlay(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    public void renderHoverOverlay(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
     }
 
     public String getDisplayAmount(ItemStack stack){
@@ -264,16 +262,16 @@ public abstract class DisplayPage{
      * <p>
      *Invoked when page s not initialized (items) yet.
      */
-    public void renderPageIcon(GuiGraphicsExtractor graphics, int x, int y, float partialTick) {
+    public void renderPageIcon(GuiGraphics graphics, int x, int y, float partialTick) {
         if(getIcon()==null) return;
         Optional<Item> optionalItem = BuiltInRegistries.ITEM.getOptional(getIcon());
         if (optionalItem.isPresent()) {
             ItemStack stack = new ItemStack(optionalItem.get());
-            graphics.item(stack,x,y);
+            graphics.renderItem(stack,x,y);
             return;
         }
         try {
-            graphics.blit(RenderPipelines.GUI_TEXTURED ,getIcon(), x, y, 0, 0, 16, 16, 16, 16);
+            graphics.blit(getIcon(), x, y, 0, 0, 16, 16, 16, 16);
         } catch (Exception ignored) {}
     }
 
@@ -286,7 +284,7 @@ public abstract class DisplayPage{
      */
     public abstract boolean doubleClickedOnOne(double XOffset, double YOffset, double lastX, double lastY, long clickInterval);
 
-    public abstract void pageClicked(double XOffset, double YOffset, int keyCode, ContainerInput clickType);
+    public abstract void pageClicked(double XOffset, double YOffset, int keyCode, ClickType clickType);
 
     /**
      * Get an area of one independent interactable area, mainly one item slot.
@@ -334,45 +332,41 @@ public abstract class DisplayPage{
     private long lastClickedTime;
     private boolean skipNextRelease;
 
-    public boolean mouseClicked(MouseButtonEvent clickEvent, boolean pre){
-        double XOffset = clickEvent.x();
-        double YOffset = clickEvent.y();
-        int keyCode = clickEvent.button();
-        InputConstants.Key mouseKey = InputConstants.Type.MOUSE.getOrCreate(keyCode);
-        boolean isKeyPicking = mc.options.keyPickItem.matchesMouse(clickEvent);//is mouse middle button and enabled for pickup or clone
+    public boolean mouseClicked(double XOffset, double YOffset, int keyCode){
+        boolean isKeyPicking = mc.options.keyPickItem.matchesMouse(keyCode);//is mouse middle button and enabled for pickup or clone
         long clickTime = Util.getMillis();
         this.doubleClick = keyCode == lastClickedButton && doubleClickedOnOne(XOffset,YOffset,lastCLickedX,lastClickedY,clickTime-lastClickedTime);
         this.skipNextRelease = false;
         if(keyCode != InputConstants.MOUSE_BUTTON_LEFT && keyCode != InputConstants.MOUSE_BUTTON_RIGHT && !isKeyPicking){
             checkHotBarClicked:
             if (this.menu.getCarried().isEmpty()) {
-                if (mc.options.keySwapOffhand.matchesMouse(clickEvent)) {
-                    pageClicked(XOffset,YOffset,40, ContainerInput.SWAP);
+                if (mc.options.keySwapOffhand.matchesMouse(keyCode)) {
+                    pageClicked(XOffset,YOffset,40, ClickType.SWAP);
                     break checkHotBarClicked;
                 }
 
                 for (int i = 0; i < 9; i++) {
-                    if (mc.options.keyHotbarSlots[i].matchesMouse(clickEvent)) {
-                        pageClicked(XOffset,YOffset, i, ContainerInput.SWAP);
+                    if (mc.options.keyHotbarSlots[i].matchesMouse(keyCode)) {
+                        pageClicked(XOffset,YOffset, i, ClickType.SWAP);
                     }
                 }
             }
         }else {
             if(menu.getCarried().isEmpty()){
-                if (mc.options.keyPickItem.matchesMouse(clickEvent)) {
-                    pageClicked(XOffset, YOffset, keyCode, ContainerInput.CLONE);
+                if (mc.options.keyPickItem.matchesMouse(keyCode)) {
+                    pageClicked(XOffset, YOffset, keyCode, ClickType.CLONE);
                 } else {
-                    ContainerInput clicktype = ContainerInput.PICKUP;
-                    if (Minecraft.getInstance().hasShiftDown()) {
+                    ClickType clicktype = ClickType.PICKUP;
+                    if (Screen.hasShiftDown()) {
                         setHoldOn();
                         //this.lastQuickMoved = slot != null && slot.hasItem() ? slot.getItem().copy() : ItemStack.EMPTY;
-                        clicktype = ContainerInput.QUICK_MOVE;
+                        clicktype = ClickType.QUICK_MOVE;
                     }
                     pageClicked(XOffset, YOffset, keyCode, clicktype);
                 }
                 this.skipNextRelease = true;
             }else {//deference to vanilla
-                pageClicked(XOffset, YOffset, keyCode, ContainerInput.PICKUP);
+                pageClicked(XOffset, YOffset, keyCode, ClickType.PICKUP);
             }
         }
         this.lastClickedTime = clickTime;
@@ -386,24 +380,21 @@ public abstract class DisplayPage{
     private int lastDraggedPageSlot = -1;
 
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY){
-        if(Minecraft.getInstance().hasShiftDown()){
+        if(Screen.hasShiftDown()){
             int slotId = getSlotByMouseOffset(mouseX,mouseY);
             if(slotId>=0 && lastDraggedPageSlot>=0 && slotId!=lastDraggedPageSlot){
-                pageClicked(mouseX,mouseY,button,ContainerInput.QUICK_MOVE);
+                pageClicked(mouseX,mouseY,button,ClickType.QUICK_MOVE);
             }
             lastDraggedPageSlot = slotId;
             return true;
         }else return false;
     }
 
-    public boolean mouseReleased(MouseButtonEvent event){
-        int keyCode = event.button();
-        double XOffset = event.x();
-        double YOffset = event.y();
+    public boolean mouseReleased(double XOffset, double YOffset, int keyCode){
         lastDraggedPageSlot = -1;
         //InputConstants.Key mouseKey = InputConstants.Type.MOUSE.getOrCreate(keyCode);
         if (this.doubleClick) {
-            this.pageClicked(XOffset,YOffset,keyCode,ContainerInput.PICKUP_ALL);
+            this.pageClicked(XOffset,YOffset,keyCode,ClickType.PICKUP_ALL);
             this.doubleClick = false;
             this.lastClickedTime = 0L;
             return true;
@@ -414,8 +405,8 @@ public abstract class DisplayPage{
                 return true;
             }
             if(!menu.getCarried().isEmpty()){
-                if (mc.options.keyPickItem.matchesMouse(event)) {
-                    this.pageClicked(XOffset,YOffset,keyCode,ContainerInput.CLONE);
+                if (mc.options.keyPickItem.matchesMouse(keyCode)) {
+                    this.pageClicked(XOffset,YOffset,keyCode,ClickType.CLONE);
                     return true;
                 }
             }
@@ -436,20 +427,20 @@ public abstract class DisplayPage{
         boolean isNumericKey = InputConstants.Type.KEYSYM.getOrCreate(keyCode).getNumericKeyValue().isPresent();
 
         if (isNumericKey && this.menu.getCarried().isEmpty()) {
-            if (mc.options.keySwapOffhand.matches(new KeyEvent(keyCode, scanCode, modifiers))) {
-                pageClicked(mouseX, mouseY, 40, ContainerInput.SWAP);
+            if (mc.options.keySwapOffhand.matches(keyCode, scanCode)) {
+                pageClicked(mouseX, mouseY, 40, ClickType.SWAP);
                 return true;
             }
 
             for(int i = 0; i < 9; ++i) {
-                if (mc.options.keyHotbarSlots[i].matches(new KeyEvent(keyCode, scanCode, modifiers))) {
-                    pageClicked(mouseX, mouseY, i, ContainerInput.SWAP);
+                if (mc.options.keyHotbarSlots[i].matches(keyCode, scanCode)) {
+                    pageClicked(mouseX, mouseY, i, ClickType.SWAP);
                     return true;
                 }
             }
         }
 
-        if(inputHandler.isActiveAndMatches(KeyMappings.STAR_ITEM,new KeyEvent(keyCode, scanCode, modifiers))){
+        if(inputHandler.isActiveAndMatches(KeyMappings.STAR_ITEM, InputConstants.getKey(keyCode, scanCode))){
             handleStarItem(mouseX,mouseY);
             return true;
         }

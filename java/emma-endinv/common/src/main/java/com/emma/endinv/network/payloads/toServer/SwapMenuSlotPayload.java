@@ -1,6 +1,5 @@
 package com.emma.endinv.network.payloads.toServer;
 
-import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.network.payloads.ModPacketContext;
@@ -8,9 +7,7 @@ import com.emma.endinv.network.payloads.ModPacketPayload;
 import com.emma.endinv.util.ItemKey;
 import com.emma.endinv.util.ItemState;
 import com.mojang.logging.LogUtils;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -30,26 +27,20 @@ public record SwapMenuSlotPayload(ItemKey key, int menuSlotIndex) implements Mod
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, SwapMenuSlotPayload> STREAM_CODEC =
-            StreamCodec.of((buf, value) -> encode(value, buf), SwapMenuSlotPayload::decode);
-
-    public static final CustomPacketPayload.Type<SwapMenuSlotPayload> TYPE =
-            new CustomPacketPayload.Type<>(AbstractModInitializer.withModLocation("swap_menu_slot"));
-
-    public static void encode(SwapMenuSlotPayload payload, RegistryFriendlyByteBuf buf) {
-        ItemKey.STREAM_CODEC.encode(buf, payload.key);
+    public static void encode(SwapMenuSlotPayload payload, FriendlyByteBuf buf) {
+        ItemKey.encode(buf, payload.key);
         buf.writeInt(payload.menuSlotIndex);
     }
 
-    public static SwapMenuSlotPayload decode(RegistryFriendlyByteBuf buf) {
-        return new SwapMenuSlotPayload(ItemKey.STREAM_CODEC.decode(buf), buf.readInt());
+    public static SwapMenuSlotPayload decode(FriendlyByteBuf buf) {
+        return new SwapMenuSlotPayload(ItemKey.decode(buf), buf.readInt());
     }
 
     @Override
-    public String id() { return "swap_menu_slot"; }
+    public void write(FriendlyByteBuf buffer) { encode(this, buffer); }
 
     @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    public String id() { return "swap_menu_slot"; }
 
     @Override
     public void handle(ModPacketContext ctx) {

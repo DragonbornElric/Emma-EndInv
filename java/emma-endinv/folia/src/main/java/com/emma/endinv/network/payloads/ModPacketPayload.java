@@ -1,19 +1,22 @@
 package com.emma.endinv.network.payloads;
 
 import com.emma.endinv.AbstractModInitializer;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
 
 // Server-only override: strips getClientPageMeta() of its ScreenFramework dependency
 // so this interface can compile against the Folia dev bundle (server-only classpath).
-public interface ModPacketPayload extends CustomPacketPayload {
+public interface ModPacketPayload {
 
     String id();
 
-    default Type<? extends CustomPacketPayload> type() {
-        return new Type<>(AbstractModInitializer.withModLocation(id()));
+    default ResourceLocation payloadId() {
+        return AbstractModInitializer.withModLocation(id());
     }
+
+    void write(FriendlyByteBuf buffer);
 
     void handle(ModPacketContext context);
 

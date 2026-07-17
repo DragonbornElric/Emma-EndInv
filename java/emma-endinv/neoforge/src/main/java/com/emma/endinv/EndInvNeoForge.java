@@ -1,14 +1,16 @@
 package com.emma.endinv;
 
 import com.emma.endinv.event.NeoForgeEvents;
-import com.emma.endinv.network.NeoForgeNetworking;
+import com.emma.endinv.menu.EndlessInventoryMenu;
+import com.emma.endinv.nbt.ForgeCapabilities;
+import com.emma.endinv.nbt.IEndInvUuid;
+import com.emma.endinv.nbt.ISyncedConfig;
 import com.emma.endinv.network.IPacketDistributor;
+import com.emma.endinv.network.NeoForgeNetworking;
 import com.emma.endinv.network.payloads.SyncedConfig;
 import com.emma.endinv.options.ServerConfigs;
 import com.emma.endinv.options.config.json.JsonConfigurationHandler;
 import com.emma.endinv.platform.ILoaderProvider;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlags;
@@ -17,54 +19,43 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import com.emma.endinv.menu.EndlessInventoryMenu;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.attachment.AttachmentType;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import net.minecraftforge.common.ForgeHooks;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 
+import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * Historical NeoForge 1.20.1 lives on the Forge 47 API/package boundary.
+ * The class name remains NeoForge to keep the multiloader artifact naming
+ * stable, while all loader imports intentionally use {@code net.minecraftforge}.
+ */
 @Mod(ModInfo.MOD_ID)
 public class EndInvNeoForge extends AbstractModInitializer {
 
-    public static Supplier<AttachmentType<UUID>> ENDINV_UUID;
-    public static Supplier<AttachmentType<SyncedConfig>> SYNCED_CONFIG;
+    private final DeferredRegister<Item> items =
+            DeferredRegister.create(ForgeRegistries.ITEMS, ModInfo.MOD_ID);
+    private final DeferredRegister<MenuType<?>> menus =
+            DeferredRegister.create(ForgeRegistries.MENU_TYPES, ModInfo.MOD_ID);
 
-    private final DeferredRegister<Item> ITEMS =
-            DeferredRegister.create(BuiltInRegistries.ITEM, ModInfo.MOD_ID);
-    private final DeferredRegister<MenuType<?>> MENUS =
-            DeferredRegister.create(BuiltInRegistries.MENU, ModInfo.MOD_ID);
-    private final DeferredRegister<AttachmentType<?>> ATTACHMENTS =
-            DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, ModInfo.MOD_ID);
+    public EndInvNeoForge() {
+        IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
 
-    public EndInvNeoForge(IEventBus eventBus) {
-        ITEMS.register(eventBus);
-        MENUS.register(eventBus);
-        ATTACHMENTS.register(eventBus);
+        items.register(modBus);
+        menus.register(modBus);
+        ForgeCapabilities.register(modBus);
+        NeoForgeNetworking.register();
+        NeoForgeEvents.register();
 
-        // Register attachment types via DeferredRegister
-        ENDINV_UUID = ATTACHMENTS.register("endinv_uuid", () ->
-                AttachmentType.<UUID>builder(UUID::randomUUID)
-                        .serialize(net.minecraft.core.UUIDUtil.CODEC.fieldOf("id"))
-                        .copyOnDeath()
-                        .build()
-        );
-        SYNCED_CONFIG = ATTACHMENTS.register("endinv_settings", () ->
-                AttachmentType.<SyncedConfig>builder(() -> SyncedConfig.DEFAULT)
-                        .serialize(SyncedConfig.CODEC.fieldOf("config"))
-                        .copyOnDeath()
-                        .build()
-        );
-
-        NeoForgeNetworking.register(eventBus);
-        NeoForgeEvents.register(eventBus);
-
-        if (FMLEnvironment.getDist().isClient()) {
-            new EndInvNeoForgeClient(eventBus);
+        if (FMLEnvironment.dist.isClient()) {
+            new EndInvNeoForgeClient(modBus);
         }
 
         super.init();
@@ -74,10 +65,25 @@ public class EndInvNeoForge extends AbstractModInitializer {
     protected IPlatform loadOtherPlatformSpecific() {
         return new IPlatform() {
             @Override
-            public boolean onItemStackedOn(ItemStack clickedItem, ItemStack carriedItem, Slot slot, ClickAction action, Player player, SlotAccess access) {
+            public boolean onItemStackedOn(
+                    ItemStack clickedItem,
+                    ItemStack carriedItem,
+                    Slot slot,
+                    ClickAction action,
+                    Player player,
+                    SlotAccess access
+            ) {
+                if (ForgeHooks.onItemStackedOn(
+                        carriedItem, clickedItem, slot, action, player, access)) {
+                    return true;
+                }
+
                 var features = player.level().enabledFeatures();
-                return (carriedItem.isItemEnabled(features) && carriedItem.overrideStackedOnOther(slot, action, player))
-                        || (clickedItem.isItemEnabled(features) && clickedItem.overrideOtherStackedOnMe(carriedItem, slot, action, player, access));
+                return (carriedItem.isItemEnabled(features)
+                            && carriedItem.overrideStackedOnOther(slot, action, player))
+                        || (clickedItem.isItemEnabled(features)
+                            && clickedItem.overrideOtherStackedOnMe(
+                                    carriedItem, slot, action, player, access));
             }
 
             @Override
@@ -105,8 +111,7 @@ public class EndInvNeoForge extends AbstractModInitializer {
         return new RegistryCallback<>() {
             @Override
             public <R extends Item> Supplier<R> register(String id, Supplier<R> supplier) {
-                var holder = ITEMS.register(id, supplier);
-                return holder;
+                return items.register(id, supplier);
             }
         };
     }
@@ -115,52 +120,47 @@ public class EndInvNeoForge extends AbstractModInitializer {
     protected RegistryCallback<MenuType<?>> menuReg() {
         return new RegistryCallback<>() {
             @Override
-            @SuppressWarnings("unchecked")
             public <R extends MenuType<?>> Supplier<R> register(String id, Supplier<R> supplier) {
-                var holder = (net.neoforged.neoforge.registries.DeferredHolder<MenuType<?>, R>)
-                        MENUS.register(id, supplier);
+                RegistryObject<R> holder = menus.register(id, supplier);
                 return holder;
             }
         };
     }
 
     @Override
-    @SuppressWarnings({"rawtypes", "unchecked"})
     protected Supplier<MenuType<EndlessInventoryMenu>> createEndInvMenuType() {
-        return () -> {
-            net.minecraft.world.inventory.MenuType raw = new net.minecraft.world.inventory.MenuType(
-                    (id, inventory) -> {
-                        try {
-                            var cls = Class.forName("com.emma.endinv.menu.EndlessInventoryMenu");
-                            var m = cls.getMethod("createClient", int.class, net.minecraft.world.entity.player.Inventory.class);
-                            return (net.minecraft.world.inventory.AbstractContainerMenu) m.invoke(null, id, inventory);
-                        } catch (Throwable t) {
-                            throw new RuntimeException(t);
-                        }
-                    },
-                    FeatureFlags.DEFAULT_FLAGS
-            );
-            return (MenuType<EndlessInventoryMenu>) raw;
-        };
+        return () -> new MenuType<>(EndlessInventoryMenu::createClient, FeatureFlags.DEFAULT_FLAGS);
     }
 
     @Override
     protected NbtAttachment<UUID> createEndInvUUID(String name) {
         return new NbtAttachment<>() {
             @Override
+            @Nullable
             public UUID getWith(Player player) {
-                if (!player.hasData(ENDINV_UUID.get())) return null;
-                return player.getData(ENDINV_UUID.get());
+                return player.getCapability(ForgeCapabilities.END_INV_UUID)
+                        .resolve()
+                        .map(IEndInvUuid::getUuid)
+                        .orElse(null);
             }
 
             @Override
             public void setTo(Player player, UUID uuid) {
-                player.setData(ENDINV_UUID.get(), uuid);
+                player.getCapability(ForgeCapabilities.END_INV_UUID)
+                        .ifPresent(capability -> capability.setUuid(uuid));
             }
 
             @Override
             public UUID computeIfAbsent(Player player) {
-                return player.getData(ENDINV_UUID.get());
+                IEndInvUuid capability = player.getCapability(ForgeCapabilities.END_INV_UUID)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "EndInv UUID capability missing from player " + player.getUUID()));
+                UUID uuid = capability.getUuid();
+                if (uuid == null || ModInfo.DEFAULT_UUID.equals(uuid)) {
+                    uuid = UUID.randomUUID();
+                    capability.setUuid(uuid);
+                }
+                return uuid;
             }
         };
     }
@@ -169,19 +169,31 @@ public class EndInvNeoForge extends AbstractModInitializer {
     protected NbtAttachment<SyncedConfig> createSyncedConfig(String name) {
         return new NbtAttachment<>() {
             @Override
+            @Nullable
             public SyncedConfig getWith(Player player) {
-                if (!player.hasData(SYNCED_CONFIG.get())) return null;
-                return player.getData(SYNCED_CONFIG.get());
+                return player.getCapability(ForgeCapabilities.END_INV_CONFIG)
+                        .resolve()
+                        .map(ISyncedConfig::getSyncedConfig)
+                        .orElse(null);
             }
 
             @Override
             public void setTo(Player player, SyncedConfig syncedConfig) {
-                player.setData(SYNCED_CONFIG.get(), syncedConfig);
+                player.getCapability(ForgeCapabilities.END_INV_CONFIG)
+                        .ifPresent(capability -> capability.setSyncedConfig(syncedConfig));
             }
 
             @Override
             public SyncedConfig computeIfAbsent(Player player) {
-                return player.getData(SYNCED_CONFIG.get());
+                ISyncedConfig capability = player.getCapability(ForgeCapabilities.END_INV_CONFIG)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "EndInv settings capability missing from player " + player.getUUID()));
+                SyncedConfig config = capability.getSyncedConfig();
+                if (config == null) {
+                    config = SyncedConfig.DEFAULT;
+                    capability.setSyncedConfig(config);
+                }
+                return config;
             }
         };
     }

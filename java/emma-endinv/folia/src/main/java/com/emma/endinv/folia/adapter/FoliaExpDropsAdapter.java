@@ -2,7 +2,7 @@ package com.emma.endinv.folia.adapter;
 
 import com.emma.endinv.autopick.events.ILivingExpDropsEvent;
 import net.minecraft.world.entity.player.Player;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.jetbrains.annotations.Nullable;
 

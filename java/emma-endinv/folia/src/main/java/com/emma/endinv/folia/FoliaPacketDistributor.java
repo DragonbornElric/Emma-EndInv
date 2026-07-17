@@ -2,7 +2,9 @@ package com.emma.endinv.folia;
 
 import com.emma.endinv.network.IPacketDistributor;
 import com.emma.endinv.network.payloads.ModPacketPayload;
-import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
+import io.netty.buffer.Unpooled;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -23,13 +25,30 @@ public final class FoliaPacketDistributor implements IPacketDistributor {
     @Override
     public void sendToPlayer(ServerPlayer player, ModPacketPayload payload) {
         if (player != null && player.connection != null) {
-            player.connection.send(new ClientboundCustomPayloadPacket(payload));
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            boolean handedOff = false;
+            try {
+                payload.write(buffer);
+                ClientboundCustomPayloadPacket packet =
+                        new ClientboundCustomPayloadPacket(payload.payloadId(), buffer);
+                // The 1.20.1 packet stores this buffer by reference. Once
+                // Connection#send returns, the queued packet owns it.
+                player.connection.send(packet);
+                handedOff = true;
+            } finally {
+                // Release locally only when encoding, construction, or the
+                // synchronous handoff failed.
+                if (!handedOff) {
+                    buffer.release();
+                }
+            }
         }
     }
 
     @Override
     public void sendToAllPlayer(ModPacketPayload payload) {
-        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+        for (ServerPlayer player :
+                java.util.List.copyOf(server.getPlayerList().getPlayers())) {
             sendToPlayer(player, payload);
         }
     }

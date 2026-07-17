@@ -2,10 +2,10 @@ package com.emma.endinv.menu.page;
 
 import com.emma.endinv.platform.ILoaderProvider;
 import com.emma.endinv.util.ItemKey;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.*;
 
 import org.jetbrains.annotations.Nullable;
@@ -33,10 +33,7 @@ public class PageType {
     );
 
     private static Predicate<ItemKey> ofEquipmentSlotType(EquipmentSlot slot){
-        return it-> {
-            var comp = it.toStack(1).getComponents().get(DataComponents.EQUIPPABLE);
-            return comp!=null && comp.slot() == slot;
-        };
+        return it -> Mob.getEquipmentSlotForItem(it.toStack(1)) == slot;
     }
 
     public static final List<TagKey<Item>> WEAPON_TAGS = new ArrayList<>();
@@ -48,7 +45,7 @@ public class PageType {
     public static final PageType WEAPONS = createClassifiedPage("weapons",PageType::isWeapon,"iron_sword");
     public static final PageType TOOLS = createClassifiedPage("tools",PageType::isTool,"iron_pickaxe");
     public static final PageType EQUIPMENTS = createServerSafe(
-            "equipments",PageType::isDefenceEquipment,Identifier.withDefaultNamespace("iron_chestplate"),
+            "equipments",PageType::isDefenceEquipment,new ResourceLocation("iron_chestplate"),
             () -> (type,manager)-> new com.emma.endinv.client.gui.page.SegClassifyItemDisplay(
                     type, manager, equipmentSubclassifications, false, true)
     );
@@ -57,13 +54,13 @@ public class PageType {
     public static final PageType ENCHANTED_BOOKS = createServerSafe(
             "enchanted_books",
             stack -> stack.getItem() == Items.ENCHANTED_BOOK,
-            Identifier.withDefaultNamespace("enchanted_book"),
+            new ResourceLocation("enchanted_book"),
             () -> (t, f) -> new com.emma.endinv.client.gui.page.ItemEntryDisplay(
                     t, f, com.emma.endinv.client.gui.page.ItemEntryDisplay.DescriptionProvider::fromEnch
             )
     );
     public static final PageType BOOKMARK = createServerSafe(
-            "bookmark",null,Identifier.withDefaultNamespace("book"),
+            "bookmark",null,new ResourceLocation("book"),
             () -> com.emma.endinv.client.gui.page.StarredItemPage::new
     );
 
@@ -76,7 +73,7 @@ public class PageType {
     @Nullable
     public final Predicate<ItemStack> itemClassify;
     @Nullable
-    public Identifier icon = null;
+    public ResourceLocation icon = null;
     public final String registerName;
 
     @FunctionalInterface
@@ -101,7 +98,7 @@ public class PageType {
         this.registerName = registerName;
     }
 
-    public PageType(@Nullable PageConstructor constructor, String registerName,@Nullable Predicate<ItemStack> itemClassify,@Nullable Identifier icon){
+    public PageType(@Nullable PageConstructor constructor, String registerName,@Nullable Predicate<ItemStack> itemClassify,@Nullable ResourceLocation icon){
         this.constructor = constructor;
         this.itemClassify = itemClassify;
         this.icon = icon;
@@ -113,7 +110,7 @@ public class PageType {
      * On dedicated server, the constructor is null (never called).
      */
     public static PageType createClassifiedPage(String registerName,@Nullable Predicate<ItemStack> itemClassify, String icon){
-        return createServerSafe(registerName, itemClassify, Identifier.withDefaultNamespace(icon),
+        return createServerSafe(registerName, itemClassify, new ResourceLocation(icon),
                 () -> com.emma.endinv.client.gui.page.ItemDisplay::new);
     }
 
@@ -122,7 +119,7 @@ public class PageType {
      * The supplier is only evaluated on client, avoiding class loading on server.
      */
     public static PageType createServerSafe(String registerName, @Nullable Predicate<ItemStack> itemClassify,
-                                            @Nullable Identifier icon, Supplier<PageConstructor> clientCtor) {
+                                            @Nullable ResourceLocation icon, Supplier<PageConstructor> clientCtor) {
         PageConstructor ctor = IS_CLIENT ? clientCtor.get() : null;
         return new PageType(ctor, registerName, itemClassify, icon);
     }
@@ -174,14 +171,14 @@ public class PageType {
     private static boolean isDefenceEquipment(ItemStack itemStack){
         Item item = itemStack.getItem();
         return
-                itemStack.has(DataComponents.EQUIPPABLE) ||item instanceof ShieldItem ||
+                item instanceof ArmorItem || item instanceof ShieldItem ||
                 item == Items.ELYTRA ||
                 EQUIPPABLE_TAGS.stream().anyMatch(itemStack::is);
     }
 
     private static boolean isFoodOrPotion(ItemStack itemStack){
         Item item = itemStack.getItem();
-        return item instanceof PotionItem || itemStack.has(DataComponents.FOOD);
+        return item instanceof PotionItem || item.isEdible();
     }
 
     static {

@@ -2,9 +2,7 @@ package com.emma.endinv.data;
 
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.component.DataComponentPatch;
-import net.minecraft.world.item.Item;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 
@@ -32,16 +30,8 @@ public interface EndInvCodecStrategy {
     String ACCESSIBILITY_KEY = "Accessibility";
 
 
-    Codec<ItemStack> ITEM_STACK_CODEC = Codec.lazyInitialized(
-            () -> RecordCodecBuilder.create(
-                    p_381569_ -> p_381569_.group(
-                                    Item.CODEC.fieldOf("id").forGetter(ItemStack::typeHolder),
-                                    Codec.INT.fieldOf("count").orElse(1).forGetter(ItemStack::getCount),
-                                    DataComponentPatch.CODEC
-                                            .optionalFieldOf("components", DataComponentPatch.EMPTY)
-                                            .forGetter(ItemStack::getComponentsPatch)
-                            )
-                            .apply(p_381569_, ItemStack::new)
-            )
+    Codec<ItemStack> ITEM_STACK_CODEC = CompoundTag.CODEC.xmap(
+            ItemStack::of,
+            stack -> stack.save(new CompoundTag())
     );
 }

@@ -1,35 +1,45 @@
 package com.emma.endinv.network;
 
-import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.ModPacketPayload;
-import com.emma.endinv.network.payloads.SyncedConfig;
-import com.emma.endinv.network.payloads.toClient.*;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.minecraft.network.FriendlyByteBuf;
 
 public final class FabricClientNetworking {
 
-    private FabricClientNetworking() {}
+    private static boolean receiversRegistered;
 
-    public static void init() {
-        ClientPlayNetworking.registerGlobalReceiver(EndInvContent.TYPE,
-                (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
-        ClientPlayNetworking.registerGlobalReceiver(EndInvMetadata.TYPE,
-                (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
-        ClientPlayNetworking.registerGlobalReceiver(ItemPickedUpPayload.TYPE,
-                (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
-        ClientPlayNetworking.registerGlobalReceiver(SetItemDisplayContentPayload.TYPE,
-                (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
-        ClientPlayNetworking.registerGlobalReceiver(SetStarredPagePayload.TYPE,
-                (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
-        ClientPlayNetworking.registerGlobalReceiver(MenuAttachabilityPayload.TYPE,
-                (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
-        ClientPlayNetworking.registerGlobalReceiver(SyncedConfig.TYPE,
-                (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
+    private FabricClientNetworking() {
     }
 
-    private static ModPacketContext context(net.minecraft.world.entity.player.Player player) { return () -> player; }
+    public static synchronized void init() {
+        if (receiversRegistered) {
+            return;
+        }
+        receiversRegistered = true;
+        for (FabricNetworking.PayloadRegistration<? extends ModPacketPayload> registration
+                : FabricNetworking.clientboundRegistrations()) {
+            registerReceiver(registration);
+        }
+    }
 
     public static void sendToServer(ModPacketPayload payload) {
-        ClientPlayNetworking.send(payload);
+        FabricNetworking.PayloadRegistration<ModPacketPayload> registration =
+                FabricNetworking.serverbound(payload.getClass());
+        FriendlyByteBuf buffer = PacketByteBufs.create();
+        registration.encode(payload, buffer);
+        ClientPlayNetworking.send(registration.id(), buffer);
+    }
+
+    private static <T extends ModPacketPayload> void registerReceiver(
+            FabricNetworking.PayloadRegistration<T> registration
+    ) {
+        ClientPlayNetworking.registerGlobalReceiver(
+                registration.id(),
+                (client, handler, buffer, responseSender) -> {
+                    T payload = registration.decode(buffer);
+                    client.execute(() -> payload.handle(() -> client.player));
+                }
+        );
     }
 }

@@ -3,16 +3,15 @@ package com.emma.endinv.client.gui;
 import com.emma.endinv.client.option.ClientConfigs;
 import com.emma.endinv.options.config.IConfigValue;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -176,9 +175,9 @@ public abstract class EndInvSettingScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(@NotNull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.extractBackground(guiGraphics, mouseX, mouseY, partialTick);
-        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(guiGraphics);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
         for(var entry : renderingEntries){
             if(entry!=null) {
                 entry.render(guiGraphics, partialTick, mouseX, mouseY);
@@ -187,7 +186,7 @@ public abstract class EndInvSettingScreen extends Screen {
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderBackground(GuiGraphics guiGraphics) {
         guiGraphics.fill(leftPos,topPos,leftPos+imageWidth,topPos+imageHeight,0x88888888);
     }
 
@@ -215,8 +214,8 @@ public abstract class EndInvSettingScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean p_434187_) {
-        if(!super.mouseClicked(event, p_434187_)){
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if(!super.mouseClicked(mouseX, mouseY, button)){
             if(getFocused() != null){
                 getFocused().setFocused(false);
                 setFocused(null);
@@ -231,7 +230,7 @@ public abstract class EndInvSettingScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
         if(entries.size()>MAX_ENTRY_COUNT){
             // normalize wheel direction: negative scrollY means scrolling down
             // map to step-based offset change
@@ -242,7 +241,7 @@ public abstract class EndInvSettingScreen extends Screen {
             this.scrollOffset = maxStart == 0 ? 0 : (double)entryOffset / (double)maxStart;
             scrollTo();
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return super.mouseScrolled(mouseX, mouseY, scrollY);
     }
 
     /*private AttributeEntry<Accessibility> createAccessibilityConfig(){
@@ -262,7 +261,7 @@ public abstract class EndInvSettingScreen extends Screen {
         };
     }*/
 
-    public static void renderScrollingString(GuiGraphicsExtractor guiGraphics, Font font, Component text, int minX, int minY, int maxX, int maxY, int color) {
+    public static void renderScrollingString(GuiGraphics guiGraphics, Font font, Component text, int minX, int minY, int maxX, int maxY, int color) {
         int i = font.width(text);
         int j = (minY + maxY - 9) / 2 + 1;
         int k = maxX - minX;
@@ -273,10 +272,10 @@ public abstract class EndInvSettingScreen extends Screen {
             double d2 = Math.sin((Math.PI / 2D) * Math.cos((Math.PI * 2D) * d0 / d1)) / (double)2.0F + (double)0.5F;
             double d3 = Mth.lerp(d2, 0.0F, l);
             guiGraphics.enableScissor(minX, minY, maxX, maxY);
-            guiGraphics.text(font, text, minX - (int)d3, j, color);
+            guiGraphics.drawString(font, text, minX - (int)d3, j, color);
             guiGraphics.disableScissor();
         } else {
-            guiGraphics.centeredText(font, text, (minX + maxX) / 2, j, color);
+            guiGraphics.drawCenteredString(font, text, (minX + maxX) / 2, j, color);
         }
 
     }
@@ -285,7 +284,7 @@ public abstract class EndInvSettingScreen extends Screen {
 
         void build();
 
-        void render(GuiGraphicsExtractor guiGraphics, float partialTick, int mouseX, int mouseY);
+        void render(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY);
 
         void syncConfig();
 
@@ -317,12 +316,12 @@ public abstract class EndInvSettingScreen extends Screen {
         }
 
         @Override
-        public void render(GuiGraphicsExtractor guiGraphics, float partialTick, int mouseX, int mouseY) {
+        public void render(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
             Font font = EndInvSettingScreen.this.font;
-            guiGraphics.text(font,tip,leftPos+CONFIG_ENTRY_X_OFFSET,widgetY,0xFFFFFF00);
+            guiGraphics.drawString(font,tip,leftPos+CONFIG_ENTRY_X_OFFSET,widgetY,0xFFFFFF00);
             Component v = Component.literal(info.get()!=null? info.get().toString():"null");
             int infoLength = Math.min(font.width(v.getVisualOrderText()), 100);
-            //guiGraphics.text(font,v,widgetMidX-infoLength/2,widgetY,0xFF00FFFF);
+            //guiGraphics.drawString(font,v,widgetMidX-infoLength/2,widgetY,0xFF00FFFF);
             renderScrollingString(guiGraphics,font,v,widgetMidX-infoLength/2,widgetY,widgetMidX+infoLength/2,widgetY+7,0xFF00FFFF);
         }
 
@@ -368,8 +367,8 @@ public abstract class EndInvSettingScreen extends Screen {
         }
 
         @Override
-        public void render(GuiGraphicsExtractor guiGraphics, float partialTick, int mouseX, int mouseY) {
-            guiGraphics.text(EndInvSettingScreen.this.font,tip,leftPos+CONFIG_ENTRY_X_OFFSET,widgetY,0xFFFFFF00);
+        public void render(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+            guiGraphics.drawString(EndInvSettingScreen.this.font,tip,leftPos+CONFIG_ENTRY_X_OFFSET,widgetY,0xFFFFFF00);
         }
 
         @Override
@@ -472,48 +471,41 @@ public abstract class EndInvSettingScreen extends Screen {
 
         @SuppressWarnings("unchecked")
         public void build() {
-            switch (initialValue) {
-                case Boolean b -> {
-                    IConfigValue<Boolean> booleanValue = (IConfigValue<Boolean>) configValue;
-                    var button = CycleButton.onOffBuilder(b)
-                            .displayOnlyValue()
-                            .create(widgetX, widgetY, WIDGET_X_SIZE, WIDGET_Y_SIZE, Component.empty(),
-                                    (btn, value) -> booleanValue.set(value));
-                    this.configWidget = button;
-                    EndInvSettingScreen.this.addRenderableWidget(button);
-                    entryWidgets.add(button);
-
-                }
-                case Enum<?> anEnum -> {
-                    IConfigValue<Enum<?>> enumValue = (IConfigValue<Enum<?>>) configValue;
-                    var button = new CycleButton.Builder<>(
-                            (Enum<?> e) -> Component.translatable("endinv.setting.entry." + e.name()),
-                            () -> anEnum)
-                        .withValues((Enum<?>[]) initialValue.getClass().getEnumConstants())
-                            .displayOnlyValue()
-                            .create(widgetX, widgetY, WIDGET_X_SIZE, WIDGET_Y_SIZE, Component.empty(),
-                                    (btn, value) -> enumValue.set(value));
-                    this.configWidget = button;
-                    EndInvSettingScreen.this.addRenderableWidget(button);
-                    entryWidgets.add(button);
-
-                }
-                case Integer integer -> {
-                    EditBox editBox = new EditBox(EndInvSettingScreen.this.font, widgetX, widgetY, WIDGET_X_SIZE, WIDGET_Y_SIZE, tip);
-                    this.configWidget = editBox;
-                    EndInvSettingScreen.this.addRenderableWidget(editBox);
-                    entryWidgets.add(editBox);
-                }
-                case null, default -> {
-                    EndInvSettingScreen self = EndInvSettingScreen.this;
-                    self.addRenderableOnly((guiGraphics, i, i1, v) ->
-                            guiGraphics.text(self.font, "Error", widgetX, widgetY, 0xFFFF3737));
-                }
+            if (initialValue instanceof Boolean b) {
+                IConfigValue<Boolean> booleanValue = (IConfigValue<Boolean>) configValue;
+                var button = CycleButton.onOffBuilder(b)
+                        .displayOnlyValue()
+                        .create(widgetX, widgetY, WIDGET_X_SIZE, WIDGET_Y_SIZE, Component.empty(),
+                                (btn, value) -> booleanValue.set(value));
+                this.configWidget = button;
+                EndInvSettingScreen.this.addRenderableWidget(button);
+                entryWidgets.add(button);
+            } else if (initialValue instanceof Enum<?> anEnum) {
+                IConfigValue<Enum<?>> enumValue = (IConfigValue<Enum<?>>) configValue;
+                var button = new CycleButton.Builder<>(
+                        (Enum<?> e) -> Component.translatable("endinv.setting.entry." + e.name()))
+                        .withInitialValue(anEnum)
+                    .withValues((Enum<?>[]) initialValue.getClass().getEnumConstants())
+                        .displayOnlyValue()
+                        .create(widgetX, widgetY, WIDGET_X_SIZE, WIDGET_Y_SIZE, Component.empty(),
+                                (btn, value) -> enumValue.set(value));
+                this.configWidget = button;
+                EndInvSettingScreen.this.addRenderableWidget(button);
+                entryWidgets.add(button);
+            } else if (initialValue instanceof Integer) {
+                EditBox editBox = new EditBox(EndInvSettingScreen.this.font, widgetX, widgetY, WIDGET_X_SIZE, WIDGET_Y_SIZE, tip);
+                this.configWidget = editBox;
+                EndInvSettingScreen.this.addRenderableWidget(editBox);
+                entryWidgets.add(editBox);
+            } else {
+                EndInvSettingScreen self = EndInvSettingScreen.this;
+                self.addRenderableOnly((guiGraphics, i, i1, v) ->
+                        guiGraphics.drawString(self.font, "Error", widgetX, widgetY, 0xFFFF3737));
             }
         }
 
-        public void render(GuiGraphicsExtractor guiGraphics, float partialTick, int mouseX, int mouseY){
-            guiGraphics.text(EndInvSettingScreen.this.font,tip,leftPos+CONFIG_ENTRY_X_OFFSET,widgetY,0xFFFFFF00);
+        public void render(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY){
+            guiGraphics.drawString(EndInvSettingScreen.this.font,tip,leftPos+CONFIG_ENTRY_X_OFFSET,widgetY,0xFFFFFF00);
         }
 
         @SuppressWarnings("unchecked")

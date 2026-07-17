@@ -40,22 +40,26 @@ public final class FoliaConfigLoader {
             setComments(cfg, path, entry.comments());
             wrote = true;
         }
-        switch (entry) {
-            case ConfigEntryImpl.BooleanEntry b -> b.initialize(
+        if (entry instanceof ConfigEntryImpl.BooleanEntry b) {
+            b.initialize(
                     () -> cfg.getBoolean(path, b.defaultValue()),
                     v -> { cfg.set(path, v); save(cfg); });
-            case ConfigEntryImpl.EnumEntry<?> e -> wireEnum(cfg, path, e);
-            case ConfigEntryImpl.IntEntry i -> i.initialize(
+        } else if (entry instanceof ConfigEntryImpl.EnumEntry<?> e) {
+            wireEnum(cfg, path, e);
+        } else if (entry instanceof ConfigEntryImpl.IntEntry i) {
+            i.initialize(
                     () -> cfg.getInt(path, i.defaultValue()),
                     v -> { cfg.set(path, v); save(cfg); });
-            case ConfigEntryImpl.DoubleEntry d -> d.initialize(
+        } else if (entry instanceof ConfigEntryImpl.DoubleEntry d) {
+            d.initialize(
                     () -> cfg.getDouble(path, d.defaultValue()),
                     v -> { cfg.set(path, v); save(cfg); });
-            case ConfigEntryImpl.StringEntry s -> s.initialize(
+        } else if (entry instanceof ConfigEntryImpl.StringEntry s) {
+            s.initialize(
                     () -> cfg.getString(path, s.defaultValue()),
                     v -> { cfg.set(path, v); save(cfg); });
-            case ConfigEntryImpl.ListEntry<?> l -> wireList(cfg, path, l);
-            default -> { /* ComplexConfigEntryImpl handled by caller */ }
+        } else if (entry instanceof ConfigEntryImpl.ListEntry<?> l) {
+            wireList(cfg, path, l);
         }
         return wrote;
     }

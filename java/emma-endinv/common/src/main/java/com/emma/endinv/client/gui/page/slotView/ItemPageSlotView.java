@@ -7,7 +7,7 @@ import com.emma.endinv.client.gui.page.GridPage;
 import com.emma.endinv.client.gui.page.manager.ResourcePointer;
 import com.emma.endinv.util.ItemKey;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -54,31 +54,31 @@ public class ItemPageSlotView extends Slot implements ResourcePointer<ItemStack>
     /**
      * Renders the graphical user interface (GUI) element.
      *
-     * @param guiGraphics the GuiGraphicsExtractor object used for rendering.
+     * @param guiGraphics the GuiGraphics object used for rendering.
      * @param mouseX      the x-coordinate of the mouse cursor.
      * @param mouseY      the y-coordinate of the mouse cursor.
      * @param partialTick the partial tick time.
      */
     @Override
-    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         ItemStack stack = get();
         if(hasClickedOn(mouseX, mouseY)) renderSlotHighlightBack(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.item(stack, x, y, 0);
-        guiGraphics.itemDecorations(Minecraft.getInstance().font, stack, x, y, page.getDisplayAmount(stack));
+        guiGraphics.renderItem(stack, x, y, 0);
+        guiGraphics.renderItemDecorations(Minecraft.getInstance().font, stack, x, y, page.getDisplayAmount(stack));
         if(stack.isEmpty() && !stack.is(Items.AIR)) page.renderEmpty(guiGraphics, x, y, stack);
     }
 
     @Override
-    public void renderSlotHighlightBack(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick){
+    public void renderSlotHighlightBack(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick){
         guiGraphics.fill(x, y, x+width - 2, y+height - 2, 0x80ffffff);
     }
 
     @Override
-    public void renderSlotHighlightFront(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick){
+    public void renderSlotHighlightFront(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick){
         guiGraphics.fill(x, y, x+width - 2, y+height - 2, 0x20ffffff);
     }
 
-    public void renderTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         ItemStack hovering = get();
         if(hovering.isEmpty()) return;
         TooltipRenderer.renderItem(

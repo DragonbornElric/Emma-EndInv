@@ -1,9 +1,7 @@
 package com.emma.endinv.menu.page;
 
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.*;
 
 import org.jetbrains.annotations.Nullable;
@@ -26,10 +24,10 @@ public class PageType {
     public static final List<TagKey<Item>> EQUIPPABLE_TAGS = new ArrayList<>();
 
     @Nullable public final Predicate<ItemStack> itemClassify;
-    @Nullable public Identifier icon;
+    @Nullable public ResourceLocation icon;
     public final String registerName;
 
-    public PageType(String registerName, @Nullable Predicate<ItemStack> itemClassify, @Nullable Identifier icon) {
+    public PageType(String registerName, @Nullable Predicate<ItemStack> itemClassify, @Nullable ResourceLocation icon) {
         this.registerName = registerName;
         this.itemClassify = itemClassify;
         this.icon = icon;
@@ -40,17 +38,19 @@ public class PageType {
     public static final PageType WEAPONS = createPage("weapons", PageType::isWeapon, "iron_sword");
     public static final PageType TOOLS = createPage("tools", PageType::isTool, "iron_pickaxe");
     public static final PageType EQUIPMENTS = createPage("equipments", PageType::isDefenceEquipment,
-            Identifier.withDefaultNamespace("iron_chestplate"));
+            new ResourceLocation("minecraft", "iron_chestplate"));
     public static final PageType CONSUMABLE = createPage("consumable", PageType::isFoodOrPotion, "bread");
     public static final PageType ENCHANTED_BOOKS = createPage("enchanted_books",
-            s -> s.getItem() == Items.ENCHANTED_BOOK, Identifier.withDefaultNamespace("enchanted_book"));
-    public static final PageType BOOKMARK = createPage("bookmark", null, Identifier.withDefaultNamespace("book"));
+            s -> s.getItem() == Items.ENCHANTED_BOOK, new ResourceLocation("minecraft", "enchanted_book"));
+    public static final PageType BOOKMARK = createPage(
+            "bookmark", null, new ResourceLocation("minecraft", "book"));
 
     public static PageType createPage(String name, @Nullable Predicate<ItemStack> classify, String icon) {
-        return new PageType(name, classify, Identifier.withDefaultNamespace(icon));
+        return new PageType(name, classify, new ResourceLocation("minecraft", icon));
     }
 
-    public static PageType createPage(String name, @Nullable Predicate<ItemStack> classify, Identifier icon) {
+    public static PageType createPage(
+            String name, @Nullable Predicate<ItemStack> classify, ResourceLocation icon) {
         return new PageType(name, classify, icon);
     }
 
@@ -61,7 +61,7 @@ public class PageType {
 
     /** Compatibility shim — common code calls createServerSafe on client; server drops the factory. */
     public static PageType createServerSafe(String name, @Nullable Predicate<ItemStack> classify,
-                                            @Nullable Identifier icon, Object clientCtorIgnored) {
+                                            @Nullable ResourceLocation icon, Object clientCtorIgnored) {
         return new PageType(name, classify, icon);
     }
 
@@ -77,7 +77,8 @@ public class PageType {
 
     private static boolean isWeapon(ItemStack s) {
         Item item = s.getItem();
-        return item instanceof AxeItem || item instanceof TridentItem || item instanceof ProjectileWeaponItem
+        return item instanceof SwordItem || item instanceof AxeItem || item instanceof TridentItem
+                || item instanceof ProjectileWeaponItem
                 || WEAPON_TAGS.stream().anyMatch(s::is);
     }
 
@@ -90,12 +91,12 @@ public class PageType {
 
     private static boolean isDefenceEquipment(ItemStack s) {
         Item item = s.getItem();
-        return s.has(DataComponents.EQUIPPABLE) || item instanceof ShieldItem || item == Items.ELYTRA
+        return item instanceof ArmorItem || item instanceof ShieldItem || item instanceof ElytraItem
                 || EQUIPPABLE_TAGS.stream().anyMatch(s::is);
     }
 
     private static boolean isFoodOrPotion(ItemStack s) {
-        return s.getItem() instanceof PotionItem || s.has(DataComponents.FOOD);
+        return s.getItem() instanceof PotionItem || s.isEdible();
     }
 
     static {

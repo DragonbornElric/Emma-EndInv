@@ -1,32 +1,46 @@
 package com.emma.endinv.network;
 
-import com.emma.endinv.network.payloads.ModPacketContext;
-import com.emma.endinv.network.payloads.SyncedConfig;
-import com.emma.endinv.network.payloads.toServer.*;
+import com.emma.endinv.network.payloads.ModPacketPayload;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class FabricServerNetworking {
 
-    private FabricServerNetworking() {}
+    private static boolean receiversRegistered;
 
-    public static void init() {
-        ServerPlayNetworking.registerGlobalReceiver(ItemClickPayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
-        ServerPlayNetworking.registerGlobalReceiver(CreativeItemModPayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
-        ServerPlayNetworking.registerGlobalReceiver(ItemPageContext.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
-        ServerPlayNetworking.registerGlobalReceiver(OpenEndInvPayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> {
-            payload.handle(context(ctx.player()));
-        }));
-        ServerPlayNetworking.registerGlobalReceiver(QuickMoveToPagePayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
-        ServerPlayNetworking.registerGlobalReceiver(StarItemPayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
-        ServerPlayNetworking.registerGlobalReceiver(SetActiveStationPayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
-        ServerPlayNetworking.registerGlobalReceiver(SyncedConfig.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
-        ServerPlayNetworking.registerGlobalReceiver(BulkQuickMoveFromPagePayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
-        ServerPlayNetworking.registerGlobalReceiver(SwapMenuSlotPayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
+    private FabricServerNetworking() {
     }
 
+    public static synchronized void init() {
+        if (receiversRegistered) {
+            return;
+        }
+        receiversRegistered = true;
+        for (FabricNetworking.PayloadRegistration<? extends ModPacketPayload> registration
+                : FabricNetworking.serverboundRegistrations()) {
+            registerReceiver(registration);
+        }
+    }
 
-    private static ModPacketContext context(ServerPlayer player) {
-        return () -> player;
+    public static void sendToPlayer(ServerPlayer player, ModPacketPayload payload) {
+        FabricNetworking.PayloadRegistration<ModPacketPayload> registration =
+                FabricNetworking.clientbound(payload.getClass());
+        FriendlyByteBuf buffer = PacketByteBufs.create();
+        registration.encode(payload, buffer);
+        ServerPlayNetworking.send(player, registration.id(), buffer);
+    }
+
+    private static <T extends ModPacketPayload> void registerReceiver(
+            FabricNetworking.PayloadRegistration<T> registration
+    ) {
+        ServerPlayNetworking.registerGlobalReceiver(
+                registration.id(),
+                (server, player, handler, buffer, responseSender) -> {
+                    T payload = registration.decode(buffer);
+                    server.execute(() -> payload.handle(() -> player));
+                }
+        );
     }
 }

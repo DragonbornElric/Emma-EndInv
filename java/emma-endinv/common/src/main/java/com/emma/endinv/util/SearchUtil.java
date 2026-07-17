@@ -1,7 +1,7 @@
 package com.emma.endinv.util;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Locale;
@@ -36,13 +36,13 @@ public class SearchUtil {
     }
 
     private static boolean matchesTag(ItemStack stack, String tagId) {
-        return stack.typeHolder().tags().anyMatch(tag ->
+        return stack.getTags().anyMatch(tag ->
                 tag.location().toString().toLowerCase(Locale.ROOT).contains(tagId)
         );
     }
 
     private static boolean matchesId(ItemStack stack, String idSearch) {
-        Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         return id.toString().toLowerCase(Locale.ROOT).contains(idSearch);
     }
 
@@ -55,12 +55,12 @@ public class SearchUtil {
         if (stack.getHoverName().getString().toLowerCase(Locale.ROOT).contains(nameSearch)) {
             return true;
         }
-        Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         return id.getPath().toLowerCase(Locale.ROOT).contains(nameSearch);
     }
 
     private static boolean matchesNamespace(ItemStack stack, String nsSearch) {
-        Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         return id.getNamespace().toLowerCase(Locale.ROOT).contains(nsSearch);
     }
 }

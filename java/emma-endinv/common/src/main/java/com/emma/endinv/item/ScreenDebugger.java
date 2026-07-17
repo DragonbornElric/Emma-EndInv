@@ -1,7 +1,7 @@
 package com.emma.endinv.item;
 
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -21,9 +21,13 @@ public class ScreenDebugger extends Item {
     }
 
     @Override
-    public @NotNull InteractionResult use(Level level, @NotNull Player player, @NotNull InteractionHand usedHand) {
+    public @NotNull InteractionResultHolder<ItemStack> use(
+            Level level,
+            @NotNull Player player,
+            @NotNull InteractionHand usedHand
+    ) {
         if(level.isClientSide()) phase++;
         if(phase>2) phase=0;
-        return InteractionResult.SUCCESS;
+        return InteractionResultHolder.sidedSuccess(player.getItemInHand(usedHand), level.isClientSide());
     }
 }

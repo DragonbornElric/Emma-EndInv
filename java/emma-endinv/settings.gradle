@@ -17,6 +17,10 @@ pluginManagement {
                 includeGroupAndSubgroups('net.fabricmc')
             }
         }
+        maven {
+            name = 'NeoForged'
+            url = uri('https://maven.neoforged.net/releases')
+        }
     }
 }
 

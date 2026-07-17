@@ -12,12 +12,9 @@ import com.emma.endinv.network.FabricClientNetworking;
 import com.emma.endinv.platform.ILoaderProvider;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.input.InputWithModifiers;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import org.jetbrains.annotations.Nullable;
 
 import static com.emma.endinv.client.KeyMappings.*;
@@ -33,9 +30,9 @@ public class ClientModInit extends AbstractClientModInitializer implements Clien
 
     @Override
     public void onInitializeClient() {
-        KeyMappingHelper.registerKeyMapping(KEY_MAPPING_MAP.get(OPEN_MENU));
-        KeyMappingHelper.registerKeyMapping(KEY_MAPPING_MAP.get(QUICK_MOVE));//it may be unchangeable
-        KeyMappingHelper.registerKeyMapping(KEY_MAPPING_MAP.get(STAR_ITEM_ALTER));
+        KeyBindingHelper.registerKeyBinding(KEY_MAPPING_MAP.get(OPEN_MENU));
+        KeyBindingHelper.registerKeyBinding(KEY_MAPPING_MAP.get(QUICK_MOVE));
+        KeyBindingHelper.registerKeyBinding(KEY_MAPPING_MAP.get(STAR_ITEM_ALTER));
         initClientConfigs();
         FabricClientNetworking.init();
         ClientEvents.register();
@@ -52,28 +49,7 @@ public class ClientModInit extends AbstractClientModInitializer implements Clien
 
     @Override
     protected IInputHandler getInputHandler() {
-        return new IInputHandler() {
-            @Override
-            public boolean isActiveAndMatches(KeyParam keyParam, InputWithModifiers input) {
-                AbstractClientModInitializer modClient = AbstractClientModInitializer.ENDINV_CLIENT;
-                if(modClient == null){
-                    throw new IllegalStateException("Client mod not initialized");
-                }
-                if(!keyParam.condition().isActive()) return false;
-                if(!keyParam.modifier().matchesModifier(input)) return false;
-                //fabric hot fix
-                if(input instanceof  MouseButtonEvent buttonEvent
-                        && keyParam.keyCode() == buttonEvent.button()
-                        && keyParam.modifier().matchesModifier(input)
-                ) return true;
-                var reg = modClient.KEY_MAPPING_MAP.get(keyParam);
-                return switch (input){
-                    case KeyEvent keyEvent -> reg.matches(keyEvent);
-                    case MouseButtonEvent buttonEvent -> reg.matchesMouse(buttonEvent);
-                    default -> false;
-                };
-            }
-        };
+        return new IInputHandler() {};
     }
 
     protected void initClientConfigs() {

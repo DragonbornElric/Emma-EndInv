@@ -17,12 +17,23 @@ FOLIA_VERSION=$(awk -F= '/^folia_version=/{print $2}' "$GRADLE_PROPS")
 FOLIA_JAR_GLOB="${ENDINV_DIR}/folia/build/libs/endless_inventory-folia-${MC_VERSION}*.jar"
 
 PRISM_INSTANCES_DIR="$APPDATA/PrismLauncher/instances"
-FABRIC_MODS_DIR="C:/Users/Owner/Fabric Mods"
 
 FABRIC_MODS_DIRS=()
-NEOFORGE_MODS_DIRS=("C:/Users/Owner/Neoforge Mods")
-FOLIA_MODS_DIRS=("C:/Users/Owner/Paper Plugins")
 GRADLE_ARGS=()
+
+if [[ "$MC_VERSION" == "1.20.1" ]]; then
+    # Keep the backport completely separate from the maintained 26.1.2 line.
+    FABRIC_MODS_DIR="C:/Users/Owner/Fabric Mods/1.20.1"
+    NEOFORGE_MODS_DIRS=("C:/Users/Owner/Neoforge Mods/1.20.1")
+    FOLIA_MODS_DIRS=("C:/Users/Owner/Paper Plugins/1.20.1")
+elif [[ "$MC_VERSION" == "26.1.2" ]]; then
+    FABRIC_MODS_DIR="C:/Users/Owner/Fabric Mods"
+    NEOFORGE_MODS_DIRS=("C:/Users/Owner/Neoforge Mods")
+    FOLIA_MODS_DIRS=("C:/Users/Owner/Paper Plugins")
+else
+    echo "ERROR: Unsupported deployment Minecraft version: $MC_VERSION" >&2
+    exit 1
+fi
 
 resolve_mods_dir() {
     for instance_name in "$@"; do
@@ -34,17 +45,46 @@ resolve_mods_dir() {
     return 1
 }
 
-if EMMA_MODS="$(resolve_mods_dir "Emma 26.1" "Emma")"; then : ; else
-    EMMA_MODS="$PRISM_INSTANCES_DIR/Emma 26.1/minecraft/mods"
-fi
-if ELRIC_MODS="$(resolve_mods_dir "Elric 26.1" "Elric")"; then : ; else
-    ELRIC_MODS="$PRISM_INSTANCES_DIR/Elric/minecraft/mods"
-fi
-if CAMERABOT_MODS="$(resolve_mods_dir "CameraBot26.1")"; then : ; else
-    CAMERABOT_MODS="$PRISM_INSTANCES_DIR/CameraBot26.1/minecraft/mods"
-fi
-if BRANDON_MODS="$(resolve_mods_dir "Brandon 26.1")"; then : ; else
-    BRANDON_MODS="$PRISM_INSTANCES_DIR/Brandon 26.1/minecraft/mods"
+validate_target_version() {
+    local target="$1"
+    local normalized
+    normalized=$(printf '%s' "$target" | tr '[:upper:]' '[:lower:]')
+    if [[ "$MC_VERSION" == "1.20.1" && "$normalized" == *"26.1"* ]]; then
+        echo "ERROR: refusing to deploy a 1.20.1 jar into a 26.1 target: $target" >&2
+        exit 1
+    fi
+    if [[ "$MC_VERSION" == "26.1.2" && "$normalized" == *"1.20"* ]]; then
+        echo "ERROR: refusing to deploy a 26.1.2 jar into a 1.20 target: $target" >&2
+        exit 1
+    fi
+}
+
+if [[ "$MC_VERSION" == "1.20.1" ]]; then
+    if EMMA_MODS="$(resolve_mods_dir "Emma 1.20.1" "Emma 1.20")"; then : ; else
+        EMMA_MODS="$PRISM_INSTANCES_DIR/Emma 1.20.1/minecraft/mods"
+    fi
+    if ELRIC_MODS="$(resolve_mods_dir "Elric 1.20.1" "Elric 1.20")"; then : ; else
+        ELRIC_MODS="$PRISM_INSTANCES_DIR/Elric 1.20.1/minecraft/mods"
+    fi
+    if CAMERABOT_MODS="$(resolve_mods_dir "CameraBot1.20.1" "CameraBot 1.20.1")"; then : ; else
+        CAMERABOT_MODS="$PRISM_INSTANCES_DIR/CameraBot1.20.1/minecraft/mods"
+    fi
+    if BRANDON_MODS="$(resolve_mods_dir "Brandon 1.20.1" "Brandon 1.20")"; then : ; else
+        BRANDON_MODS="$PRISM_INSTANCES_DIR/Brandon 1.20.1/minecraft/mods"
+    fi
+else
+    if EMMA_MODS="$(resolve_mods_dir "Emma 26.1" "Emma")"; then : ; else
+        EMMA_MODS="$PRISM_INSTANCES_DIR/Emma 26.1/minecraft/mods"
+    fi
+    if ELRIC_MODS="$(resolve_mods_dir "Elric 26.1" "Elric")"; then : ; else
+        ELRIC_MODS="$PRISM_INSTANCES_DIR/Elric 26.1/minecraft/mods"
+    fi
+    if CAMERABOT_MODS="$(resolve_mods_dir "CameraBot26.1")"; then : ; else
+        CAMERABOT_MODS="$PRISM_INSTANCES_DIR/CameraBot26.1/minecraft/mods"
+    fi
+    if BRANDON_MODS="$(resolve_mods_dir "Brandon 26.1")"; then : ; else
+        BRANDON_MODS="$PRISM_INSTANCES_DIR/Brandon 26.1/minecraft/mods"
+    fi
 fi
 
 if [[ -z "${GRADLE_PROJECT_CACHE_DIR:-}" && -n "${LOCALAPPDATA:-}" ]]; then
@@ -67,10 +107,11 @@ Options:
   --skip-folia                 Skip Folia build (default: Folia is built but not auto-deployed)
   -h, --help
 
-Builds Fabric, NeoForge, and Folia jars. The Fabric jar deploys to the default
-PrismLauncher Emma, Elric, and CameraBot26.1 instances and the Fabric Mods folder.
-The NeoForge jar deploys to C:/Users/Owner/Neoforge Mods and any --neoforge-mods-dir targets.
-The Folia jar deploys to C:/Users/Owner/Paper Plugins and any --folia-mods-dir targets.
+Builds Fabric, NeoForge, and Folia jars. The Fabric jar deploys only to
+version-matched PrismLauncher instances and the matching Fabric Mods folder.
+The maintained 26.1.2 branch uses the unversioned manual staging folders.
+The mc-1.20.1 branch uses only versioned 1.20.1 Prism instances and
+Fabric Mods/1.20.1, Neoforge Mods/1.20.1, and Paper Plugins/1.20.1.
 EOF
 }
 
@@ -99,6 +140,13 @@ while [[ $# -gt 0 ]]; do
         -h|--help) usage; exit 0 ;;
         *) echo "ERROR: Unknown argument: $1" >&2; usage >&2; exit 1 ;;
     esac
+done
+
+for target in \
+    "$EMMA_MODS" "$ELRIC_MODS" "$CAMERABOT_MODS" "$BRANDON_MODS" \
+    "$FABRIC_MODS_DIR" \
+    "${FABRIC_MODS_DIRS[@]}" "${NEOFORGE_MODS_DIRS[@]}" "${FOLIA_MODS_DIRS[@]}"; do
+    validate_target_version "$target"
 done
 
 mkdir -p "$DIST_DIR"
@@ -136,7 +184,7 @@ GRADLE_TARGETS=(:fabric:build)
 # Find the built jars (glob avoids hardcoding exact classifier/version suffix)
 FABRIC_JAR=$(ls ${ENDINV_DIR}/fabric/build/libs/endless_inventory-fabric-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
 NEOFORGE_JAR=$(ls ${ENDINV_DIR}/neoforge/build/libs/endless_inventory-neoforge-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
-FOLIA_JAR=$(ls ${ENDINV_DIR}/folia/build/libs/endless_inventory-folia-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
+FOLIA_JAR=$(ls ${ENDINV_DIR}/folia/build/libs/endless_inventory-folia-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | grep -v -- '-dev.jar' | head -1 || true)
 
 if [[ -z "$FABRIC_JAR" ]]; then
     echo "ERROR: Fabric jar not found under fabric/build/libs/" >&2; exit 1
@@ -160,8 +208,8 @@ echo "=== Deploying Fabric jar to default instances ==="
 for named_target in \
     "Emma:$EMMA_MODS" \
     "Elric:$ELRIC_MODS" \
-    "CameraBot26.1:$CAMERABOT_MODS" \
-    "Brandon 26.1:$BRANDON_MODS" \
+    "CameraBot:$CAMERABOT_MODS" \
+    "Brandon:$BRANDON_MODS" \
     "Fabric Mods:$FABRIC_MODS_DIR"; do
     target_name="${named_target%%:*}"
     target_dir="${named_target#*:}"

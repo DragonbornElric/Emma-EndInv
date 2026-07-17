@@ -4,15 +4,14 @@ import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ModInfo;
 import com.emma.endinv.ServerLevelEndInv;
 import com.mojang.logging.LogUtils;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraft.world.level.saveddata.SavedDataType;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.storage.LevelResource;
 import org.slf4j.Logger;
 
@@ -33,25 +32,6 @@ public class EndlessInventoryData extends SavedData {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static final SavedDataType<EndlessInventoryData> DATA_TYPE = new SavedDataType<>(
-            // The identifier of the saved data
-            // Used as the path within the level's `data` folder
-            Identifier.fromNamespaceAndPath("endless_inventory", END_INV_LIST_KEY),
-            // The initial constructor
-            EndlessInventoryData::new,
-            // The codec used to serialize the data
-            RecordCodecBuilder.create(instance -> instance.group(
-                    Codec.list(EndlessInventory.CODEC).fieldOf(END_INV_LIST_KEY).forGetter(EID -> EID.levelEndInvs)
-            ).apply(instance, lst -> {
-                var EID = new EndlessInventoryData();
-                for(var endinv : lst){
-                    EID.addEndInvToLevel(endinv);
-                }
-                return EID;
-            })),
-            DataFixTypes.SAVED_DATA_MAP_DATA
-    );
-
     public final NonNullList<EndlessInventory> levelEndInvs;
 
     public record BackupResult(boolean success, @Nullable String message) {}
@@ -66,7 +46,11 @@ public class EndlessInventoryData extends SavedData {
             return; // 仅在主世界执行
         }
 
-        ServerLevelEndInv.levelEndInvData = level.getDataStorage().computeIfAbsent(DATA_TYPE);
+        ServerLevelEndInv.levelEndInvData = level.getDataStorage().computeIfAbsent(
+                EndlessInventoryData::load,
+                EndlessInventoryData::create,
+                END_INV_LIST_KEY
+        );
 
         LOGGER.info("Initialized EndlessInventoryData in {} with {} inventories", String.valueOf(level.dimension()), ServerLevelEndInv.levelEndInvData.levelEndInvs.size());
     }
@@ -101,6 +85,29 @@ public class EndlessInventoryData extends SavedData {
 
     public static EndlessInventoryData create(){
         return new EndlessInventoryData();
+    }
+
+    public static EndlessInventoryData load(CompoundTag tag) {
+        EndlessInventoryData data = create();
+        ListTag inventories = tag.getList(END_INV_LIST_KEY, Tag.TAG_COMPOUND);
+        for (Tag value : inventories) {
+            EndlessInventory.CODEC.parse(NbtOps.INSTANCE, value)
+                    .resultOrPartial(message -> LOGGER.error("Failed to load Endless Inventory: {}", message))
+                    .ifPresent(data.levelEndInvs::add);
+        }
+        return data;
+    }
+
+    @Override
+    public CompoundTag save(CompoundTag tag) {
+        ListTag inventories = new ListTag();
+        for (EndlessInventory inventory : levelEndInvs) {
+            EndlessInventory.CODEC.encodeStart(NbtOps.INSTANCE, inventory)
+                    .resultOrPartial(message -> LOGGER.error("Failed to save Endless Inventory: {}", message))
+                    .ifPresent(inventories::add);
+        }
+        tag.put(END_INV_LIST_KEY, inventories);
+        return tag;
     }
 
     public void addEndInvToLevel(EndlessInventory endlessInventory){

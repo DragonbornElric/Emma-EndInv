@@ -78,7 +78,7 @@ public final class FabricScreenAttachment {
 
             ScreenAttachment.lastContainerLeft = ScreenAttachment.getContainerLeft(container);
 
-            ScreenEvents.afterExtract(screen).register((s, graphics, mouseX, mouseY, delta) -> {
+            ScreenEvents.beforeRender(screen).register((s, graphics, mouseX, mouseY, delta) -> {
                 AttachingScreen<?> current = ScreenAttachment.attachment;
                 if (current == null || current.getScreen() != s || !ScreenAttachment.isAttachmentActive(current)) {
                     return;
@@ -101,24 +101,31 @@ public final class FabricScreenAttachment {
                     @Override public double getMouseX() { return mouseX; }
                     @Override public double getMouseY() { return mouseY; }
                     @Override public float getPartialTick() { return delta; }
-                    @Override public net.minecraft.client.gui.GuiGraphicsExtractor getGuiGraphicsExtractor() { return graphics; }
-                });
-                toRender.render(new IScreenEvent() {
-                    @Override public double getMouseX() { return mouseX; }
-                    @Override public double getMouseY() { return mouseY; }
-                    @Override public float getPartialTick() { return delta; }
-                    @Override public net.minecraft.client.gui.GuiGraphicsExtractor getGuiGraphicsExtractor() { return graphics; }
+                    @Override public net.minecraft.client.gui.GuiGraphics getGuiGraphics() { return graphics; }
                 });
             });
 
-            ScreenMouseEvents.allowMouseClick(screen).register((s, event) ->
-                    ScreenAttachment.allowMouseClick(ScreenAttachment.attachment, event));
-            ScreenMouseEvents.allowMouseRelease(screen).register((s, event) ->
-                    ScreenAttachment.allowMouseRelease(ScreenAttachment.attachment, event));
+            ScreenEvents.afterRender(screen).register((s, graphics, mouseX, mouseY, delta) -> {
+                AttachingScreen<?> current = ScreenAttachment.attachment;
+                if (current == null || current.getScreen() != s || !ScreenAttachment.isAttachmentActive(current)) {
+                    return;
+                }
+                current.render(new IScreenEvent() {
+                    @Override public double getMouseX() { return mouseX; }
+                    @Override public double getMouseY() { return mouseY; }
+                    @Override public float getPartialTick() { return delta; }
+                    @Override public net.minecraft.client.gui.GuiGraphics getGuiGraphics() { return graphics; }
+                });
+            });
+
+            ScreenMouseEvents.allowMouseClick(screen).register((s, mouseX, mouseY, button) ->
+                    ScreenAttachment.allowMouseClick(ScreenAttachment.attachment, mouseX, mouseY, button));
+            ScreenMouseEvents.allowMouseRelease(screen).register((s, mouseX, mouseY, button) ->
+                    ScreenAttachment.allowMouseRelease(ScreenAttachment.attachment, mouseX, mouseY, button));
             ScreenMouseEvents.allowMouseScroll(screen).register((s, mouseX, mouseY, horizontal, vertical) ->
                     ScreenAttachment.allowMouseScroll(ScreenAttachment.attachment, mouseX, mouseY, horizontal, vertical));
-            ScreenKeyboardEvents.allowKeyPress(screen).register((s, event) ->
-                    ScreenAttachment.allowKeyPress(ScreenAttachment.attachment, event));
+            ScreenKeyboardEvents.allowKeyPress(screen).register((s, keyCode, scanCode, modifiers) ->
+                    ScreenAttachment.allowKeyPress(ScreenAttachment.attachment, keyCode, scanCode, modifiers));
         });
     }
 }

@@ -77,7 +77,7 @@ public abstract class MenuClickHandler {
                                 && menu.canDragTo(slot1)) { //I never know why check twice...
                             int j = slot1.hasItem() ? slot1.getItem().getCount() : 0;//j=itemCount
                             int k = Math.min(copiedCarried.getMaxStackSize(), slot1.getMaxStackSize(copiedCarried));//k=minSlotCapSize
-                            int l = Math.min(getQuickCraftPlaceCount(menu.quickcraftSlots.size(), menu.quickcraftType, copiedCarried) + j, k);//finalCountAfterPlace
+                            int l = Math.min(getQuickCraftPlaceCount(menu.quickcraftSlots, menu.quickcraftType, copiedCarried) + j, k);//finalCountAfterPlace
                             count -= l - j;//=count-itemCountDecrease = remainCount
 
                             slot1.setByPlayer(copiedCarried.copyWithCount(l));
@@ -144,14 +144,14 @@ public abstract class MenuClickHandler {
                     clickedSlot.onTake(player, p_150421_);
                 });
             } else if (clickedSlot.mayPlace(carried)) {
-                if (ItemStack.isSameItemSameComponents(clickedSlotItem, carried)) {
+                if (ItemStack.isSameItemSameTags(clickedSlotItem, carried)) {
                     int k3 = clickaction == ClickAction.PRIMARY ? carried.getCount() : 1;
                     menu.setCarried(clickedSlot.safeInsert(carried, k3));
                 } else if (carried.getCount() <= clickedSlot.getMaxStackSize(carried)) {
                     menu.setCarried(clickedSlotItem);
                     clickedSlot.setByPlayer(carried);
                 }
-            } else if (ItemStack.isSameItemSameComponents(clickedSlotItem, carried)) {
+            } else if (ItemStack.isSameItemSameTags(clickedSlotItem, carried)) {
                 Optional<ItemStack> optional = clickedSlot.tryRemove(clickedSlotItem.getCount(), carried.getMaxStackSize() - carried.getCount(), player);
                 optional.ifPresent((p_150428_) -> {
                     carried.grow(p_150428_.getCount());

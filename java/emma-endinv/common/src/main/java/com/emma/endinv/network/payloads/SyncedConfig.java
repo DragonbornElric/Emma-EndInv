@@ -1,13 +1,9 @@
 package com.emma.endinv.network.payloads;
 
-import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.ModRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * Synced endless inventory config data shared between client preferences and the server.
@@ -21,17 +17,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  * @param attaching presents player's client attaching config.
  */
 public record SyncedConfig(boolean attaching, boolean autoPicking) implements ModPacketPayload {
-
-    public static final StreamCodec<RegistryFriendlyByteBuf, SyncedConfig> STREAM_CODEC =
-            StreamCodec.of((buf, value) -> encode(value, buf), SyncedConfig::decode);
-
-    public static final CustomPacketPayload.Type<SyncedConfig> TYPE =
-            new CustomPacketPayload.Type<>(AbstractModInitializer.withModLocation("endinv_settings"));
-
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
-        return TYPE;
-    }
 
     public static final SyncedConfig DEFAULT = new SyncedConfig(true, true);
     public static final Codec<SyncedConfig> CODEC = RecordCodecBuilder.create(instance ->
@@ -50,6 +35,11 @@ public record SyncedConfig(boolean attaching, boolean autoPicking) implements Mo
         boolean attaching = buffer.readBoolean();
         boolean autoPicking = buffer.readBoolean();
         return new SyncedConfig(attaching, autoPicking);
+    }
+
+    @Override
+    public void write(FriendlyByteBuf buffer) {
+        encode(this, buffer);
     }
 
     @Override

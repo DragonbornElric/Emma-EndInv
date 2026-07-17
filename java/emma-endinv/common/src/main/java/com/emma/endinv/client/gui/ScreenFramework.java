@@ -26,7 +26,7 @@ import com.emma.endinv.network.payloads.toServer.StarItemPayload;
 import com.emma.endinv.util.SortType;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -34,9 +34,6 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
-import net.minecraft.client.input.CharacterEvent;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -273,14 +270,14 @@ public class ScreenFramework implements PageManager, GuiEventListener {
         widgets.forEach(installer);
     }
 
-    public void renderBg(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderBg(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         SFBgRenderer.renderBg(guiGraphics, partialTick, mouseX, mouseY);
         getDisplayingPage().renderBg(guiGraphics, partialTick, mouseX, mouseY);
     }
 
     private boolean isHoveringOnPage;
 
-    public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         roughMouseX = mouseX;
         roughMouseY = mouseY;
 
@@ -289,13 +286,12 @@ public class ScreenFramework implements PageManager, GuiEventListener {
         getDisplayingPage().render(guiGraphics, mouseX, mouseY, partialTick);
 
         // Re-render after panel background so these appear on top of it
-        reverseSortButton.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
-        if (lootAllButton != null) lootAllButton.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+        reverseSortButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        if (lootAllButton != null) lootAllButton.render(guiGraphics, mouseX, mouseY, partialTick);
 
-        this.sortTypeSwitchBox.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+        this.sortTypeSwitchBox.render(guiGraphics, mouseX, mouseY, partialTick);
 
         if (searchBox.isHovered() && !searchBox.isFocused()) {
-            guiGraphics.nextStratum();
             TooltipRenderer.renderText(
                 guiGraphics,
                 mc.font,
@@ -310,7 +306,6 @@ public class ScreenFramework implements PageManager, GuiEventListener {
             );
         }
         if (reverseSortButton.isHovered()) {
-            guiGraphics.nextStratum();
             TooltipRenderer.renderText(
                 guiGraphics,
                 mc.font,
@@ -320,7 +315,6 @@ public class ScreenFramework implements PageManager, GuiEventListener {
             );
         }
         if (lootAllButton != null && lootAllButton.isHovered()) {
-            guiGraphics.nextStratum();
             TooltipRenderer.renderText(
                 guiGraphics,
                 mc.font,
@@ -330,7 +324,6 @@ public class ScreenFramework implements PageManager, GuiEventListener {
             );
         }
         if (ScreenAttachment.configToggleButton != null && ScreenAttachment.configToggleButton.isHovered()) {
-            guiGraphics.nextStratum();
             TooltipRenderer.renderText(
                 guiGraphics,
                 mc.font,
@@ -397,7 +390,7 @@ public class ScreenFramework implements PageManager, GuiEventListener {
     private void slotQuickMoved(Slot clicked) {
         ItemStack itemStack = clicked.getItem().copy();
         if (menu instanceof CreativeModeInventoryScreen.ItemPickerMenu && clicked.index < 45 && menu.slots.size() >= 54) {
-            if (ItemStack.isSameItemSameComponents(itemStack, creativeQuickInsertedItem)) {
+            if (ItemStack.isSameItemSameTags(itemStack, creativeQuickInsertedItem)) {
                 return;
             } else creativeQuickInsertedItem = itemStack;
             itemStack.setCount(itemStack.getMaxStackSize());
@@ -438,11 +431,8 @@ public class ScreenFramework implements PageManager, GuiEventListener {
         return originalIndex - 9;
     }
 
-    public boolean mouseClicked(MouseButtonEvent clickEvent, boolean pre) {
-        double mouseX = clickEvent.x();
-        double mouseY = clickEvent.y();
-        int keyCode = clickEvent.button();
-        if(this.sortTypeSwitchBox.mouseClicked(clickEvent, pre)){
+    public boolean mouseClicked(double mouseX, double mouseY, int keyCode, boolean pre) {
+        if(this.sortTypeSwitchBox.mouseClicked(mouseX, mouseY, keyCode)){
             return true;
         }
 
@@ -457,7 +447,8 @@ public class ScreenFramework implements PageManager, GuiEventListener {
             }
         }
         //handle menu item quick move
-        boolean flg = inputHandler.isActiveAndMatches(KeyMappings.QUICK_MOVE, clickEvent);
+        boolean flg = inputHandler.isActiveAndMatches(
+                KeyMappings.QUICK_MOVE, InputConstants.Type.MOUSE.getOrCreate(keyCode));
         if (flg) {
             Slot clicked = findSlot(mouseX, mouseY);
             if (clicked != null && clicked.hasItem()) {
@@ -468,7 +459,7 @@ public class ScreenFramework implements PageManager, GuiEventListener {
         }
 //        //handle clicked on the page switch bar
         // Use widget onClick to avoid signature mismatch across versions
-        pageSwitchBar.onClick(clickEvent, pre);//todo ?
+        pageSwitchBar.onClick(mouseX, mouseY);
         // onClick reports via framework.pageSwitched(), treat as handled when mouse is over tab area
         if (mouseX >= pageSwitchBar.getX() && mouseX < pageSwitchBar.getX() + pageSwitchBar.getWidth()
                 && mouseY >= pageSwitchBar.getY() && mouseY < pageSwitchBar.getY() + pageSwitchBar.getHeight()) {
@@ -482,22 +473,20 @@ public class ScreenFramework implements PageManager, GuiEventListener {
         //
         if (hasClickedOnPage(mouseX, mouseY)) {
             sortTypeSwitchBox.setOpen(false);
-            return getDisplayingPage().mouseClicked(new MouseButtonEvent(mouseX - pageX, mouseY - pageY, clickEvent.buttonInfo()), pre);
+            return getDisplayingPage().mouseClicked(mouseX - pageX, mouseY - pageY, keyCode);
         }
         return false;
     }
 
 
-    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-        int button = event.button();
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         ItemStack itemstack = this.menu.getCarried();
         //ignore QUICK_CRAFT and touchscreen
         if (!itemstack.isEmpty() || mc.options.touchscreen().get())
             return false;
         //CTRL-click(default) to quick move items as behavior as Mouse Tweaks
-        if (inputHandler.isActiveAndMatches(KeyMappings.QUICK_MOVE, event)) {
+        if (inputHandler.isActiveAndMatches(
+                KeyMappings.QUICK_MOVE, InputConstants.Type.MOUSE.getOrCreate(button))) {
             Slot clicked = findSlot(mouseX, mouseY);
             if (clicked != null && clicked.hasItem()) {
                 slotQuickMoved(clicked);
@@ -511,15 +500,13 @@ public class ScreenFramework implements PageManager, GuiEventListener {
         return false;
     }
 
-    public boolean mouseReleased(MouseButtonEvent event) {
-        double mouseX = event.x();
-        double mouseY = event.y();
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
         creativeQuickInsertedItem = ItemStack.EMPTY;
 
         DisplayPage displayingPage = getDisplayingPage();
         displayingPage.release();
         if (hasClickedOnPage(mouseX, mouseY)) {
-            return displayingPage.mouseReleased(new MouseButtonEvent(mouseX - getPageX(), mouseY - getPageY(), event.buttonInfo()));
+            return displayingPage.mouseReleased(mouseX - getPageX(), mouseY - getPageY(), button);
         }
         return false;
     }
@@ -527,20 +514,17 @@ public class ScreenFramework implements PageManager, GuiEventListener {
 
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (hasClickedOnPage(mouseX, mouseY)) {
-            return getDisplayingPage().mouseScrolled(mouseX - getPageX(), getPageY(), scrollY);
+            return getDisplayingPage().mouseScrolled(mouseX - getPageX(), mouseY - getPageY(), scrollY);
         }
         return false;
     }
 
     private boolean ignoreTextInput;
 
-    public boolean keyPressed(KeyEvent event) {
-        int keyCode = event.key();
-        int scanCode = event.scancode();
-        int modifiers = event.modifiers();
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         this.ignoreTextInput = false;
 
-        if (inputHandler.isActiveAndMatches(KeyMappings.STAR_ITEM, event)) {
+        if (inputHandler.isActiveAndMatches(KeyMappings.STAR_ITEM, InputConstants.getKey(keyCode, scanCode))) {
             Slot clicked = findSlot(roughMouseX, roughMouseY);
             if (clicked != null && clicked.hasItem()) {
                 ItemStack itemStack = clicked.getItem();
@@ -559,17 +543,29 @@ public class ScreenFramework implements PageManager, GuiEventListener {
             return true;
         }
 
-        // Let default input pipeline handle focused widgets in 1.21.11
+        if (getDisplayingPage().hasSearchbox() && this.searchBox.isFocused()) {
+            String value = this.searchBox.getValue();
+            if (this.searchBox.keyPressed(keyCode, scanCode, modifiers)) {
+                if (!java.util.Objects.equals(value, this.searchBox.getValue())) {
+                    this.refreshSearchResults();
+                }
+                return true;
+            }
+            return this.searchBox.isFocused() && this.searchBox.isVisible() && keyCode != 256;
+        }
         return false;
     }
 
-    public boolean charTyped(CharacterEvent event) {
+    public boolean charTyped(char codePoint, int modifiers) {
         if (this.ignoreTextInput || !getDisplayingPage().hasSearchbox()) {
             return false;
-        } else {
-            // Defer text input handling to the widget pipeline
-            return false;
         }
+        String value = this.searchBox.getValue();
+        if (!this.searchBox.charTyped(codePoint, modifiers)) return false;
+        if (!java.util.Objects.equals(value, this.searchBox.getValue())) {
+            this.refreshSearchResults();
+        }
+        return true;
     }
 
     public void onClose() {

@@ -3,7 +3,7 @@ package com.emma.endinv.folia.scheduler;
 import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.ModPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
 import org.bukkit.plugin.Plugin;
 
 /** Hops inbound plugin-message payloads from the Netty thread to the player's region thread. */

@@ -3,7 +3,7 @@ package com.emma.endinv.client.gui.page.slotView;
 import com.emma.endinv.client.gui.page.ItemEntryDisplay;
 import com.emma.endinv.util.ItemKey;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import org.jetbrains.annotations.Nullable;
 
 public class ItemEntryPageSlotView extends ItemPageSlotView{
@@ -15,16 +15,16 @@ public class ItemEntryPageSlotView extends ItemPageSlotView{
     /**
      * Renders the graphical user interface (GUI) element.
      *
-     * @param guiGraphics the GuiGraphicsExtractor object used for rendering.
+     * @param guiGraphics the GuiGraphics object used for rendering.
      * @param mouseX      the x-coordinate of the mouse cursor.
      * @param mouseY      the y-coordinate of the mouse cursor.
      * @param partialTick the partial tick time.
      */
     @Override
-    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
         var view = ((EntryPageViewContainer)container);
-        guiGraphics.text(
+        guiGraphics.drawString(
                 Minecraft.getInstance().font,
                 view.entryProvider.apply((ItemEntryDisplay) view.page, get()),
                 x + 18, y + 5, 0xFFFFFFFF, true
@@ -36,7 +36,7 @@ public class ItemEntryPageSlotView extends ItemPageSlotView{
     }
      *     private static final int TOOLTIP_X_SEP = 5;
     @Override
-    public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         int rowIndex = 0;
         int columnIndex = 0;
         for(StandardItemPageSlotView pointer : viewContainer.slots()){
@@ -51,7 +51,7 @@ public class ItemEntryPageSlotView extends ItemPageSlotView{
         }
     }
 
-    private void renderItemEntry(ItemStack item, int x, int y, GuiGraphicsExtractor graphics){
+    private void renderItemEntry(ItemStack item, int x, int y, GuiGraphics graphics){
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
         List<Component> tooltips = AbstractContainerScreen.getTooltipFromItem(mc,item);

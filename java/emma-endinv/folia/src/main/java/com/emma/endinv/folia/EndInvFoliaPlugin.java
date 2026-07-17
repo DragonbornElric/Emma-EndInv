@@ -1,28 +1,21 @@
 package com.emma.endinv.folia;
 
-import com.emma.endinv.IPlatform;
 import com.emma.endinv.ModInfo;
 import com.emma.endinv.ModRegistries;
-import com.emma.endinv.NbtAttachment;
-import com.emma.endinv.AbstractModInitializer;
-import com.emma.endinv.menu.EndlessInventoryMenu;
-import com.emma.endinv.network.IPacketDistributor;
-import com.emma.endinv.network.payloads.SyncedConfig;
-import com.emma.endinv.options.ServerConfigs;
-import com.emma.endinv.options.config.json.JsonConfigurationHandler;
+import com.emma.endinv.ServerLevelEndInv;
+import com.emma.endinv.data.EndlessInventoryData;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.item.Item;
-import org.bukkit.craftbukkit.CraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
+import org.bukkit.craftbukkit.v1_20_R1.CraftServer;
+import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.util.UUID;
-import java.util.function.Supplier;
 
 public final class EndInvFoliaPlugin extends JavaPlugin {
 
     private static EndInvFoliaPlugin instance;
     private FoliaIncomingPayloadBridge payloadBridge;
+    private FoliaEventListeners eventListeners;
     private io.papermc.paper.threadedregions.scheduler.ScheduledTask tickTask;
 
     public static EndInvFoliaPlugin get() { return instance; }
@@ -36,7 +29,7 @@ public final class EndInvFoliaPlugin extends JavaPlugin {
         FoliaLoaderProvider.setConfigDir(getDataFolder().toPath());
 
         // 2. Register MenuType + NbtAttachments (must happen before any player events)
-        FoliaMenuRegistry.init();
+        FoliaMenuRegistry.init(this);
 
         // 3. Load config.yml → wire ServerConfigs
         FoliaConfigLoader.load(this);
@@ -49,39 +42,35 @@ public final class EndInvFoliaPlugin extends JavaPlugin {
         ModInfo.platformContext = new FoliaPlatform();
         ModInfo.setPacketDistributor(new FoliaPacketDistributor(mcServer));
 
-        // 6. Load server config
-        new JsonConfigurationHandler(
-                getDataFolder().toPath().resolve("endless_inventory-server.json"),
-                ServerConfigs.getConfigs()
-        ).load();
-
-        // 7. Inject S2C payload codecs into GAMEPLAY_STREAM_CODEC
-        FoliaPayloadRegistry.register();
-
-        // 8. Register Brigadier commands
+        // 6. Register Brigadier commands
         FoliaCommands.register(this);
 
-        // 9. Register plugin-message bridge (C2S payloads → handle on player region thread)
+        // 7. Register plugin-message bridge (C2S payloads → handle on player region thread)
         payloadBridge = new FoliaIncomingPayloadBridge(mcServer, this);
         payloadBridge.register();
 
-        // 10. Register Bukkit event listeners
-        getServer().getPluginManager().registerEvents(new FoliaEventListeners(this), this);
+        // 8. Register Bukkit event listeners
+        eventListeners = new FoliaEventListeners(this);
+        getServer().getPluginManager().registerEvents(eventListeners, this);
         getServer().getPluginManager().registerEvents(new com.emma.endinv.folia.debug.CraftingDebugListener(this), this);
         getServer().getPluginManager().registerEvents(new FoliaRecipeBookPlacementListener(this), this);
 
-        // 11. Periodic tick for broadcastChanges + background cooking (global region, 1 tick period)
+        // 9. Periodic tick for broadcastChanges + background cooking (global region, 1 tick period)
         tickTask = getServer().getGlobalRegionScheduler()
-                .runAtFixedRate(this, sch -> FoliaEventListeners.tickBackgroundCooking(mcServer), 1L, 1L);
+                .runAtFixedRate(
+                        this,
+                        sch -> FoliaEventListeners.scheduleBackgroundCooking(this, mcServer),
+                        1L,
+                        1L
+                );
 
-        // 12. Handle /reload: worlds already loaded before onEnable
-        if (!getServer().getWorlds().isEmpty()) {
-            var overworld = getServer().getWorlds().getFirst();
-            if (overworld instanceof org.bukkit.craftbukkit.CraftWorld craftWorld) {
-                com.emma.endinv.data.EndlessInventoryData.init(craftWorld.getHandle());
-                for (net.minecraft.server.level.ServerPlayer p : mcServer.getPlayerList().getPlayers()) {
-                    new FoliaEventListeners(this).scheduleSync(p);
-                }
+        // 10. Handle /reload: worlds may already be loaded before onEnable.
+        // Do not assume Bukkit's first world is the overworld.
+        ServerLevel overworld = findOverworld();
+        if (overworld != null) {
+            EndlessInventoryData.init(overworld);
+            for (net.minecraft.server.level.ServerPlayer player : mcServer.getPlayerList().getPlayers()) {
+                eventListeners.scheduleSync(player);
             }
         }
 
@@ -93,15 +82,31 @@ public final class EndInvFoliaPlugin extends JavaPlugin {
         if (tickTask != null) { tickTask.cancel(); tickTask = null; }
         if (payloadBridge != null) { payloadBridge.unregister(); payloadBridge = null; }
 
-        // Force-flush EndInv data — Pelican Panel may kill the process before async save completes
-        if (!getServer().getWorlds().isEmpty()) {
-            var overworld = getServer().getWorlds().getFirst();
-            if (overworld instanceof org.bukkit.craftbukkit.CraftWorld craftWorld) {
-                craftWorld.getHandle().getDataStorage().saveAndJoin();
-                getLogger().info("EndInv data flushed to disk");
-            }
+        // Force-flush EndInv data — Pelican Panel may kill the process before
+        // the next normal world save completes.
+        ServerLevel overworld = findOverworld();
+        if (overworld != null) {
+            overworld.getDataStorage().save();
+            getLogger().info("EndInv data flushed to disk");
         }
+        ServerLevelEndInv.PAGE_META_DATA_MANAGER.clear();
+        ServerLevelEndInv.TEMP_ENDINV_REG.clear();
+        ServerLevelEndInv.levelEndInvData = null;
+        FoliaEventListeners.clearRuntimeState();
+        eventListeners = null;
         getLogger().info("EmmaEndInv (Folia) disabled");
         instance = null;
+    }
+
+    private ServerLevel findOverworld() {
+        for (org.bukkit.World world : getServer().getWorlds()) {
+            if (world instanceof CraftWorld craftWorld) {
+                ServerLevel level = craftWorld.getHandle();
+                if (level.dimension().equals(Level.OVERWORLD)) {
+                    return level;
+                }
+            }
+        }
+        return null;
     }
 }

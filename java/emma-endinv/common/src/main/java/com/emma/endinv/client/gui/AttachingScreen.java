@@ -8,7 +8,7 @@ import com.emma.endinv.client.option.MenuAttachabilityCache;
 import com.emma.endinv.network.payloads.toServer.OpenEndInvPayload;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -72,7 +72,7 @@ public class AttachingScreen<T extends AbstractContainerMenu>{
         return Button.builder(
                 Component.literal("⚙"),
                         btn -> {
-                        if(Minecraft.getInstance().hasShiftDown()){
+                        if(Screen.hasShiftDown()){
                             mc.setScreen(ClientModInfo.createConfigScreen(screen));
                         } else {
                             boolean currentA = ClientConfigs.DO_ATTACH.get();
@@ -104,7 +104,7 @@ public class AttachingScreen<T extends AbstractContainerMenu>{
     public void render(IScreenEvent event) {
         int mouseX = (int) event.getMouseX();
         int mouseY = (int) event.getMouseY();
-        GuiGraphicsExtractor guiGraphics = event.getGuiGraphicsExtractor();
+        GuiGraphics guiGraphics = event.getGuiGraphics();
         float partialTick = event.getPartialTick();
 
         frameWork.renderBg(guiGraphics, mouseX, mouseY, partialTick);
@@ -113,20 +113,23 @@ public class AttachingScreen<T extends AbstractContainerMenu>{
 
 
     public void mouseClicked(IScreenEvent event) {
-        boolean isActionOverride = frameWork.mouseClicked(event.getMouseButtonEvent(), true);
+        boolean isActionOverride = frameWork.mouseClicked(
+                event.getMouseX(), event.getMouseY(), event.getMouseButton(), true);
         event.setCanceled(isActionOverride);
     }
 
 
     public void mouseReleased(IScreenEvent event) {
-        event.setCanceled(frameWork.mouseReleased(event.getMouseButtonEvent()));
+        event.setCanceled(frameWork.mouseReleased(
+                event.getMouseX(), event.getMouseY(), event.getMouseButton()));
     }
 
     public void mouseDragged(IScreenEvent event) {
         double dragX = event.getDragX();
         double dragY = event.getDragY();
 
-        event.setCanceled(frameWork.mouseDragged(event.getMouseButtonEvent(), dragX, dragY));
+        event.setCanceled(frameWork.mouseDragged(
+                event.getMouseX(), event.getMouseY(), event.getMouseButton(), dragX, dragY));
     }
 
     public void mouseScrolled(IScreenEvent event) {
@@ -134,11 +137,12 @@ public class AttachingScreen<T extends AbstractContainerMenu>{
     }
 
     public void keyPressed(IScreenEvent event) {
-        event.setCanceled(frameWork.keyPressed(event.getKeyEvent()));
+        event.setCanceled(frameWork.keyPressed(
+                event.getKeyCode(), event.getScanCode(), event.getModifiers()));
     }
 
     public void charTyped(IScreenEvent event) {
-        event.setCanceled(frameWork.charTyped(event.getCharEvent()));
+        event.setCanceled(frameWork.charTyped(event.getCodePoint(), event.getModifiers()));
     }
 
     public void closed(IScreenEvent event){

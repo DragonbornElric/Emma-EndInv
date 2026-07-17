@@ -1,6 +1,5 @@
 package com.emma.endinv.network.payloads.toClient;
 
-import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.client.CachedSrcInv;
 import com.emma.endinv.client.gui.page.ItemDisplay;
 import com.emma.endinv.network.payloads.ModPacketContext;
@@ -8,42 +7,35 @@ import com.emma.endinv.network.payloads.ModPacketPayload;
 import com.emma.endinv.util.ItemKey;
 import com.emma.endinv.util.ItemState;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.Map;
 
 public record EndInvContent(Map<ItemKey, ItemState> itemMap) implements ModPacketPayload {
 
-    public static void encode(RegistryFriendlyByteBuf o, EndInvContent content){
+    public static void encode(EndInvContent content, FriendlyByteBuf o){
         o.writeMap(
                 content.itemMap,
-                (buf, key) -> ItemKey.STREAM_CODEC.encode((RegistryFriendlyByteBuf) buf, key),
+                ItemKey::encode,
                 ItemState::encode
         );
     }
 
-    public static EndInvContent decode(RegistryFriendlyByteBuf o){
+    public static EndInvContent decode(FriendlyByteBuf o){
         return new EndInvContent(o.readMap(Object2ObjectLinkedOpenHashMap::new,
-                buf -> ItemKey.STREAM_CODEC.decode((RegistryFriendlyByteBuf) buf),
+                ItemKey::decode,
                 ItemState::decode
         ));
     }
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, EndInvContent> STREAM_CODEC = StreamCodec.of(EndInvContent::encode, EndInvContent::decode);
-
-    public static final CustomPacketPayload.Type<EndInvContent> TYPE =
-            new CustomPacketPayload.Type<>(AbstractModInitializer.withModLocation("endinv_content"));
+    @Override
+    public void write(FriendlyByteBuf buffer) {
+        encode(this, buffer);
+    }
 
     @Override
     public String id() {
         return "endinv_content";
-    }
-
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
-        return TYPE;
     }
 
     public void handle(ModPacketContext context){
