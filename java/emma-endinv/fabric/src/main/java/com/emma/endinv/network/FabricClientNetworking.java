@@ -25,6 +25,10 @@ public final class FabricClientNetworking {
                 (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
         ClientPlayNetworking.registerGlobalReceiver(SyncedConfig.TYPE,
                 (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
+        ClientPlayNetworking.registerGlobalReceiver(EndInvListPayload.TYPE,
+                (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
+        ClientPlayNetworking.registerGlobalReceiver(EndInvDetailPayload.TYPE,
+                (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
     }
 
     private static ModPacketContext context(net.minecraft.world.entity.player.Player player) { return () -> player; }

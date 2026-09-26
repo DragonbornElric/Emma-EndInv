@@ -41,8 +41,9 @@ public final class ServerLevelEndInv {
      */
     public static Optional<EndlessInventory> getEndInvForPlayer(Player player){
         if (levelEndInvData == null) return Optional.empty();
-        EndlessInventory endlessInventory = null;
-        if(hasEndInvUuid(player)){
+        levelEndInvData.rememberName(player.getUUID(), player.getName().getString());
+        EndlessInventory endlessInventory = getSavedSelection(player);
+        if(endlessInventory==null && hasEndInvUuid(player)){
             endlessInventory = getPlayerDefaultEndInv(player);
         }
         if(endlessInventory==null){
@@ -108,6 +109,27 @@ public final class ServerLevelEndInv {
         }
         return true;
     }
+
+    /**
+     * The EndInv the player explicitly chose (manager screen or {@code /endinv ofIndex <i> setDefault}).
+     * Stored in the world's EndInv save rather than on the player, so it also survives restarts on Folia,
+     * where the player attachment is in-memory only. Ignored if the inventory was deleted or the player lost access.
+     */
+    @Nullable
+    private static EndlessInventory getSavedSelection(Player player){
+        UUID selected = levelEndInvData.getSelection(player.getUUID());
+        if(selected == null) return null;
+        EndlessInventory endInv = levelEndInvData.fromUUID(selected);
+        if(endInv == null) return null;
+        boolean allowed = endInv.accessible(player)
+                || (player instanceof ServerPlayer sp && com.emma.endinv.manage.EndInvManager.isAdmin(sp));
+        if(!allowed) return null;
+        if(!Objects.equals(ModRegistries.NbtAttachments.getEndInvUUID().getWith(player), selected)){
+            ModRegistries.NbtAttachments.getEndInvUUID().setTo(player, selected);
+        }
+        return endInv;
+    }
+
     @Nullable
     private static EndlessInventory getPlayerDefaultEndInv(Player player){
         return levelEndInvData.fromUUID(ModRegistries.NbtAttachments.getEndInvUUID().getWith(player));

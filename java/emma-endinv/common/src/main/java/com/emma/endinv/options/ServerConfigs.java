@@ -40,5 +40,8 @@ public final class ServerConfigs {
     public static final DefaultEndinvBehavior ENDINV_BEHAVIOR = register(DefaultEndinvBehavior.INSTANCE);
     public static final SpecifiedMenuAttachingConfig.Entry SPECIFIED_ATTACHABILITY = register(SpecifiedMenuAttachingConfig.Entry.INSTANCE);
     public static final ConfigEntryImpl<Boolean> ENABLE_AUTOPICK = register(new ConfigEntryImpl.BooleanEntry("EnableAutoPick", new String[]{"Whether the endless inventory will auto pick up items when they are dropped"}, true));
+    public static final ConfigEntryImpl.ListEntry<String> ADMINS = register(new ConfigEntryImpl.ListEntry<>("Admins", new String[]{
+            "Player names or UUIDs allowed to manage every Endless Inventory (view, share, select, take, move, clear, delete).",
+            "If empty, operators with permission level 4 (server owners) are admins."}, new ArrayList<>()));
     public static final ConfigEntryImpl<Boolean> ENABLE_CRAFT_DEBUG_LOG = register(new ConfigEntryImpl.BooleanEntry("EnableCraftDebugLog", new String[]{"Whether to emit [CRAFT-DBG] crafting/inventory trace logs on the server (Folia)."}, false));
 }

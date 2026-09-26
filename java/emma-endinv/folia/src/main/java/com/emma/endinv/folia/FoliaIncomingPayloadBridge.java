@@ -39,6 +39,7 @@ public final class FoliaIncomingPayloadBridge implements PluginMessageListener {
             Map.entry(channel(StarItemPayload.TYPE),                 decodeWith(StarItemPayload.STREAM_CODEC)),
             Map.entry(channel(SetActiveStationPayload.TYPE),         decodeWith(SetActiveStationPayload.STREAM_CODEC)),
             Map.entry(channel(SwapMenuSlotPayload.TYPE),             decodeWith(SwapMenuSlotPayload.STREAM_CODEC)),
+            Map.entry(channel(ManageEndInvPayload.TYPE),             decodeWith(ManageEndInvPayload.STREAM_CODEC)),
             Map.entry(channel(SyncedConfig.TYPE),                    decodeWith(SyncedConfig.STREAM_CODEC))
     );
 

@@ -39,6 +39,8 @@ public final class NeoForgeNetworking {
                 (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(serverCtx((ServerPlayer) ctx.player()))));
         reg.playToServer(SwapMenuSlotPayload.TYPE, SwapMenuSlotPayload.STREAM_CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(serverCtx((ServerPlayer) ctx.player()))));
+        reg.playToServer(ManageEndInvPayload.TYPE, ManageEndInvPayload.STREAM_CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(serverCtx((ServerPlayer) ctx.player()))));
 
         // S2C
         reg.playToClient(EndInvContent.TYPE, EndInvContent.STREAM_CODEC,
@@ -52,6 +54,10 @@ public final class NeoForgeNetworking {
         reg.playToClient(SetStarredPagePayload.TYPE, SetStarredPagePayload.STREAM_CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))));
         reg.playToClient(MenuAttachabilityPayload.TYPE, MenuAttachabilityPayload.STREAM_CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))));
+        reg.playToClient(EndInvListPayload.TYPE, EndInvListPayload.STREAM_CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))));
+        reg.playToClient(EndInvDetailPayload.TYPE, EndInvDetailPayload.STREAM_CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))));
 
         // NeoForge keys payload registrations by ID rather than direction, so the

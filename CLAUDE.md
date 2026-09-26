@@ -106,7 +106,7 @@ The Folia jar is staged in `dist/` but not auto-deployed (server install paths v
 
 | Surface | Module |
 |---------|--------|
-| All 17 payloads | `common` — vanilla `CustomPacketPayload`/`StreamCodec` only |
+| All 20 payloads | `common` — vanilla `CustomPacketPayload`/`StreamCodec` only |
 | All 12 mixins | `common` — target vanilla classes only |
 | Menus, inventory, GUI, screens | `common` |
 | `ILoaderProvider` (isClient, isModLoaded, getConfigDir) | `common` interface, `fabric`/`neoforge`/`folia` service impl |

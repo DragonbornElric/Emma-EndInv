@@ -104,6 +104,10 @@ public abstract class EndInvSettingScreen extends Screen {
         this.clearWidgets();
 
         addPageSwitchButton();
+        addRenderableWidget(Button.builder(Component.translatable("endinv.manager.open"),
+                        btn -> this.minecraft.setScreen(new EndInvManagerScreen(this)))
+                .bounds(leftPos + (imageWidth - 140) / 2, topPos + imageHeight + 4, 140, 20)
+                .build());
 
         if (pageIndex == 1) {
             //entries.add(createAccessibilityConfig());

@@ -25,6 +25,7 @@ public final class FabricNetworking {
         c2s.register(SetActiveStationPayload.TYPE, SetActiveStationPayload.STREAM_CODEC);
         c2s.register(SyncedConfig.TYPE, SyncedConfig.STREAM_CODEC);
         c2s.register(SwapMenuSlotPayload.TYPE, SwapMenuSlotPayload.STREAM_CODEC);
+        c2s.register(ManageEndInvPayload.TYPE, ManageEndInvPayload.STREAM_CODEC);
 
         var s2c = PayloadTypeRegistry.clientboundPlay();
         s2c.register(EndInvContent.TYPE, EndInvContent.STREAM_CODEC);
@@ -34,6 +35,8 @@ public final class FabricNetworking {
         s2c.register(SetStarredPagePayload.TYPE, SetStarredPagePayload.STREAM_CODEC);
         s2c.register(MenuAttachabilityPayload.TYPE, MenuAttachabilityPayload.STREAM_CODEC);
         s2c.register(SyncedConfig.TYPE, SyncedConfig.STREAM_CODEC);
+        s2c.register(EndInvListPayload.TYPE, EndInvListPayload.STREAM_CODEC);
+        s2c.register(EndInvDetailPayload.TYPE, EndInvDetailPayload.STREAM_CODEC);
     }
 
     public static void sendToPlayer(ServerPlayer player, ModPacketPayload payload) {

@@ -1,17 +1,20 @@
 package com.emma.endinv.commands;
 
 import com.emma.endinv.EndlessInventory;
-import com.emma.endinv.ModRegistries;
 import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.data.EndlessInventoryData;
+import com.emma.endinv.manage.EndInvManager;
+import com.emma.endinv.manage.EndInvSnapshots;
 import com.emma.endinv.menu.EndlessInventoryMenu;
 import com.emma.endinv.util.Accessibility;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
@@ -65,6 +68,15 @@ public class EndInvCommand {
                                 )
                         )
                 )
+                .then(Commands.literal("snapshots")
+                        .executes(context -> listSnapshots(context.getSource()))
+                )
+                .then(Commands.literal("restore")
+                        .then(Commands.argument("snapshot", StringArgumentType.word())
+                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                        EndInvSnapshots.list(context.getSource().getServer()), builder))
+                                .executes(context -> restoreSnapshot(context.getSource(), StringArgumentType.getString(context, "snapshot"))))
+                )
                 .then(Commands.literal("new")
                         .executes(context -> createNew(context.getSource(),Accessibility.PUBLIC))
                         .then(Commands.literal("public")
@@ -76,6 +88,25 @@ public class EndInvCommand {
                         )
                 )
         );
+    }
+
+    private static int listSnapshots(CommandSourceStack source) {
+        var names = EndInvSnapshots.list(source.getServer());
+        if (names.isEmpty()) {
+            source.sendSuccess(() -> Component.literal("No EndInv snapshots in " + EndInvSnapshots.directory(source.getServer())), false);
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal(names.size() + " snapshot(s), newest last:"), false);
+        for (String name : names) {
+            source.sendSuccess(() -> Component.literal("  " + name), false);
+        }
+        return names.size();
+    }
+
+    private static int restoreSnapshot(CommandSourceStack source, String name) {
+        String result = EndInvSnapshots.restore(source.getServer(), name);
+        source.sendSuccess(() -> Component.literal(result), true);
+        return 1;
     }
 
     private static int byIndexRemove(CommandSourceStack source, int index, boolean forced) {
@@ -208,7 +239,7 @@ public class EndInvCommand {
                 source.sendFailure(Component.literal("Cannot get EndInv by index "+index));
                 return -1;
             }
-            ModRegistries.NbtAttachments.getEndInvUUID().setTo(player,endlessInventory.getUuid());
+            EndInvManager.assign(player, endlessInventory);
             source.sendSuccess(()->Component.literal("Set player's default endInv with uuid: "+endlessInventory.getUuid()),true);
             return index;
         }catch (CommandSyntaxException e) {

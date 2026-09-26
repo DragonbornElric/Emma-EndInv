@@ -64,7 +64,7 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                     ITEM_MAP_CODEC.fieldOf(ITEM_LIST_KEY).forGetter(EndlessInventory::getItemMap),
                     EndInvAffinities.CODEC.fieldOf(AFFINITY_KEY).forGetter(endinv->endinv.affinities),
                     UUIDUtil.CODEC.fieldOf(UUID_KEY).forGetter(EndlessInventory::getUuid),
-                    UUIDUtil.CODEC.fieldOf(OWNER_UUID_KEY).forGetter(endinv -> endinv.owner),
+                    UUIDUtil.CODEC.optionalFieldOf(OWNER_UUID_KEY).forGetter(endinv -> Optional.ofNullable(endinv.owner)),
                     Codec.list(UUIDUtil.CODEC).fieldOf(WHITE_LIST_KEY).forGetter(ei -> ei.white_list),
                     Codec.STRING.xmap(Accessibility::valueOf, Accessibility::name).fieldOf(ACCESSIBILITY_KEY).forGetter(EndlessInventory::getAccessibility),
                     Codec.INT.fieldOf(MAX_STACK_SIZE_INT_KEY).forGetter(EndlessInventory::getMaxItemStackSize),
@@ -76,7 +76,7 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                         ).apply(instance, (itemMap, aff, uuid, ownerUuid, wLstUid, acc, maxSize, infBool, furnaceState, smokerState, blastState, brewingState) -> {
                             EndlessInventory endInv = new EndlessInventory(uuid, aff);
                                endInv.itemMap.putAll(itemMap);
-                               endInv.owner = ownerUuid;
+                               endInv.owner = ownerUuid.orElse(null);
                                endInv.white_list.addAll(wLstUid);
                                endInv.setAccessibility(acc);
                                endInv.setMaxItemStackSize(maxSize);

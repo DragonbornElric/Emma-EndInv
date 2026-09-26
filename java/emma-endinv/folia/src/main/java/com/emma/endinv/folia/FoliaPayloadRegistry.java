@@ -33,6 +33,8 @@ public final class FoliaPayloadRegistry {
             codecs.put(SetItemDisplayContentPayload.TYPE.id(), SetItemDisplayContentPayload.STREAM_CODEC);
             codecs.put(SetStarredPagePayload.TYPE.id(), SetStarredPagePayload.STREAM_CODEC);
             codecs.put(MenuAttachabilityPayload.TYPE.id(), MenuAttachabilityPayload.STREAM_CODEC);
+            codecs.put(EndInvListPayload.TYPE.id(), EndInvListPayload.STREAM_CODEC);
+            codecs.put(EndInvDetailPayload.TYPE.id(), EndInvDetailPayload.STREAM_CODEC);
 
             Field gameplayField = ClientboundCustomPayloadPacket.class.getDeclaredField("GAMEPLAY_STREAM_CODEC");
             gameplayField.setAccessible(true);
