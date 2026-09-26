@@ -58,6 +58,11 @@ public class EndlessInventoryData extends SavedData {
             ).apply(instance, (lst, selections, names) -> {
                 var EID = new EndlessInventoryData();
                 for(var endinv : lst){
+                    // DEFAULT_UUID means "no EndInv" everywhere else (fromUUID, payloads), so an inventory saved
+                    // with it can never be looked up by id. Re-key it; owners still find it via the owner fallback.
+                    if(endinv.getUuid() == null || Objects.equals(endinv.getUuid(), ModInfo.DEFAULT_UUID)){
+                        LOGGER.warn("EndInv owned by {} had the null UUID; assigned {}", endinv.getOwnerUUID(), endinv.giveNewUuid());
+                    }
                     EID.addEndInvToLevel(endinv);
                 }
                 EID.playerSelections.putAll(selections);

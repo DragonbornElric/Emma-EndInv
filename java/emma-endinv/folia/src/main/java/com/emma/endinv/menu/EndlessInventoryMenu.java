@@ -49,10 +49,22 @@ import static com.emma.endinv.ServerLevelEndInv.getEndInvForPlayer;
 
 public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaDataManager, PageQuickMoveHandler.PageQuickMoveOverride {
 
+    private org.bukkit.craftbukkit.inventory.CraftInventoryView<EndlessInventoryMenu, org.bukkit.inventory.Inventory> bukkitView;
+
+    /**
+     * Paper calls this from ServerPlayer.openMenu (transferTo / InventoryOpenEvent) and click events, and
+     * NPEs on null. The EndInv pool has no Bukkit-side container, so expose a placeholder top inventory
+     * sized to this menu's own (non-player) slots; the player's inventory is the bottom half as usual.
+     */
     @Override
-    @Nullable
     public org.bukkit.inventory.InventoryView getBukkitView() {
-        return null;
+        if (bukkitView == null) {
+            int ownSlots = (int) this.slots.stream().filter(slot -> !(slot.container instanceof Inventory)).count();
+            org.bukkit.inventory.Inventory top = new org.bukkit.craftbukkit.inventory.CraftInventory(new SimpleContainer(Math.max(1, ownSlots)));
+            bukkitView = new org.bukkit.craftbukkit.inventory.CraftInventoryView<>(
+                    ((ServerPlayer) this.player).getBukkitEntity(), top, this);
+        }
+        return bukkitView;
     }
 
     private final SourceInventory sourceInventory;
