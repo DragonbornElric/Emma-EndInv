@@ -19,6 +19,11 @@ FOLIA_JAR_GLOB="${ENDINV_DIR}/folia/build/libs/endless_inventory-folia-${MC_VERS
 PRISM_INSTANCES_DIR="$APPDATA/PrismLauncher/instances"
 FABRIC_MODS_DIR="C:/Users/Owner/Fabric Mods"
 
+# Remote Emma instance on emmabrain (Linux box, Flatpak PrismLauncher).
+# Host/user/port come from ~/.ssh/config (Host emmabrain).
+EMMABRAIN_HOST="emmabrain"
+EMMABRAIN_MODS="/home/emmabrain/.var/app/org.prismlauncher.PrismLauncher/data/PrismLauncher/instances/EmmaAI/minecraft/mods"
+
 FABRIC_MODS_DIRS=()
 NEOFORGE_MODS_DIRS=("C:/Users/Owner/Neoforge Mods")
 FOLIA_MODS_DIRS=("C:/Users/Owner/Paper Plugins")
@@ -63,12 +68,14 @@ Options:
   --fabric-mods-dir "/path"    Deploy Fabric jar to additional directory (repeatable)
   --neoforge-mods-dir "/path"  Deploy NeoForge jar to additional directory (repeatable)
   --folia-mods-dir "/path"     Deploy Folia jar to a plugins/ directory (repeatable)
-  --skip-neoforge              Skip NeoForge build
-  --skip-folia                 Skip Folia build (default: Folia is built but not auto-deployed)
+  --skip-neoforge               Skip NeoForge build
+  --skip-folia                  Skip Folia build (default: Folia is built but not auto-deployed)
+  --emmabrain-only              Build Fabric only, deploy only to emmabrain (EmmaAI); implies --skip-neoforge --skip-folia
   -h, --help
 
 Builds Fabric, NeoForge, and Folia jars. The Fabric jar deploys to the default
-PrismLauncher Emma, Elric, and CameraBot26.1 instances and the Fabric Mods folder.
+PrismLauncher Emma, Elric, and CameraBot26.1 instances and the Fabric Mods folder,
+plus the Emma instance on emmabrain (EmmaAI, via ssh/scp — see ~/.ssh/config).
 The NeoForge jar deploys to C:/Users/Owner/Neoforge Mods and any --neoforge-mods-dir targets.
 The Folia jar deploys to C:/Users/Owner/Paper Plugins and any --folia-mods-dir targets.
 EOF
@@ -76,6 +83,7 @@ EOF
 
 SKIP_NEOFORGE=0
 SKIP_FOLIA=0
+EMMABRAIN_ONLY=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -96,6 +104,8 @@ while [[ $# -gt 0 ]]; do
             SKIP_NEOFORGE=1; shift ;;
         --skip-folia)
             SKIP_FOLIA=1; shift ;;
+        --emmabrain-only)
+            EMMABRAIN_ONLY=1; SKIP_NEOFORGE=1; SKIP_FOLIA=1; shift ;;
         -h|--help) usage; exit 0 ;;
         *) echo "ERROR: Unknown argument: $1" >&2; usage >&2; exit 1 ;;
     esac
@@ -155,22 +165,32 @@ if [[ $SKIP_NEOFORGE -eq 0 ]]; then
     echo "Staged NeoForge jar: $DIST_DIR/$NEOFORGE_JAR_NAME"
 fi
 
-echo "=== Deploying Fabric jar to default instances ==="
+if [[ $EMMABRAIN_ONLY -eq 0 ]]; then
+    echo "=== Deploying Fabric jar to default instances ==="
 
-for named_target in \
-    "Emma:$EMMA_MODS" \
-    "Elric:$ELRIC_MODS" \
-    "CameraBot26.1:$CAMERABOT_MODS" \
-    "Brandon 26.1:$BRANDON_MODS" \
-    "Fabric Mods:$FABRIC_MODS_DIR"; do
-    target_name="${named_target%%:*}"
-    target_dir="${named_target#*:}"
-    if [[ ! -d "$target_dir" ]]; then
-        echo "WARNING: $target_name mods folder not found: $target_dir" >&2; continue
-    fi
-    cp "$FABRIC_JAR" "$target_dir/$FABRIC_JAR_NAME"
-    echo "Deployed Fabric to $target_name: $target_dir"
-done
+    for named_target in \
+        "Emma:$EMMA_MODS" \
+        "Elric:$ELRIC_MODS" \
+        "CameraBot26.1:$CAMERABOT_MODS" \
+        "Brandon 26.1:$BRANDON_MODS" \
+        "Fabric Mods:$FABRIC_MODS_DIR"; do
+        target_name="${named_target%%:*}"
+        target_dir="${named_target#*:}"
+        if [[ ! -d "$target_dir" ]]; then
+            echo "WARNING: $target_name mods folder not found: $target_dir" >&2; continue
+        fi
+        cp "$FABRIC_JAR" "$target_dir/$FABRIC_JAR_NAME"
+        echo "Deployed Fabric to $target_name: $target_dir"
+    done
+fi
+
+# Emma on emmabrain: same jar as local Emma, deployed over ssh/scp (Flatpak PrismLauncher, Linux box).
+if ssh -o ConnectTimeout=5 -o BatchMode=yes "$EMMABRAIN_HOST" "mkdir -p '$EMMABRAIN_MODS'" 2>/dev/null; then
+    scp "$FABRIC_JAR" "$EMMABRAIN_HOST:$EMMABRAIN_MODS/$FABRIC_JAR_NAME"
+    echo "Deployed Fabric to emmabrain (EmmaAI): $EMMABRAIN_MODS"
+else
+    echo "WARNING: emmabrain unreachable via ssh, skipping remote deploy" >&2
+fi
 
 for mods_dir in "${FABRIC_MODS_DIRS[@]}"; do
     if [[ ! -d "$mods_dir" ]]; then
