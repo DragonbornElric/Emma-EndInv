@@ -24,6 +24,8 @@ public final class EndInvFoliaPlugin extends JavaPlugin {
     private static EndInvFoliaPlugin instance;
     private FoliaIncomingPayloadBridge payloadBridge;
     private io.papermc.paper.threadedregions.scheduler.ScheduledTask tickTask;
+    private io.papermc.paper.threadedregions.scheduler.ScheduledTask saveTask;
+    private static final long SAVE_INTERVAL_TICKS = 20L * 60L;
 
     public static EndInvFoliaPlugin get() { return instance; }
 
@@ -74,6 +76,15 @@ public final class EndInvFoliaPlugin extends JavaPlugin {
         tickTask = getServer().getGlobalRegionScheduler()
                 .runAtFixedRate(this, sch -> FoliaEventListeners.tickBackgroundCooking(mcServer), 1L, 1L);
 
+        // 11b. Folia's autosave never writes SavedData, so EndInv was only persisted on clean shutdown and a
+        // crash/host reboot lost everything since startup. Flush it every minute when dirty.
+        saveTask = getServer().getGlobalRegionScheduler().runAtFixedRate(this, sch -> {
+            if (!getServer().getWorlds().isEmpty()
+                    && getServer().getWorlds().getFirst() instanceof org.bukkit.craftbukkit.CraftWorld craftWorld) {
+                com.emma.endinv.data.EndlessInventoryData.saveNow(craftWorld.getHandle());
+            }
+        }, SAVE_INTERVAL_TICKS, SAVE_INTERVAL_TICKS);
+
         // 12. Handle /reload: worlds already loaded before onEnable
         if (!getServer().getWorlds().isEmpty()) {
             var overworld = getServer().getWorlds().getFirst();
@@ -91,6 +102,7 @@ public final class EndInvFoliaPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         if (tickTask != null) { tickTask.cancel(); tickTask = null; }
+        if (saveTask != null) { saveTask.cancel(); saveTask = null; }
         if (payloadBridge != null) { payloadBridge.unregister(); payloadBridge = null; }
 
         // Force-flush EndInv data — Pelican Panel may kill the process before async save completes

@@ -122,6 +122,35 @@ public class EndlessInventoryData extends SavedData {
     }
 
     /**
+     * Write only this SavedData to disk now, if dirty, in the same format SavedDataStorage uses.
+     * Folia never persists SavedData during its autosave (only on clean shutdown), so a crash or host
+     * reboot lost every EndInv change since startup; the Folia plugin calls this on a timer.
+     * Written to a temp file and moved into place so a crash mid-write can't truncate the save.
+     * @return true if a save was written
+     */
+    public static boolean saveNow(ServerLevel level) {
+        EndlessInventoryData data = ServerLevelEndInv.levelEndInvData;
+        if (data == null || !data.isDirty()) return false;
+        try {
+            Path dataFile = findDataFile(level, level.getServer().getWorldPath(LevelResource.ROOT).normalize());
+            data.setDirty(false); // cleared before encoding so changes made during the write mark it dirty again
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            tag.put("data", DATA_TYPE.codec().encodeStart(
+                    level.registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), data).getOrThrow());
+            net.minecraft.nbt.NbtUtils.addCurrentDataVersion(tag);
+            Path tmp = dataFile.resolveSibling(dataFile.getFileName() + ".tmp");
+            net.minecraft.nbt.NbtIo.writeCompressed(tag, tmp);
+            Files.move(tmp, dataFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            return true;
+        } catch (Exception e) {
+            // Most likely a concurrent modification from a region thread while encoding; retry next cycle.
+            data.setDirty();
+            LOGGER.warn("EndInv periodic save failed, will retry: {}", e.toString());
+            return false;
+        }
+    }
+
+    /**
      * Locate the saved file. 26.1 stores overworld SavedData under {@code dimensions/minecraft/overworld/data/<namespace>/};
      * the storage's own folder is read reflectively first so server forks with a different layout also work.
      */
