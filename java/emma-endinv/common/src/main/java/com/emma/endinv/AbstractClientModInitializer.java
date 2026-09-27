@@ -21,6 +21,7 @@ public abstract class AbstractClientModInitializer {
         ModInfo.clientLoaded = true;
         ClientModInfo.inputHandler = getInputHandler();
         ClientModInfo.containerScreenHelper = getScreenHelper();
+        com.emma.endinv.storage.StorageIndexPayload.clientHandler = com.emma.endinv.client.gui.StorageTrackerScreen::onIndex;
 
         regKeyParam(OPEN_MENU);
         regKeyParam(QUICK_MOVE);

@@ -21,6 +21,7 @@ public final class FoliaCommands {
             var commands = mcServer.getCommands().getDispatcher();
             EndInvCommand.register(commands);
             ConfigCommand.register(commands);
+            com.emma.endinv.storage.StorageCommand.register(commands);
         });
     }
 }

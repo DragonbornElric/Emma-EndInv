@@ -3,6 +3,7 @@ package com.emma.endinv.network;
 import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.SyncedConfig;
 import com.emma.endinv.network.payloads.toServer.*;
+import com.emma.endinv.storage.StorageRequestPayload;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -24,6 +25,7 @@ public final class FabricServerNetworking {
         ServerPlayNetworking.registerGlobalReceiver(BulkQuickMoveFromPagePayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
         ServerPlayNetworking.registerGlobalReceiver(SwapMenuSlotPayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
         ServerPlayNetworking.registerGlobalReceiver(ManageEndInvPayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
+        ServerPlayNetworking.registerGlobalReceiver(StorageRequestPayload.TYPE, (payload, ctx) -> ctx.server().execute(() -> payload.handle(context(ctx.player()))));
     }
 
 

@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:paper",
+    "minecraft:chest"
+  ],
+  "result": {
+    "id": "minecraft:paper",
+    "components": {
+      "minecraft:custom_data": {
+        "endinv_storage_tag": true
+      },
+      "minecraft:item_name": {
+        "translate": "item.endless_inventory.storage_tag",
+        "fallback": "Storage Tag"
+      },
+      "minecraft:item_model": "minecraft:name_tag",
+      "minecraft:enchantment_glint_override": true,
+      "minecraft:lore": [
+        {
+          "translate": "item.endless_inventory.storage_tag.lore1",
+          "fallback": "Right-click a chest to track its contents",
+          "color": "gray",
+          "italic": false
+        },
+        {
+          "translate": "item.endless_inventory.storage_tag.lore2",
+          "fallback": "Sneak + right-click to stop tracking",
+          "color": "gray",
+          "italic": false
+        }
+      ]
+    }
+  }
+}

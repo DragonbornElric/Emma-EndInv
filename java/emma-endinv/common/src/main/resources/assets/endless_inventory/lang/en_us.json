@@ -135,5 +135,23 @@
   "endinv.manager.delete": "Delete inventory",
   "endinv.manager.delete.confirm": "Delete %s entirely? Players using it get their own inventory back on next use. A snapshot is saved first.",
   "endinv.manager.confirm_title": "Are you sure?",
-  "endinv.manager.refresh": "Refresh"
+  "endinv.manager.refresh": "Refresh",
+
+  "item.endless_inventory.storage_tag": "Storage Tag",
+  "item.endless_inventory.storage_tag.lore1": "Right-click a chest to track its contents",
+  "item.endless_inventory.storage_tag.lore2": "Sneak + right-click to stop tracking",
+  "title.endinv.storage": "Storage Tracker",
+  "endinv.storage.open.tip": "Storage Tracker: find items in the chests you tagged with a Storage Tag",
+  "endinv.storage.search": "Search items (#tag, @mod)",
+  "endinv.storage.loading": "Loading…",
+  "endinv.storage.none": "No containers tracked yet. Craft a Storage Tag (paper + chest) and right-click a chest with it.",
+  "endinv.storage.no_match": "Nothing matches.",
+  "endinv.storage.mode.items": "By item",
+  "endinv.storage.mode.containers": "By container",
+  "endinv.storage.mode.tip": "Switch between listing items (and where they are) and listing containers (and what they hold)",
+  "endinv.storage.untrack": "Stop tracking",
+  "endinv.storage.untrack.confirm": "Stop tracking %s? Its contents will no longer be listed. You can tag it again at any time.",
+  "endinv.storage.refresh": "Refresh",
+  "endinv.storage.copy": "Copy coords",
+  "endinv.storage.copy.tip": "Copy this container's coordinates to the clipboard"
 }

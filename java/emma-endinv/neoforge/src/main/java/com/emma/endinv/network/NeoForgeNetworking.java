@@ -4,6 +4,8 @@ import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.SyncedConfig;
 import com.emma.endinv.network.payloads.toClient.*;
 import com.emma.endinv.network.payloads.toServer.*;
+import com.emma.endinv.storage.StorageIndexPayload;
+import com.emma.endinv.storage.StorageRequestPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -41,6 +43,8 @@ public final class NeoForgeNetworking {
                 (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(serverCtx((ServerPlayer) ctx.player()))));
         reg.playToServer(ManageEndInvPayload.TYPE, ManageEndInvPayload.STREAM_CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(serverCtx((ServerPlayer) ctx.player()))));
+        reg.playToServer(StorageRequestPayload.TYPE, StorageRequestPayload.STREAM_CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(serverCtx((ServerPlayer) ctx.player()))));
 
         // S2C
         reg.playToClient(EndInvContent.TYPE, EndInvContent.STREAM_CODEC,
@@ -58,6 +62,8 @@ public final class NeoForgeNetworking {
         reg.playToClient(EndInvListPayload.TYPE, EndInvListPayload.STREAM_CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))));
         reg.playToClient(EndInvDetailPayload.TYPE, EndInvDetailPayload.STREAM_CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))));
+        reg.playToClient(StorageIndexPayload.TYPE, StorageIndexPayload.STREAM_CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))));
 
         // NeoForge keys payload registrations by ID rather than direction, so the

@@ -27,4 +27,16 @@ public final class EmmaEndInvApi {
     public static boolean swapEndInvWithMenuSlot(ItemKey key, int menuSlotIndex) {
         return SwapMenuSlotAction.swapWithMenuSlot(key, menuSlotIndex);
     }
+
+    /** Ask the server for the storage index (every container tagged with a Storage Tag and its contents).
+     *  The reply arrives asynchronously; read it with {@link #getStorageIndex()}. Client thread only. */
+    public static void requestStorageIndex() {
+        com.emma.endinv.client.gui.StorageTrackerScreen.requestIndex();
+    }
+
+    /** The last storage index received from the server, or empty if never requested. Each entry has the
+     *  container's dimension, position and aggregated contents. Client thread only. */
+    public static java.util.List<com.emma.endinv.storage.TrackedContainer> getStorageIndex() {
+        return com.emma.endinv.client.gui.StorageTrackerScreen.lastIndex();
+    }
 }

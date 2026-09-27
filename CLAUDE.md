@@ -106,7 +106,7 @@ The Folia jar is staged in `dist/` but not auto-deployed (server install paths v
 
 | Surface | Module |
 |---------|--------|
-| All 20 payloads | `common` — vanilla `CustomPacketPayload`/`StreamCodec` only |
+| All payloads | `common` — vanilla `CustomPacketPayload`/`StreamCodec` only |
 | All 12 mixins | `common` — target vanilla classes only |
 | Menus, inventory, GUI, screens | `common` |
 | `ILoaderProvider` (isClient, isModLoaded, getConfigDir) | `common` interface, `fabric`/`neoforge`/`folia` service impl |
@@ -122,6 +122,8 @@ The Folia jar is staged in `dist/` but not auto-deployed (server install paths v
 | Folia events (Bukkit @EventHandler + global region scheduler tick) | `folia/FoliaEventListeners` |
 | Fabric screen events (ScreenEvents, ScreenKeyboardEvents, etc.) | `fabric/client/events/ScreenAttachment.java` |
 | NeoForge screen events (ScreenEvent.*) | `neoforge/client/events/NeoForgeClientEvents.java` |
+| Storage tracker logic, index, payloads, `/storage` command | `common/storage/` (loader-neutral; payloads live here so the Folia build includes them) |
+| Storage tracker hooks (use-block, 1 s poll, load/save) | `fabric/event/StorageEvents.java`, `neoforge/event/NeoForgeStorageEvents.java`, `folia/FoliaStorageTracker.java` (per-chunk region polling + Bukkit recipe) |
 
 ## Review Guidance
 

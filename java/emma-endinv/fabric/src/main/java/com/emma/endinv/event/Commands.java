@@ -2,6 +2,7 @@ package com.emma.endinv.event;
 
 import com.emma.endinv.commands.ConfigCommand;
 import com.emma.endinv.commands.EndInvCommand;
+import com.emma.endinv.storage.StorageCommand;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 
 public final class Commands {
@@ -13,6 +14,7 @@ public final class Commands {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             EndInvCommand.register(dispatcher);
             ConfigCommand.register(dispatcher);
+            StorageCommand.register(dispatcher);
         });
     }
 }

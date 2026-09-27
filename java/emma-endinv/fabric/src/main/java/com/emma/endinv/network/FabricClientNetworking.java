@@ -4,6 +4,7 @@ import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.ModPacketPayload;
 import com.emma.endinv.network.payloads.SyncedConfig;
 import com.emma.endinv.network.payloads.toClient.*;
+import com.emma.endinv.storage.StorageIndexPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
 public final class FabricClientNetworking {
@@ -28,6 +29,8 @@ public final class FabricClientNetworking {
         ClientPlayNetworking.registerGlobalReceiver(EndInvListPayload.TYPE,
                 (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
         ClientPlayNetworking.registerGlobalReceiver(EndInvDetailPayload.TYPE,
+                (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
+        ClientPlayNetworking.registerGlobalReceiver(StorageIndexPayload.TYPE,
                 (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
     }
 

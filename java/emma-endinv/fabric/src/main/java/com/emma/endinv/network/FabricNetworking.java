@@ -5,6 +5,8 @@ import com.emma.endinv.network.payloads.ModPacketPayload;
 import com.emma.endinv.network.payloads.SyncedConfig;
 import com.emma.endinv.network.payloads.toClient.*;
 import com.emma.endinv.network.payloads.toServer.*;
+import com.emma.endinv.storage.StorageIndexPayload;
+import com.emma.endinv.storage.StorageRequestPayload;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,6 +28,7 @@ public final class FabricNetworking {
         c2s.register(SyncedConfig.TYPE, SyncedConfig.STREAM_CODEC);
         c2s.register(SwapMenuSlotPayload.TYPE, SwapMenuSlotPayload.STREAM_CODEC);
         c2s.register(ManageEndInvPayload.TYPE, ManageEndInvPayload.STREAM_CODEC);
+        c2s.register(StorageRequestPayload.TYPE, StorageRequestPayload.STREAM_CODEC);
 
         var s2c = PayloadTypeRegistry.clientboundPlay();
         s2c.register(EndInvContent.TYPE, EndInvContent.STREAM_CODEC);
@@ -37,6 +40,7 @@ public final class FabricNetworking {
         s2c.register(SyncedConfig.TYPE, SyncedConfig.STREAM_CODEC);
         s2c.register(EndInvListPayload.TYPE, EndInvListPayload.STREAM_CODEC);
         s2c.register(EndInvDetailPayload.TYPE, EndInvDetailPayload.STREAM_CODEC);
+        s2c.register(StorageIndexPayload.TYPE, StorageIndexPayload.STREAM_CODEC);
     }
 
     public static void sendToPlayer(ServerPlayer player, ModPacketPayload payload) {

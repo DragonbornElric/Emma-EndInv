@@ -11,5 +11,6 @@ public final class FabricEvents {
         PlayerEvents.register();
         //LootEvent.register();
         FabricBlockBreakEvents.register();
+        StorageEvents.register();
     }
 }

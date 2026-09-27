@@ -79,6 +79,29 @@ An Endless Inventory (EndInv) does not have to belong to one player. Several pla
 
 A group can also have a shared EndInv that no single player owns: `/endinv new public` or `/endinv new restricted` creates one without an owner.
 
+## Storage Tracker
+
+Find items in your chests without opening every one of them.
+
+**Tag a container:** craft a **Storage Tag** (paper + chest, shapeless) and right-click any storage block with it: chests (single or double), barrels, shulker boxes, hoppers, furnaces, and modded blocks that expose a vanilla container. The tag is not used up and takes no slot in the container. Rename the tag in an anvil first to label the container. **Sneak + right-click** stops tracking; only the player who tagged it, or an admin, can do that.
+
+**How it stays current:** every tracked container in a loaded chunk is re-read once a second, so changes from players, hoppers or other mods show up within about a second. Items inside shulker boxes are indexed too. A container that is broken drops out of the index. The index is shared by everyone on the server and saved to `<world>/endinv_storage_index.dat` every minute and on shutdown, on every loader.
+
+**Searching:** open the EndInv screen and click the chest button above the recipe book. The Storage Tracker screen has a search box (same syntax as EndInv search: `#tag`, `@mod`) and two views:
+
+- **By item** - every stored item with its total; select one to see where it is, nearest first, with coordinates, distance and direction. Click a location to copy its coordinates.
+- **By container** - every tracked container and its contents, with **Copy coords** and **Stop tracking**.
+
+Players without the client mod (for example vanilla clients on Folia) can use chat commands:
+
+| Command | Purpose |
+|---------|---------|
+| `/storage find <item>` | Where an item is stored, nearest first |
+| `/storage list` | The nearest tracked containers |
+| `/storage tag [count]` | Give Storage Tags (permission level 2) |
+
+On Folia the tag interaction runs after protection plugins, so a player cannot read a container inside a claim they could not open.
+
 ## Administration
 
 **Who is an admin:** add player names or UUIDs to the `Admins` list in the server config. If that list is empty, operators with permission level 4 are admins.

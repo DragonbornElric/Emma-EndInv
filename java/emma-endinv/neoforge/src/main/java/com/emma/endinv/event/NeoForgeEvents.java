@@ -45,6 +45,7 @@ public final class NeoForgeEvents {
         NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerLogin);
         NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerLogout);
         NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerClone);
+        NeoForgeStorageEvents.register();
     }
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {

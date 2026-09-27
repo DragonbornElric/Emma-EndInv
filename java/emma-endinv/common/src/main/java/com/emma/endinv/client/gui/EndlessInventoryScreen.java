@@ -77,6 +77,7 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
     @Nullable private StationIconButton grindstoneButton;
     @Nullable private StationIconButton smithingButton;
     @Nullable private StationIconButton brewingButton;
+    @Nullable private StorageTrackerButton storageButton;
 
     // Static capture so we can store the super() argument in a final field
     @Nullable private static EndInvCraftingRecipeBookComponent pendingCraftingComp;
@@ -146,6 +147,8 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         addRenderableWidget(grindstoneButton);
         addRenderableWidget(smithingButton);
         addRenderableWidget(brewingButton);
+        storageButton = new StorageTrackerButton(0, 0);
+        addRenderableWidget(storageButton);
         updateStationButtonPositions();
 
         // Restore active station from menu (handles screen resize)
@@ -215,6 +218,8 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         smithingButton.setX(rightEdge - 22 - 24);      smithingButton.setY(row2Y);
         grindstoneButton.setX(rightEdge - 22 - 48);    grindstoneButton.setY(row2Y);
         stonecutterButton.setX(rightEdge - 22 - 72);   stonecutterButton.setY(row2Y);
+        // Storage tracker sits at the left end of row 2, above the recipe book button.
+        if (storageButton != null) { storageButton.setX(this.leftPos); storageButton.setY(row2Y); }
     }
 
     private void drawStationBackground(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
@@ -469,6 +474,32 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         @Override
         public void onPress(InputWithModifiers input) {
             EndlessInventoryScreen.this.setActiveStation(this.station);
+        }
+
+        @Override
+        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+            this.extractDefaultSprite(graphics);
+            graphics.item(icon, this.getX() + 3, this.getY() + 3, 0);
+        }
+
+        @Override
+        public void updateWidgetNarration(NarrationElementOutput output) {
+            this.defaultButtonNarrationText(output);
+        }
+    }
+
+    /** Opens the {@link StorageTrackerScreen} over this screen; closing it returns here. */
+    private class StorageTrackerButton extends AbstractButton {
+        private final ItemStack icon = new ItemStack(Items.CHEST);
+
+        StorageTrackerButton(int x, int y) {
+            super(x, y, 22, 22, CommonComponents.EMPTY);
+            this.setTooltip(Tooltip.create(Component.translatable("endinv.storage.open.tip")));
+        }
+
+        @Override
+        public void onPress(InputWithModifiers input) {
+            EndlessInventoryScreen.this.minecraft.setScreen(new StorageTrackerScreen(EndlessInventoryScreen.this));
         }
 
         @Override

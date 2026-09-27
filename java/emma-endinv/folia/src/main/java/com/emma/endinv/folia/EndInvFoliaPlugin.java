@@ -25,6 +25,7 @@ public final class EndInvFoliaPlugin extends JavaPlugin {
     private FoliaIncomingPayloadBridge payloadBridge;
     private io.papermc.paper.threadedregions.scheduler.ScheduledTask tickTask;
     private io.papermc.paper.threadedregions.scheduler.ScheduledTask saveTask;
+    private io.papermc.paper.threadedregions.scheduler.ScheduledTask storagePollTask;
     private static final long SAVE_INTERVAL_TICKS = 20L * 60L;
 
     public static EndInvFoliaPlugin get() { return instance; }
@@ -72,6 +73,14 @@ public final class EndInvFoliaPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new com.emma.endinv.folia.debug.CraftingDebugListener(this), this);
         getServer().getPluginManager().registerEvents(new FoliaRecipeBookPlacementListener(this), this);
 
+        // 10b. Storage tracker: load the index, poll tracked containers on their region threads, add the tag recipe.
+        com.emma.endinv.storage.StorageIndex.load(mcServer);
+        FoliaStorageTracker storageTracker = new FoliaStorageTracker(this);
+        getServer().getPluginManager().registerEvents(storageTracker, this);
+        storagePollTask = getServer().getGlobalRegionScheduler().runAtFixedRate(this, sch -> storageTracker.poll(mcServer),
+                com.emma.endinv.storage.StorageTracker.REFRESH_INTERVAL_TICKS, com.emma.endinv.storage.StorageTracker.REFRESH_INTERVAL_TICKS);
+        FoliaStorageTracker.registerRecipe(this);
+
         // 11. Periodic tick for broadcastChanges + background cooking (global region, 1 tick period)
         tickTask = getServer().getGlobalRegionScheduler()
                 .runAtFixedRate(this, sch -> FoliaEventListeners.tickBackgroundCooking(mcServer), 1L, 1L);
@@ -83,6 +92,7 @@ public final class EndInvFoliaPlugin extends JavaPlugin {
                     && getServer().getWorlds().getFirst() instanceof org.bukkit.craftbukkit.CraftWorld craftWorld) {
                 com.emma.endinv.data.EndlessInventoryData.saveNow(craftWorld.getHandle());
             }
+            com.emma.endinv.storage.StorageIndex.saveIfDirty();
         }, SAVE_INTERVAL_TICKS, SAVE_INTERVAL_TICKS);
 
         // 12. Handle /reload: worlds already loaded before onEnable
@@ -103,6 +113,8 @@ public final class EndInvFoliaPlugin extends JavaPlugin {
     public void onDisable() {
         if (tickTask != null) { tickTask.cancel(); tickTask = null; }
         if (saveTask != null) { saveTask.cancel(); saveTask = null; }
+        if (storagePollTask != null) { storagePollTask.cancel(); storagePollTask = null; }
+        com.emma.endinv.storage.StorageIndex.unload(((CraftServer) getServer()).getServer());
         if (payloadBridge != null) { payloadBridge.unregister(); payloadBridge = null; }
 
         // Force-flush EndInv data — Pelican Panel may kill the process before async save completes
