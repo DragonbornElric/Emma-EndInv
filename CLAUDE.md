@@ -2,6 +2,11 @@
 
 Multi-loader repository for the Emma fork of Endless Inventory — Fabric, NeoForge, and Folia, targeting Minecraft 26.1.2.
 
+## Loader roles
+
+- **Fabric** and **NeoForge** jars are one mod for both sides: install the same jar on the client and on a Fabric/NeoForge dedicated server.
+- **Folia** jar is the server-only half: a Folia plugin that serves Fabric/NeoForge clients running the client jar.
+
 ## Scope
 
 - This repository contains only the Emma-EndInv mod.
