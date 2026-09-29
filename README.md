@@ -29,6 +29,15 @@ cd java/emma-endinv
 
 Build a single target with `:fabric:build`, `:neoforge:build`, or `:folia:build`.
 
+**Linux / macOS:** use `./gradlew`. `gradle.properties` pins `org.gradle.java.home` to the
+Windows PrismLauncher runtime, so override it with any installed JDK 21+ (the Java 25
+toolchain for compiling is provisioned by Gradle itself):
+
+```bash
+cd java/emma-endinv
+./gradlew -Dorg.gradle.java.home=/usr/lib/jvm/java-21-openjdk-amd64 :fabric:build
+```
+
 Output jars:
 
 ```text
@@ -36,6 +45,21 @@ java/emma-endinv/fabric/build/libs/endless_inventory-fabric-<mc_version>*.jar
 java/emma-endinv/neoforge/build/libs/endless_inventory-neoforge-<mc_version>*.jar
 java/emma-endinv/folia/build/libs/endless_inventory-folia-<folia_version>*.jar
 ```
+
+## Which jar goes where
+
+| Server | Server side | Client side |
+|---|---|---|
+| Folia / Paper (production) | Folia plugin in `plugins/` | Fabric or NeoForge jar |
+| Fabric dedicated server | **the same Fabric jar** in `mods/` (+ Fabric API) | Fabric jar |
+| NeoForge dedicated server | the NeoForge jar in `mods/` | NeoForge jar |
+| Single player | nothing extra (the client jar runs the integrated server) | Fabric or NeoForge jar |
+
+The Fabric jar is a client **and** server mod. Verified 2026-09-29 on a Fabric 26.1.2
+dedicated server (Fabric Loader 0.19.2, Fabric API 0.155.3): the server loads
+`endless_inventory 1.3.0`, a Fabric client with the same jar joins,
+and Emma's bridge reports `endinv_available: true` and moves a chest's contents into her
+EndInv (`@loot`). The rail lab in EmmaMinecraft261 (`tools/rail_lab/`) runs this setup.
 
 ## Deploy Helper
 

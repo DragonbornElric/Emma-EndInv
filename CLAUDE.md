@@ -45,6 +45,10 @@ cd java/emma-endinv
 ./gradlew.bat :fabric:build
 ```
 
+On Linux use `./gradlew -Dorg.gradle.java.home=<any JDK 21+> ...`: `gradle.properties` pins
+`org.gradle.java.home` to a Windows path (the Java 25 compile toolchain is provisioned by
+Gradle).
+
 **NeoForge only:**
 ```bash
 ./gradlew.bat :neoforge:build
@@ -88,6 +92,13 @@ cd java
 
 The Fabric jar deploys automatically to the default PrismLauncher Emma, Elric, and CameraBot26.1 instances.
 The Folia jar is staged in `dist/` but not auto-deployed (server install paths vary).
+
+## Server targets
+
+The Fabric jar is a client **and** server mod: it runs on a Fabric dedicated server as well
+as on the client (verified on a Fabric 26.1.2 dedicated server, 2026-09-29, with Emma's bridge
+reading and filling EndInv). Folia/Paper servers use the Folia plugin instead; NeoForge
+servers the NeoForge jar. Don't describe the server side as "Folia only".
 
 ## Conventions
 
