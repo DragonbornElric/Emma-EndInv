@@ -1,6 +1,6 @@
-# Emma-EndInv
+# Emma's Endless Inventory
 
-Emma-EndInv is the Emma fork of Endless Inventory for Minecraft 26.1.2. It builds for three targets from one Gradle project:
+**Emma's Endless Inventory** (repository: Emma-EndInv, mod id `emma_endinv`) by **Elric Heart** is the Emma fork of [Endless Inventory](https://github.com/kwwsyk/Endless-Inventory) for Minecraft 26.1.2, 26.2 and 26.3. It builds for three targets from one Gradle project:
 
 - **Fabric** client/server mod
 - **NeoForge** client/server mod
@@ -390,6 +390,15 @@ From 1.4.0 the mod id is **`emma_endinv`** (before: `endless_inventory`, the ori
     on first start, and the old file is kept as `.migrated`.
   - Items saved as `endless_inventory:…` load as `emma_endinv:…`.
   - Existing Storage Tags keep working and still stack with new ones.
+
+## Support
+
+Need help or found a bug?
+- **GitHub:** open an issue at https://github.com/DragonbornElric/Emma-EndInv/issues. Include
+  your Minecraft version, loader, the mod version and the log.
+- **Livestream:** catch the stream at **[twitch.tv/Elric_Heart](https://www.twitch.tv/Elric_Heart)** and ask.
+
+Please don't ask the original Endless Inventory author for help with this fork.
 
 ## Credits and License
 

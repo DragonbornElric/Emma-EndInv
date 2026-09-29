@@ -2,13 +2,19 @@
   "schemaVersion": 1,
   "id": "${mod_id}",
   "version": "${version}",
-  "name": "Endless Inventory (Emma Fork)",
-  "description": "RPG-style infinite inventory for Minecraft. Forked and ported to 26.2 for Emma.",
+  "name": "Emma's Endless Inventory",
+  "description": "Endless per-player storage for Minecraft: auto-pickup, crafting from storage, built-in stations, shared inventories and a chest storage tracker. Fork of Endless Inventory by Kay Zhang (kwwsyk).",
   "authors": [
-    "Kay_Zhang",
-    "Emma Team"
+    "Elric Heart"
   ],
-  "contact": {},
+  "contributors": [
+    "Kay Zhang (kwwsyk) - original Endless Inventory"
+  ],
+  "contact": {
+    "homepage": "https://github.com/DragonbornElric/Emma-EndInv",
+    "sources": "https://github.com/DragonbornElric/Emma-EndInv",
+    "issues": "https://github.com/DragonbornElric/Emma-EndInv/issues"
+  },
   "license": "${license}",
   "icon": "assets/emma_endinv/icon.png",
   "accessWidener": "endinv.accesswidener",
