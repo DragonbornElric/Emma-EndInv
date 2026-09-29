@@ -14,11 +14,11 @@ MOD_ID=$(awk -F= '/^mod_id=/{print $2}' "$GRADLE_PROPS")
 # Jar prefix before the 1.3 rename to emma_endinv; old jars with it are removed when deploying.
 LEGACY_MOD_ID="endless_inventory"
 
-FABRIC_JAR_GLOB="${ENDINV_DIR}/fabric/build/libs/${MOD_ID}-fabric-${MC_VERSION}*.jar"
-NEOFORGE_JAR_GLOB="${ENDINV_DIR}/neoforge/build/libs/${MOD_ID}-neoforge-${MC_VERSION}*.jar"
+FABRIC_JAR_GLOB="${ENDINV_DIR}/fabric/build/libs/${MOD_ID}-fabric-${MC_VERSION}-${MOD_VERSION}*.jar"
+NEOFORGE_JAR_GLOB="${ENDINV_DIR}/neoforge/build/libs/${MOD_ID}-neoforge-${MC_VERSION}-${MOD_VERSION}*.jar"
 FOLIA_VERSION=$(awk -F= '/^folia_version=/{print $2}' "$GRADLE_PROPS")
 PAPER_VERSION=$(awk -F= '/^paper_version=/{print $2}' "$GRADLE_PROPS")
-FOLIA_JAR_GLOB="${ENDINV_DIR}/folia/build/libs/${MOD_ID}-folia-${MC_VERSION}*.jar"
+FOLIA_JAR_GLOB="${ENDINV_DIR}/folia/build/libs/${MOD_ID}-folia-${MC_VERSION}-${MOD_VERSION}*.jar"
 
 PRISM_INSTANCES_DIR="$APPDATA/PrismLauncher/instances"
 FABRIC_MODS_DIR="C:/Users/Owner/Fabric Mods"
@@ -175,9 +175,9 @@ GRADLE_TARGETS=(:fabric:build)
 ./gradlew.bat "${GRADLE_ARGS[@]}" "${GRADLE_TARGETS[@]}" 2>&1 | quiet_gradle
 
 # Find the built jars (glob avoids hardcoding exact classifier/version suffix)
-FABRIC_JAR=$(ls ${ENDINV_DIR}/fabric/build/libs/${MOD_ID}-fabric-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
-NEOFORGE_JAR=$(ls ${ENDINV_DIR}/neoforge/build/libs/${MOD_ID}-neoforge-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
-FOLIA_JAR=$(ls ${ENDINV_DIR}/folia/build/libs/${MOD_ID}-folia-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
+FABRIC_JAR=$(ls ${ENDINV_DIR}/fabric/build/libs/${MOD_ID}-fabric-${MC_VERSION}-${MOD_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
+NEOFORGE_JAR=$(ls ${ENDINV_DIR}/neoforge/build/libs/${MOD_ID}-neoforge-${MC_VERSION}-${MOD_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
+FOLIA_JAR=$(ls ${ENDINV_DIR}/folia/build/libs/${MOD_ID}-folia-${MC_VERSION}-${MOD_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
 
 if [[ -z "$FABRIC_JAR" ]]; then
     echo "ERROR: Fabric jar not found under fabric/build/libs/" >&2; exit 1
