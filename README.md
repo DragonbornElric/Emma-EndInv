@@ -96,6 +96,8 @@ screenshots on 26.2/26.3).
 | 26.3 | NeoForge 26.3.0.34-beta | NeoForge | ✅ all checks |
 | 26.3 | Folia | — | ⏳ no Folia 26.3 release yet |
 
+Full details are in [TESTING.md](TESTING.md): each check, how it was run, per-server results, and what isn't covered yet.
+
 Bugs found by these tests and fixed in 1.4.1:
 - **Folia/Paper plugin duplicated walk-over pickups:** items went into EndInv *and* the
   inventory. This happened only with auto-pickup on.
