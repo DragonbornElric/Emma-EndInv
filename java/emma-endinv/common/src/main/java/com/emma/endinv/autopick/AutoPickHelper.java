@@ -176,10 +176,14 @@ public final class AutoPickHelper {
                     ModInfo.getPacketDistributor().sendToPlayer(player, new ItemPickedUpPayload(absorbedStack));
                     EndInvRecipeUnlock.fireVanillaInventoryChanged(player, absorbedStack);
                 }
+                if(absorbed <= 0) return;
+                // The loader must not hand the absorbed items to the player as well: cancel its pickup
+                // and settle the item entity here (all taken -> gone, otherwise what EndInv couldn't hold).
+                event.cancelVanillaPickup();
                 if(remain.isEmpty()){
-                    stack.setCount(0);
+                    entity.discard();
                 }else {//rare
-                    stack.split(remain.getCount());
+                    entity.setItem(remain);
                 }
             });
         }

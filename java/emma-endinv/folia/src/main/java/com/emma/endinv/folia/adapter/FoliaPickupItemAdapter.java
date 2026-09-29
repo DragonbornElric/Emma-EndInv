@@ -18,4 +18,7 @@ public class FoliaPickupItemAdapter implements IPlayerPickupItemEvent {
 
     @Override
     public Player getPlayer() { return ((CraftPlayer) event.getEntity()).getHandle(); }
+
+    @Override
+    public void cancelVanillaPickup() { event.setCancelled(true); }
 }
