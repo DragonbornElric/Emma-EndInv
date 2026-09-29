@@ -50,7 +50,10 @@ public class CachedSrcInv extends SourceInventory {
                                      String search){
         var ret = getSortedKeyReference(sortType)
                 .filter(key -> {
-                    ItemStack stack = key.toStack(itemMap.get(key).count());
+                    // Upstream 1cc28fe: skip entries whose state vanished or hit zero during a refresh.
+                    ItemState state = itemMap.get(key);
+                    if (state == null || state.count() <= 0) return false;
+                    ItemStack stack = key.toStack(state.count());
                     return (classify == null || classify.test(stack)) && SearchUtil.matchesSearch(stack, search);
                 })
                 .toList();

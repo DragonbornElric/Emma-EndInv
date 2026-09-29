@@ -19,17 +19,19 @@ public class ClientModInfo {
     private static java.util.function.Function<Screen, Screen> configScreenFactory;
 
     public static void sendOpenMenu(){
-        int rows = ClientConfigs.EIM_CONFIG.Rows.get();
-        if (rows <= 0) {
-            rows = calculateDefaultRowsForMenu();
-        }
+        // Same resolution as EIMConfig.Param#adjust, so server menu, client menu and framework agree.
+        int rows = fitMenuRows(ClientConfigs.EIM_CONFIG.Rows.get(), Minecraft.getInstance().getWindow().getGuiScaledHeight());
         ModInfo.getPacketDistributor().sendToServer(new OpenEndInvPayload(true, rows));
     }
 
-    private static int calculateDefaultRowsForMenu() {
-        Minecraft mc = Minecraft.getInstance();
-        int height = mc.getWindow().getGuiScaledHeight();
-        return Math.max(Math.floorDiv(height - 60, 18) - 4, 1);
+    /**
+     * Rows of the Endless Inventory menu that fit the scaled window, leaving room for the two
+     * station-button rows drawn above the panel. {@code requested <= 0} means auto (as many as fit).
+     */
+    public static int fitMenuRows(int requested, int guiScaledHeight) {
+        int maxRows = Math.max(1, Math.floorDiv(guiScaledHeight - EndlessInventoryScreen.BASE_IMAGE_HEIGHT
+                - EndlessInventoryScreen.STATION_BAR_HEIGHT - 2, 18));
+        return requested <= 0 ? maxRows : Math.max(1, Math.min(requested, maxRows));
     }
 
     public static void setConfigScreenFactory(Function<Screen, Screen> factory) {
