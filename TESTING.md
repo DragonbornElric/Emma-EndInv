@@ -79,6 +79,19 @@ Also checked:
 | `/storage find minecraft:lapis_block` found nothing (full ids weren't matched) | All |
 | The stack held on the cursor was hidden behind the EndInv panels | All clients |
 
+## GUI checks (1.4.3)
+
+Checked by screenshot on Fabric 26.1.2 and NeoForge 26.3 clients, with a small game window
+(about 1490×715, auto GUI scale) and a shorter one (1100×500):
+
+| Check | Passes when |
+|---|---|
+| Type `e q1 x`, then `stone cobble` in the search box | The screen stays open, nothing is dropped or swapped, and the grid filters as you type |
+| Open the EndInv screen in a short window | Both rows of station buttons are on screen and clickable; the grid has fewer rows |
+| Open the recipe book in the player inventory | The attached EndInv panel ends left of the book's tabs |
+| Open the recipe book in the EndInv screen (crafting, then furnace) | The panel and its page tabs sit right of the book; hovering items shows the right tooltips; closing the book re-centres the panel |
+| Switch stations with their books open | Each station keeps its own book open or closed |
+
 ## Not covered by these tests
 
 Not functionally tested in this run; they work in normal play on the author's server, but have
@@ -87,7 +100,7 @@ no automated check yet:
   furnaces, brewing, stonecutter, grindstone, smithing).
 - Background cooking and brewing.
 - Shared and combined inventories, access levels, admin actions, snapshots and restore.
-- Loot All, starring items, and search and sorting in the GUI.
+- Loot All, starring items, and sorting in the GUI.
 - Block breaking and the Storage Tracker on 26.2/26.3 (no bot bridge there).
 - Many players at once, and performance.
 - Folia 26.3 (not released).
