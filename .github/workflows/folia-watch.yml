@@ -38,9 +38,9 @@ jobs:
           if [ "$open" != "0" ]; then echo "Issue already exists"; exit 0; fi
           gh issue create --title "${ISSUE_TITLE}" --body "PaperMC has published Folia builds for Minecraft ${MC_VERSION}: https://fill.papermc.io/v3/projects/folia/versions/${MC_VERSION}/builds
 
-          To port the Folia plugin, on the \`mc-${MC_VERSION}\` branch:
-          1. Set \`folia_version\` in \`java/emma-endinv/gradle.properties\` to the new dev bundle (see https://repo.papermc.io/repository/maven-public/dev/folia/dev-bundle/maven-metadata.xml).
-          2. Build with \`./gradlew :folia:build\` and fix what breaks.
-          3. Update the README version table and remove the \"Folia pending\" note.
+          The \`mc-${MC_VERSION}\` plugin is currently built against Paper. To test and release it for Folia:
+          1. Set \`folia_version\` in \`java/emma-endinv/gradle.properties\` to the new dev bundle (see https://repo.papermc.io/repository/maven-public/dev/folia/dev-bundle/maven-metadata.xml); it takes priority over \`paper_version\`.
+          2. Build with \`./gradlew :folia:build\`, fix what breaks, and test the plugin on a Folia ${MC_VERSION} server.
+          3. Update the README version table and remove the \"pending testing\" note.
 
           (Opened automatically by .github/workflows/folia-watch.yml. Disable that workflow once this is done.)"
