@@ -340,7 +340,10 @@ public class ScreenFramework implements PageManager, GuiEventListener {
             );
         }
 
-        getDisplayingPage().renderHoverOverlay(guiGraphics, mouseX, mouseY, partialTick);
+        // Like vanilla: no item tooltip while a stack is held on the cursor (it would cover the stack).
+        if (getMenu().getCarried().isEmpty()) {
+            getDisplayingPage().renderHoverOverlay(guiGraphics, mouseX, mouseY, partialTick);
+        }
 
         this.pageSwitchBar.renderHoverTooltip(guiGraphics, mouseX, mouseY);
     }

@@ -306,6 +306,9 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         drawStationBackground(guiGraphics, mouseX, mouseY);
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         frameWork.render(guiGraphics, mouseX, mouseY, partialTick);
+        // The pages are drawn after the screen, so draw the stack held on the cursor again on top of them.
+        guiGraphics.nextStratum();
+        extractCarriedItem(guiGraphics, mouseX, mouseY);
     }
 
     @Override
