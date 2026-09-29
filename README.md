@@ -18,6 +18,8 @@ Emma-EndInv is the Emma fork of Endless Inventory for Minecraft 26.1.2. It build
 
 ## Installation
 
+**Download:** [Releases](https://github.com/DragonbornElric/Emma-EndInv/releases). Each release is for one Minecraft version: 26.1.2 is the main release, 26.2 and 26.3 are pre-releases.
+
 **This mod needs to be installed on both sides.** Every player runs a **Fabric** or
 **NeoForge** client with this mod in their `mods/` folder, and the server runs it too:
 
