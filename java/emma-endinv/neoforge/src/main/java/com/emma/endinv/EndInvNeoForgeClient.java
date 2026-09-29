@@ -48,7 +48,7 @@ public class EndInvNeoForgeClient extends AbstractClientModInitializer {
 
     private void onClientSetup() {
         CLIENT_CONFIGS = new JsonConfigurationHandler(
-                ILoaderProvider.get().getConfigDir().resolve("endless_inventory-client.json"),
+                com.emma.endinv.options.config.ConfigFiles.resolve(ILoaderProvider.get().getConfigDir(), "client.json"),
                 ClientConfigs.getConfigs()
         );
         CLIENT_CONFIGS.load();

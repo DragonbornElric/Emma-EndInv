@@ -54,7 +54,7 @@ public final class EndInvFoliaPlugin extends JavaPlugin {
 
         // 6. Load server config
         new JsonConfigurationHandler(
-                getDataFolder().toPath().resolve("endless_inventory-server.json"),
+                com.emma.endinv.options.config.ConfigFiles.resolve(getDataFolder().toPath(), "server.json"),
                 ServerConfigs.getConfigs()
         ).load();
 

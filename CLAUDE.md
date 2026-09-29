@@ -70,9 +70,9 @@ Gradle).
 ```
 
 Output jars:
-- `fabric/build/libs/endless_inventory-fabric-<mc_version>*.jar`
-- `neoforge/build/libs/endless_inventory-neoforge-<mc_version>*.jar`
-- `folia/build/libs/endless_inventory-folia-<folia_version>*.jar`
+- `fabric/build/libs/emma_endinv-fabric-<mc_version>*.jar`
+- `neoforge/build/libs/emma_endinv-neoforge-<mc_version>*.jar`
+- `folia/build/libs/emma_endinv-folia-<folia_version>*.jar`
 
 ## Deploy Helper
 
@@ -109,7 +109,7 @@ Don't describe the server side as "Folia only".
 Fabric-server parity with the Folia plugin (death loot and XP, pickup filter, EndInv-first recipe
 book, 60 s save, respawn re-sync) is listed in README "Fabric server behaves like the Folia
 plugin". The death-loot mixins are Fabric-only (`fabric/.../mixin/fabric/`, registered in
-`endless_inventory.fabric.mixins.json`). NeoForge buffers death drops in `captureDrops`
+`emma_endinv.fabric.mixins.json`). NeoForge buffers death drops in `captureDrops`
 before they reach the level, so its port lives in `NeoForgeEvents` (`LivingDropsEvent`,
 `LivingExperienceDropEvent`, `PlayerRespawnEvent`, 60 s save on `ServerTickEvent.Post`); untested
 on a dedicated server.
@@ -123,6 +123,7 @@ on a dedicated server.
 - Fabric Loom 1.15.5 / ModDevGradle 2.0.141
 - Java 25
 - Package namespace: `com.emma.endinv`
+- Mod id `emma_endinv` (since 1.4.0; `ModInfo.MOD_ID`). The upstream id `endless_inventory` (`ModInfo.LEGACY_ID`) is still used on purpose for saved data (world EndInv file, snapshots, Fabric/NeoForge player attachments) and the Storage Tag translation keys, so existing worlds load unchanged. Item ids are aliased from it; config files are migrated by `ConfigFiles`. Don't "clean up" those legacy uses.
 - Loader-neutral service abstraction: `ILoaderProvider` (ServiceLoader, one impl per module)
 - Mixin compatibility: `JAVA_25`, `defaultRequire: 1`
 - Folia threading: no `Bukkit.getScheduler()`; use `entity.getScheduler()`, `getGlobalRegionScheduler()`, `getRegionScheduler()`

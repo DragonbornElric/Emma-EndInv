@@ -10,7 +10,7 @@
   ],
   "contact": {},
   "license": "${license}",
-  "icon": "assets/endless_inventory/icon.png",
+  "icon": "assets/emma_endinv/icon.png",
   "accessWidener": "endinv.accesswidener",
   "environment": "*",
   "entrypoints": {

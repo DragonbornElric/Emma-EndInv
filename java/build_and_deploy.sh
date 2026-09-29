@@ -10,12 +10,15 @@ GRADLE_PROPS="$ENDINV_DIR/gradle.properties"
 MC_VERSION=$(awk -F= '/^minecraft_version=/{print $2}' "$GRADLE_PROPS")
 FABRIC_LOADER_VERSION=$(awk -F= '/^fabric_loader_version=/{print $2}' "$GRADLE_PROPS")
 MOD_VERSION=$(awk -F= '/^version=/{print $2}' "$GRADLE_PROPS")
+MOD_ID=$(awk -F= '/^mod_id=/{print $2}' "$GRADLE_PROPS")
+# Jar prefix before the 1.3 rename to emma_endinv; old jars with it are removed when deploying.
+LEGACY_MOD_ID="endless_inventory"
 
-FABRIC_JAR_GLOB="${ENDINV_DIR}/fabric/build/libs/endless_inventory-fabric-${MC_VERSION}*.jar"
-NEOFORGE_JAR_GLOB="${ENDINV_DIR}/neoforge/build/libs/endless_inventory-neoforge-${MC_VERSION}*.jar"
+FABRIC_JAR_GLOB="${ENDINV_DIR}/fabric/build/libs/${MOD_ID}-fabric-${MC_VERSION}-${MOD_VERSION}*.jar"
+NEOFORGE_JAR_GLOB="${ENDINV_DIR}/neoforge/build/libs/${MOD_ID}-neoforge-${MC_VERSION}-${MOD_VERSION}*.jar"
 FOLIA_VERSION=$(awk -F= '/^folia_version=/{print $2}' "$GRADLE_PROPS")
 PAPER_VERSION=$(awk -F= '/^paper_version=/{print $2}' "$GRADLE_PROPS")
-FOLIA_JAR_GLOB="${ENDINV_DIR}/folia/build/libs/endless_inventory-folia-${MC_VERSION}*.jar"
+FOLIA_JAR_GLOB="${ENDINV_DIR}/folia/build/libs/${MOD_ID}-folia-${MC_VERSION}-${MOD_VERSION}*.jar"
 
 PRISM_INSTANCES_DIR="$APPDATA/PrismLauncher/instances"
 FABRIC_MODS_DIR="C:/Users/Owner/Fabric Mods"
@@ -40,6 +43,19 @@ if [[ $AUTO_DEPLOY -eq 1 ]]; then
     FOLIA_MODS_DIRS=("C:/Users/Owner/Paper Plugins")
 fi
 GRADLE_ARGS=()
+
+# Copy a jar into a mods/plugins folder, first removing any other build of it for that loader
+# (older versions, and jars still named with the pre-1.3 endless_inventory id), so the folder
+# never holds two copies of the mod.
+install_jar() {
+    local jar="$1" dir="$2" loader="$3"
+    local name; name="$(basename "$jar")"
+    local old
+    for old in "$dir/${MOD_ID}-${loader}-"*.jar "$dir/${LEGACY_MOD_ID}-${loader}-"*.jar; do
+        [[ -e "$old" && "$(basename "$old")" != "$name" ]] && rm -f "$old" && echo "  removed old $(basename "$old")"
+    done
+    cp "$jar" "$dir/$name"
+}
 
 resolve_mods_dir() {
     for instance_name in "$@"; do
@@ -159,9 +175,9 @@ GRADLE_TARGETS=(:fabric:build)
 ./gradlew.bat "${GRADLE_ARGS[@]}" "${GRADLE_TARGETS[@]}" 2>&1 | quiet_gradle
 
 # Find the built jars (glob avoids hardcoding exact classifier/version suffix)
-FABRIC_JAR=$(ls ${ENDINV_DIR}/fabric/build/libs/endless_inventory-fabric-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
-NEOFORGE_JAR=$(ls ${ENDINV_DIR}/neoforge/build/libs/endless_inventory-neoforge-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
-FOLIA_JAR=$(ls ${ENDINV_DIR}/folia/build/libs/endless_inventory-folia-${MC_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
+FABRIC_JAR=$(ls ${ENDINV_DIR}/fabric/build/libs/${MOD_ID}-fabric-${MC_VERSION}-${MOD_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
+NEOFORGE_JAR=$(ls ${ENDINV_DIR}/neoforge/build/libs/${MOD_ID}-neoforge-${MC_VERSION}-${MOD_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
+FOLIA_JAR=$(ls ${ENDINV_DIR}/folia/build/libs/${MOD_ID}-folia-${MC_VERSION}-${MOD_VERSION}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
 
 if [[ -z "$FABRIC_JAR" ]]; then
     echo "ERROR: Fabric jar not found under fabric/build/libs/" >&2; exit 1
@@ -196,7 +212,7 @@ elif [[ $EMMABRAIN_ONLY -eq 0 ]]; then
         if [[ ! -d "$target_dir" ]]; then
             echo "WARNING: $target_name mods folder not found: $target_dir" >&2; continue
         fi
-        cp "$FABRIC_JAR" "$target_dir/$FABRIC_JAR_NAME"
+        install_jar "$FABRIC_JAR" "$target_dir" fabric
         echo "Deployed Fabric to $target_name: $target_dir"
     done
 fi
@@ -205,6 +221,7 @@ fi
 if [[ $AUTO_DEPLOY -eq 0 ]]; then
     :
 elif ssh -o ConnectTimeout=5 -o BatchMode=yes "$EMMABRAIN_HOST" "mkdir -p '$EMMABRAIN_MODS'" 2>/dev/null; then
+    ssh -o BatchMode=yes "$EMMABRAIN_HOST" "cd '$EMMABRAIN_MODS' && for f in ${MOD_ID}-fabric-*.jar ${LEGACY_MOD_ID}-fabric-*.jar; do [ -e \"\$f\" ] && [ \"\$f\" != '$FABRIC_JAR_NAME' ] && rm -f \"\$f\" && echo \"  removed old \$f\"; done; true"
     scp "$FABRIC_JAR" "$EMMABRAIN_HOST:$EMMABRAIN_MODS/$FABRIC_JAR_NAME"
     echo "Deployed Fabric to emmabrain (EmmaAI): $EMMABRAIN_MODS"
 else
@@ -215,7 +232,7 @@ for mods_dir in "${FABRIC_MODS_DIRS[@]}"; do
     if [[ ! -d "$mods_dir" ]]; then
         echo "WARNING: Fabric mods dir not found: $mods_dir" >&2; continue
     fi
-    cp "$FABRIC_JAR" "$mods_dir/$FABRIC_JAR_NAME"
+    install_jar "$FABRIC_JAR" "$mods_dir" fabric
     echo "Deployed Fabric to: $mods_dir"
 done
 
@@ -225,7 +242,7 @@ if [[ $SKIP_NEOFORGE -eq 0 && ${#NEOFORGE_MODS_DIRS[@]} -gt 0 ]]; then
         if [[ ! -d "$mods_dir" ]]; then
             echo "WARNING: NeoForge mods dir not found: $mods_dir" >&2; continue
         fi
-        cp "$NEOFORGE_JAR" "$mods_dir/$NEOFORGE_JAR_NAME"
+        install_jar "$NEOFORGE_JAR" "$mods_dir" neoforge
         echo "Deployed NeoForge to: $mods_dir"
     done
 fi
@@ -243,7 +260,7 @@ if [[ $SKIP_FOLIA -eq 0 ]]; then
             if [[ ! -d "$plugins_dir" ]]; then
                 echo "WARNING: Folia plugins dir not found: $plugins_dir" >&2; continue
             fi
-            cp "$FOLIA_JAR" "$plugins_dir/$FOLIA_JAR_NAME"
+            install_jar "$FOLIA_JAR" "$plugins_dir" folia
             echo "Deployed Folia to: $plugins_dir"
         done
     fi

@@ -1035,7 +1035,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         } catch (Exception exception) {
             CrashReport crashreport = CrashReport.forThrowable(exception, "Container click");
             CrashReportCategory crashreportcategory = crashreport.addCategory("Click info");
-            crashreportcategory.setDetail("Menu Type", "endless_inventory");
+            crashreportcategory.setDetail("Menu Type", "emma_endinv");
             crashreportcategory.setDetail("Menu Class", () -> this.getClass().getCanonicalName());
             crashreportcategory.setDetail("Slot Count", this.slots.size());
             crashreportcategory.setDetail("Slot", slotId);

@@ -39,12 +39,16 @@ public class EndInvNeoForge extends AbstractModInitializer {
     private final DeferredRegister<MenuType<?>> MENUS =
             DeferredRegister.create(BuiltInRegistries.MENU, ModInfo.MOD_ID);
     private final DeferredRegister<AttachmentType<?>> ATTACHMENTS =
-            DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, ModInfo.MOD_ID);
+            DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, ModInfo.LEGACY_ID); // saved in player data: legacy id kept
 
     public EndInvNeoForge(IEventBus eventBus) {
         ITEMS.register(eventBus);
         MENUS.register(eventBus);
         ATTACHMENTS.register(eventBus);
+        // Stacks saved under the upstream id (endless_inventory:<id>) load as these items.
+        for (String id : new String[]{"endinv_accessor", "screen_debugger"}) {
+            BuiltInRegistries.ITEM.addAlias(Identifier.fromNamespaceAndPath(ModInfo.LEGACY_ID, id), Identifier.fromNamespaceAndPath(ModInfo.MOD_ID, id));
+        }
 
         // Register attachment types via DeferredRegister
         ENDINV_UUID = ATTACHMENTS.register("endinv_uuid", () ->
@@ -95,7 +99,7 @@ public class EndInvNeoForge extends AbstractModInitializer {
     @Override
     protected void loadServerConfig() {
         new JsonConfigurationHandler(
-                ILoaderProvider.get().getConfigDir().resolve("endless_inventory-server.json"),
+                com.emma.endinv.options.config.ConfigFiles.resolve(ILoaderProvider.get().getConfigDir(), "server.json"),
                 ServerConfigs.getConfigs()
         ).load();
     }

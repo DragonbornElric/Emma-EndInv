@@ -47,7 +47,7 @@ public class EndlessInventoryData extends SavedData {
     public static final SavedDataType<EndlessInventoryData> DATA_TYPE = new SavedDataType<>(
             // The identifier of the saved data
             // Used as the path within the level's `data` folder
-            Identifier.fromNamespaceAndPath("endless_inventory", END_INV_LIST_KEY),
+            Identifier.fromNamespaceAndPath(ModInfo.LEGACY_ID, END_INV_LIST_KEY), // legacy save path, kept on purpose
             // The initial constructor
             EndlessInventoryData::new,
             // The codec used to serialize the data

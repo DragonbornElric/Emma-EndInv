@@ -78,7 +78,7 @@ public class ClientModInit extends AbstractClientModInitializer implements Clien
 
     protected void initClientConfigs() {
         CLIENT_CONFIGS = new JsonConfigurationHandler(
-                ILoaderProvider.get().getConfigDir().resolve("endless_inventory-client.json"),
+                com.emma.endinv.options.config.ConfigFiles.resolve(ILoaderProvider.get().getConfigDir(), "client.json"),
                 ClientConfigs.getConfigs()
         );
         CLIENT_CONFIGS.load();
