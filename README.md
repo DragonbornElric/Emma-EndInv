@@ -97,11 +97,25 @@ entry with a count of up to 2,147,483,647. Press **I** to open it. It is saved i
     Fabric and NeoForge; on Folia it resets to on after a server restart.
   - Server-wide switch: `EnableAutoPick`, or `/endinv config autoPick <true|false>` (permission
     level 2). When it's off, nobody gets auto-pickup.
-- **Crafting from EndInv:** recipe-book autofill takes ingredients from EndInv first. Clearing
-  the grid puts items back in EndInv. Items entering EndInv still unlock recipes and advancements.
-- **Built-in stations** (buttons on the EndInv screen):
-  - Crafting, Furnace, Smoker, Blast Furnace, Brewing Stand, Stonecutter, Grindstone and Smithing Table.
-  - Furnaces and brewing keep working after you close the screen, as long as you are online.
+- **Recipe book with EndInv:** the recipe book works on the EndInv crafting grid, and on any
+  crafting table or furnace. It counts what's in EndInv as well as your inventory.
+  - Clicking a recipe fills the grid from EndInv first, then from your inventory.
+  - Your inventory being full doesn't block it.
+  - Clearing the grid puts the items back in EndInv.
+  - Items going into EndInv still unlock recipes and advancements.
+- **Built-in stations** (buttons on the EndInv screen): Crafting Table, Furnace, Smoker, Blast
+  Furnace, Brewing Stand, Stonecutter, Grindstone and Smithing Table. They work straight from
+  EndInv, with no block to place.
+  - Furnace, Smoker and Blast Furnace each have their own slots and their own recipe book.
+  - **Shift-click** an item from an EndInv page or your inventory to send it to the open station:
+    - Ingredients go to the input slot, and fuel (coal, wood, lava buckets and so on) goes to
+      the fuel slot.
+    - Templates, base and addition go to the matching smithing slots.
+    - Stonecutter and grindstone items go to their input slots.
+    - Shift-clicking a result puts it in your inventory, or in EndInv when your inventory is full.
+  - Furnaces and the brewing stand keep cooking and brewing after you close the screen, as long
+    as you are online.
+  - Cooking XP is given to you.
 - **Shared inventories, Storage Tracker and admin tools:** see the sections below.
 - **API for other client code:** `com.emma.endinv.api.EmmaEndInvApi`. It can loot the open
   container into EndInv, swap an EndInv item with a menu slot, and read the Storage Tracker
