@@ -1,5 +1,6 @@
 package com.emma.endinv.network.payloads.toClient;
 
+import com.emma.endinv.network.BufCollections;
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ModInfo;
 import com.emma.endinv.util.Accessibility;
@@ -21,14 +22,14 @@ public record EndInvConfig(Accessibility accessibility, UUID owner, List<UUID> w
         return new EndInvConfig(
                 friendlyByteBuf.readEnum(Accessibility.class),
                 friendlyByteBuf.readUUID(),
-                friendlyByteBuf.readList(buf -> buf.readUUID())
+                BufCollections.readList(friendlyByteBuf, buf -> buf.readUUID())
         );
     }
 
     public static void encode(FriendlyByteBuf o, EndInvConfig endInvConfig) {
         o.writeEnum(endInvConfig.accessibility);
         o.writeUUID(endInvConfig.owner);
-        o.writeCollection(endInvConfig.white_list, (buf, id) -> buf.writeUUID(id));
+        BufCollections.writeCollection(o, endInvConfig.white_list, (buf, id) -> buf.writeUUID(id));
     }
 
     public static EndInvConfig getWith(EndlessInventory endInv) {

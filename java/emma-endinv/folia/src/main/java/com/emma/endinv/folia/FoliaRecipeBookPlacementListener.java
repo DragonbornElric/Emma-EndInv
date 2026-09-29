@@ -103,7 +103,7 @@ public final class FoliaRecipeBookPlacementListener implements Listener {
             s.set(ItemStack.EMPTY);
             ItemStack remain = endInv.addItem(cur.copy());
             if (!remain.isEmpty()) {
-                sp.drop(remain, false);
+                sp.drop(remain, false, net.minecraft.util.Prediction.SERVER_ONLY);
             }
         }
 

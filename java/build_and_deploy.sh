@@ -14,6 +14,7 @@ MOD_VERSION=$(awk -F= '/^version=/{print $2}' "$GRADLE_PROPS")
 FABRIC_JAR_GLOB="${ENDINV_DIR}/fabric/build/libs/endless_inventory-fabric-${MC_VERSION}*.jar"
 NEOFORGE_JAR_GLOB="${ENDINV_DIR}/neoforge/build/libs/endless_inventory-neoforge-${MC_VERSION}*.jar"
 FOLIA_VERSION=$(awk -F= '/^folia_version=/{print $2}' "$GRADLE_PROPS")
+PAPER_VERSION=$(awk -F= '/^paper_version=/{print $2}' "$GRADLE_PROPS")
 FOLIA_JAR_GLOB="${ENDINV_DIR}/folia/build/libs/endless_inventory-folia-${MC_VERSION}*.jar"
 
 PRISM_INSTANCES_DIR="$APPDATA/PrismLauncher/instances"
@@ -149,8 +150,8 @@ quiet_gradle() {
     | grep -v "^$"
 }
 
-# No Folia build pinned for this Minecraft version yet (folia_version empty in gradle.properties).
-[[ -z "$FOLIA_VERSION" ]] && SKIP_FOLIA=1
+# No server-plugin dev bundle pinned for this Minecraft version (folia_version and paper_version empty).
+[[ -z "$FOLIA_VERSION" && -z "$PAPER_VERSION" ]] && SKIP_FOLIA=1
 
 GRADLE_TARGETS=(:fabric:build)
 [[ $SKIP_NEOFORGE -eq 0 ]] && GRADLE_TARGETS+=(:neoforge:build)

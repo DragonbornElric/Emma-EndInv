@@ -28,8 +28,9 @@ rootProject.name = 'emma-endinv'
 include('common')
 include('fabric')
 include('neoforge')
-// Folia ships later than Minecraft: leave folia_version empty in gradle.properties when there is
-// no Folia build for this Minecraft version yet, and the folia module is left out.
-if (!providers.gradleProperty('folia_version').getOrElse('').isBlank()) {
+// The server plugin (folia module) compiles against folia_version, or against paper_version when
+// Folia has no build for this Minecraft version yet. With neither set the module is left out.
+if (!providers.gradleProperty('folia_version').getOrElse('').isBlank()
+        || !providers.gradleProperty('paper_version').getOrElse('').isBlank()) {
     include('folia')
 }

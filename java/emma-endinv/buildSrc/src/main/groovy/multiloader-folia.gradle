@@ -49,7 +49,14 @@ configurations {
 }
 
 dependencies {
-    paperweight.foliaDevBundle("${folia_version}")
+    // Folia dev bundle when one exists for this Minecraft version, otherwise Paper's
+    // (the plugin runs on both; Folia can lag behind a Minecraft release).
+    def foliaVersion = project.findProperty('folia_version')?.toString()?.trim()
+    if (foliaVersion) {
+        paperweight.foliaDevBundle(foliaVersion)
+    } else {
+        paperweight.paperDevBundle(project.property('paper_version').toString().trim())
+    }
 
     commonServerJava project(path: ':common', configuration: 'commonServerJava')
     commonResources project(path: ':common', configuration: 'commonResources')

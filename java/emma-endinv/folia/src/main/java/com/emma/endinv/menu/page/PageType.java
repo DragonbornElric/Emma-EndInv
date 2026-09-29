@@ -75,17 +75,21 @@ public class PageType {
                 && Objects.equals(p.registerName, registerName);
     }
 
-    private static boolean isWeapon(ItemStack s) {
-        Item item = s.getItem();
-        return item instanceof AxeItem || item instanceof TridentItem || item instanceof ProjectileWeaponItem
-                || WEAPON_TAGS.stream().anyMatch(s::is);
+    private static boolean isWeapon(ItemStack itemStack){
+        Item item = itemStack.getItem();
+        return
+                item instanceof  TridentItem ||
+                item instanceof ProjectileWeaponItem ||
+                WEAPON_TAGS.stream().anyMatch(itemStack::is);
     }
 
-    private static boolean isTool(ItemStack s) {
-        Item item = s.getItem();
-        return item instanceof AxeItem || item instanceof ShearsItem || item instanceof ShovelItem
-                || item instanceof FlintAndSteelItem || item instanceof FishingRodItem
-                || TOOL_TAGS.stream().anyMatch(s::is);
+    private static boolean isTool(ItemStack itemStack){
+        Item item = itemStack.getItem();
+        return
+                item instanceof ShearsItem ||
+                item instanceof FlintAndSteelItem ||
+                item instanceof FishingRodItem ||
+                TOOL_TAGS.stream().anyMatch(itemStack::is);
     }
 
     private static boolean isDefenceEquipment(ItemStack s) {

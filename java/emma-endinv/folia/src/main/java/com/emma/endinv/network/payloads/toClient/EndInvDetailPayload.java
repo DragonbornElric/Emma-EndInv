@@ -1,5 +1,6 @@
 package com.emma.endinv.network.payloads.toClient;
 
+import com.emma.endinv.network.BufCollections;
 import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.ModPacketPayload;
@@ -19,14 +20,14 @@ public record EndInvDetailPayload(UUID inventoryId, List<ItemStackLike> items, i
 
     public static void encode(EndInvDetailPayload payload, RegistryFriendlyByteBuf o) {
         UUIDUtil.STREAM_CODEC.encode(o, payload.inventoryId);
-        o.writeCollection(payload.items, (buf, like) -> ItemStackLike.STREAM_CODEC.encode((RegistryFriendlyByteBuf) buf, like));
+        BufCollections.writeCollection(o, payload.items, (buf, like) -> ItemStackLike.STREAM_CODEC.encode((RegistryFriendlyByteBuf) buf, like));
         o.writeVarInt(payload.totalTypes);
     }
 
     public static EndInvDetailPayload decode(RegistryFriendlyByteBuf o) {
         return new EndInvDetailPayload(
                 UUIDUtil.STREAM_CODEC.decode(o),
-                o.readList(buf -> ItemStackLike.STREAM_CODEC.decode((RegistryFriendlyByteBuf) buf)),
+                BufCollections.readList(o, buf -> ItemStackLike.STREAM_CODEC.decode((RegistryFriendlyByteBuf) buf)),
                 o.readVarInt());
     }
 
