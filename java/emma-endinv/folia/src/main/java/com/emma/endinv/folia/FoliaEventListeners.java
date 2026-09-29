@@ -109,11 +109,6 @@ public class FoliaEventListeners implements Listener {
         var configAttachment = ModRegistries.NbtAttachments.getSyncedConfig();
         SyncedConfig syncedConfig = configAttachment.computeIfAbsent(player);
 
-        boolean serverAutoPick = ServerConfigs.ENABLE_AUTOPICK.get();
-        if (syncedConfig.autoPicking() != serverAutoPick) {
-            syncedConfig = new SyncedConfig(syncedConfig.attaching(), serverAutoPick);
-            configAttachment.setTo(player, syncedConfig);
-        }
 
         ModInfo.getPacketDistributor().sendToPlayer(player, syncedConfig);
 

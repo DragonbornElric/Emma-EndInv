@@ -130,12 +130,6 @@ public final class PlayerEvents {
         var configAttachment = ModRegistries.NbtAttachments.getSyncedConfig();
         SyncedConfig syncedConfig = configAttachment.computeIfAbsent(player);
 
-        // Force autopick to match server config — prevents stale per-player data from disabling it
-        boolean serverAutoPick = ServerConfigs.ENABLE_AUTOPICK.get();
-        if (syncedConfig.autoPicking() != serverAutoPick) {
-            syncedConfig = new SyncedConfig(syncedConfig.attaching(), serverAutoPick);
-            configAttachment.setTo(player, syncedConfig);
-        }
 
         ModInfo.getPacketDistributor().sendToPlayer(player, syncedConfig);
 

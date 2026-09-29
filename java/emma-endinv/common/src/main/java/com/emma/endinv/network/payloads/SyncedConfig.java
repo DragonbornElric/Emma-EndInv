@@ -37,7 +37,9 @@ public record SyncedConfig(boolean attaching, boolean autoPicking) implements Mo
     public static final Codec<SyncedConfig> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
                     Codec.BOOL.optionalFieldOf("attaching", true).forGetter(SyncedConfig::attaching),
-                    Codec.BOOL.optionalFieldOf("auto_pickup", true).forGetter(SyncedConfig::autoPicking)
+                    // "autopick_enabled", not the old "auto_pickup": builds before the per-player /autopick
+                    // command left stale false values there, which used to be overwritten on every join.
+                    Codec.BOOL.optionalFieldOf("autopick_enabled", true).forGetter(SyncedConfig::autoPicking)
             ).apply(instance, SyncedConfig::new)
     );
 

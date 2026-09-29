@@ -46,7 +46,10 @@ entry with a count of up to 2,147,483,647. Press **I** to open it. It is saved i
   - A small pickup list in the bottom-right shows what came in.
   - The first tool, weapon or armour piece of its kind, and anything that stacks onto an item
     you already carry, goes to your normal inventory instead.
-  - Server switch: `EnableAutoPick`, or `/endinv config autoPick <true|false>`.
+  - Each player can turn it on or off with `/autopick on|off|status`. It's saved per player on
+    Fabric and NeoForge; on Folia it resets to on after a server restart.
+  - Server-wide switch: `EnableAutoPick`, or `/endinv config autoPick <true|false>` (permission
+    level 2). When it's off, nobody gets auto-pickup.
 - **Crafting from EndInv:** recipe-book autofill takes ingredients from EndInv first. Clearing
   the grid puts items back in EndInv. Items entering EndInv still unlock recipes and advancements.
 - **Built-in stations** (buttons on the EndInv screen):
@@ -228,6 +231,7 @@ Players without the client mod (for example vanilla clients on Folia) can use ch
 | `/storage find <item>` | Where an item is stored, nearest first |
 | `/storage list` | The nearest tracked containers |
 | `/storage tag [count]` | Give Storage Tags (permission level 2) |
+| `/autopick on\|off\|status` | Turn your own auto-pickup into EndInv on or off |
 
 On Folia the tag interaction runs after protection plugins, so a player cannot read a container inside a claim they could not open.
 
