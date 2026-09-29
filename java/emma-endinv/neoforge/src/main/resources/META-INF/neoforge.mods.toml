@@ -1,12 +1,15 @@
 modLoader = "javafml"
 loaderVersion = "${neoforge_loader_version_range}"
 license = "${license}"
+issueTrackerURL = "https://github.com/DragonbornElric/Emma-EndInv/issues"
 
 [[mods]]
 modId = "${mod_id}"
 version = "${version}"
-displayName = "Endless Inventory (Emma Fork)"
-description = '''RPG-style infinite inventory for Minecraft. Forked and ported to 26.3 for Emma.'''
+displayName = "Emma's Endless Inventory"
+authors = "Elric Heart; original Endless Inventory by Kay Zhang (kwwsyk)"
+displayURL = "https://github.com/DragonbornElric/Emma-EndInv"
+description = '''Endless per-player storage for Minecraft: auto-pickup, crafting from storage, built-in stations, shared inventories and a chest storage tracker. Fork of Endless Inventory by Kay Zhang (kwwsyk).'''
 
 [[mixins]]
 config = "${mod_id}.mixins.json"
