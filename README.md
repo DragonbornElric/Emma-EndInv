@@ -315,6 +315,18 @@ Restoring adds items and does not overwrite. If you restore the snapshot taken b
 
 **Folia persistence:** Folia's autosave does not write mod saved data. The plugin writes EndInv data itself every 60 seconds when something has changed, and again on shutdown.
 
+## Credits and License
+
+Emma-EndInv is a fork of **[Endless Inventory](https://github.com/kwwsyk/Endless-Inventory)** by
+Kay Zhang (kwwsyk), also on [Modrinth](https://modrinth.com/mod/endless-inventory) and
+[CurseForge](https://www.curseforge.com/minecraft/mc-mods/endless-inventory). The fork ports it
+to Minecraft 26.x and adds the Folia/Paper server plugin, shared inventories, the storage
+tracker and admin tools. Please report problems with this fork here, not to the original mod.
+
+Both are MIT licensed; see [LICENSE](LICENSE).
+
+Developed live on stream at **[twitch.tv/Elric_Heart](https://www.twitch.tv/Elric_Heart)**.
+
 ## Notes
 
 - This repository contains only the standalone Emma-EndInv mod.
