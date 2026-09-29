@@ -119,6 +119,6 @@ public final class StorageCommand {
 
     private static double distanceSq(CommandSourceStack source, TrackedContainer c, Vec3 origin) {
         if (!c.dimension().equals(source.getLevel().dimension())) return Double.MAX_VALUE;
-        return c.pos().getCenter().distanceToSqr(origin);
+        return Vec3.atCenterOf(c.pos()).distanceToSqr(origin);
     }
 }

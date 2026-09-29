@@ -73,7 +73,7 @@ public class AttachingScreen<T extends AbstractContainerMenu>{
                 Component.literal("⚙"),
                         btn -> {
                         if(Minecraft.getInstance().hasShiftDown()){
-                            mc.setScreen(ClientModInfo.createConfigScreen(screen));
+                            mc.gui.setScreen(ClientModInfo.createConfigScreen(screen));
                         } else {
                             boolean currentA = ClientConfigs.DO_ATTACH.get();
                             currentA = !currentA;

@@ -71,7 +71,7 @@ public class StorageTrackerScreen extends Screen {
         admin = payload.admin();
         serverMessage = payload.message();
         indexVersion++;
-        if (Minecraft.getInstance().screen instanceof StorageTrackerScreen screen) screen.indexUpdated();
+        if (Minecraft.getInstance().gui.screen() instanceof StorageTrackerScreen screen) screen.indexUpdated();
     }
 
     /** The last full index received, for other client code (e.g. {@code EmmaEndInvApi}). Empty until requested once. */
@@ -449,7 +449,7 @@ public class StorageTrackerScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     @Override
@@ -466,13 +466,13 @@ public class StorageTrackerScreen extends Screen {
     }
 
     private void confirmUntrack(TrackedContainer c) {
-        minecraft.setScreen(new ConfirmScreen(yes -> {
+        minecraft.gui.setScreen(new ConfirmScreen(yes -> {
             if (yes) {
                 status = "";
                 ModInfo.getPacketDistributor().sendToServer(
                         new StorageRequestPayload(StorageRequestPayload.Action.UNTRACK, c.dimension(), c.pos()));
             }
-            minecraft.setScreen(this);
+            minecraft.gui.setScreen(this);
         }, Component.translatable("endinv.manager.confirm_title"),
                 Component.translatable("endinv.storage.untrack.confirm", c.displayName())));
     }
@@ -522,14 +522,14 @@ public class StorageTrackerScreen extends Screen {
     private static double distanceSq(TrackedContainer c) {
         var player = Minecraft.getInstance().player;
         if (player == null || !sameDimension(c)) return Double.POSITIVE_INFINITY;
-        return c.pos().getCenter().distanceToSqr(player.position());
+        return Vec3.atCenterOf(c.pos()).distanceToSqr(player.position());
     }
 
     private static String distanceText(TrackedContainer c) {
         if (!sameDimension(c)) return c.dimension().identifier().getPath().replace('_', ' ');
         var player = Minecraft.getInstance().player;
         if (player == null) return "";
-        Vec3 delta = c.pos().getCenter().subtract(player.position());
+        Vec3 delta = Vec3.atCenterOf(c.pos()).subtract(player.position());
         return Math.round(delta.horizontalDistance()) + " m " + direction(delta)
                 + (Math.abs(delta.y) >= 4 ? (delta.y > 0 ? " ↑" : " ↓") + Math.round(Math.abs(delta.y)) : "");
     }

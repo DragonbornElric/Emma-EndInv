@@ -499,7 +499,7 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
 
         @Override
         public void onPress(InputWithModifiers input) {
-            EndlessInventoryScreen.this.minecraft.setScreen(new StorageTrackerScreen(EndlessInventoryScreen.this));
+            EndlessInventoryScreen.this.minecraft.gui.setScreen(new StorageTrackerScreen(EndlessInventoryScreen.this));
         }
 
         @Override

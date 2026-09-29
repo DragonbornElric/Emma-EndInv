@@ -72,14 +72,14 @@ public class EndInvManagerScreen extends Screen {
 
     public static void onList(EndInvListPayload payload) {
         lastList = payload;
-        if (Minecraft.getInstance().screen instanceof EndInvManagerScreen screen) {
+        if (Minecraft.getInstance().gui.screen() instanceof EndInvManagerScreen screen) {
             screen.listUpdated();
         }
     }
 
     public static void onDetail(EndInvDetailPayload payload) {
         lastDetail = payload;
-        if (Minecraft.getInstance().screen instanceof EndInvManagerScreen screen
+        if (Minecraft.getInstance().gui.screen() instanceof EndInvManagerScreen screen
                 && Objects.equals(screen.selectedId, payload.inventoryId())) {
             screen.gridScroll = Mth.clamp(screen.gridScroll, 0, screen.maxGridScroll());
         }
@@ -353,7 +353,7 @@ public class EndInvManagerScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     @Override
@@ -381,7 +381,7 @@ public class EndInvManagerScreen extends Screen {
         if (player != null && player.containerMenu != player.inventoryMenu) {
             player.closeContainer();
         } else {
-            minecraft.setScreen(null);
+            minecraft.gui.setScreen(null);
         }
     }
 
@@ -406,9 +406,9 @@ public class EndInvManagerScreen extends Screen {
     }
 
     private void confirm(Component question, ManageEndInvPayload request) {
-        minecraft.setScreen(new ConfirmScreen(yes -> {
+        minecraft.gui.setScreen(new ConfirmScreen(yes -> {
             if (yes) send(request);
-            minecraft.setScreen(this);
+            minecraft.gui.setScreen(this);
         }, Component.translatable("endinv.manager.confirm_title"), question));
     }
 

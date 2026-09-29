@@ -105,7 +105,7 @@ public abstract class EndInvSettingScreen extends Screen {
 
         addPageSwitchButton();
         addRenderableWidget(Button.builder(Component.translatable("endinv.manager.open"),
-                        btn -> this.minecraft.setScreen(new EndInvManagerScreen(this)))
+                        btn -> this.minecraft.gui.setScreen(new EndInvManagerScreen(this)))
                 .bounds(leftPos + (imageWidth - 140) / 2, topPos + imageHeight + 4, 140, 20)
                 .build());
 
@@ -197,7 +197,7 @@ public abstract class EndInvSettingScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.back);
+        this.minecraft.gui.setScreen(this.back);
     }
 
     // input handling is routed by the widget pipeline in 1.21.11

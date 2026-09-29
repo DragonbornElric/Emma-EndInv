@@ -86,7 +86,7 @@ public class AutoPickTipper {
             return 0x88ffffff;
         } else {
             var color = rarity.color();
-            Integer rgb = color != null ? color.getColor() : null;
+            Integer rgb = color != null ? net.minecraft.network.chat.TextColor.fromLegacyFormat(color).getValue() : null;
             return rgb != null ? (0xff000000 | rgb) : 0x88ffffff;
         }
     }
