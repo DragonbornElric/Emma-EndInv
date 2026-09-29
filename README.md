@@ -6,6 +6,81 @@ Emma-EndInv is the Emma fork of Endless Inventory for Minecraft 26.1.2. It build
 - **NeoForge** client/server mod
 - **Folia** server plugin (Paper/Folia, no client mod required on the server side)
 
+## Status
+
+> **Work in progress.** The tested, production setup is a **Folia server running the Folia
+> plugin, with players on the Fabric client jar**. Fabric and NeoForge dedicated servers are
+> still being brought up to parity with the Folia plugin. A Fabric dedicated server has been
+> checked (see [Which jar goes where](#which-jar-goes-where)). A NeoForge dedicated server and
+> the NeoForge client with a Folia server have not been tested yet. Back up your world before
+> trying either of them.
+
+## Features
+
+**Endless Inventory (EndInv).** A per-player storage with no slot limit: each item type is one
+entry with a count of up to 2,147,483,647. Press **I** to open it. It is saved in the world's data.
+
+- **Pages:** All items, Block items, Tools, Weapons, Equipment, Food & Potion, Enchanted Books,
+  and Bookmark. You can hide pages you don't use.
+- **Sorting:** Default, Count, Mod + name, Registry order, or Last modified. The ⇅ button
+  reverses the order.
+- **Search:** separate terms with spaces; every term must match.
+  - `#tag` matches an item tag.
+  - `@mod` matches a mod namespace.
+  - `*id` matches the full item id.
+  - A term with no prefix matches the name or the id.
+  - Right-click the search box to clear it.
+- **Keys:**
+  - **Ctrl + left-click** (click or drag over slots) moves items into or out of EndInv.
+  - **A**, while hovering an item, stars it into the Bookmark page.
+  - All keys can be rebound under the "Endless Inventory" category.
+- **Attached panel:** the EndInv panel also appears beside chests, other containers and the
+  player inventory.
+  - Its layout, position, size and texture can be set in the settings screen (Shift+click the ⚙ button).
+  - A plain click on ⚙ turns the attached panel on or off.
+  - **Loot All** moves an open container's contents into EndInv.
+  - Server owners can allow or block the panel per menu (`specifiedMenuAttachability`).
+- **Auto-pickup:**
+  - Block drops, drops from mobs you kill, and items you walk over go straight into EndInv.
+  - XP from those goes straight to you.
+  - A small pickup list in the bottom-right shows what came in.
+  - The first tool, weapon or armour piece of its kind, and anything that stacks onto an item
+    you already carry, goes to your normal inventory instead.
+  - Server switch: `EnableAutoPick`, or `/endinv config autoPick <true|false>`.
+- **Crafting from EndInv:** recipe-book autofill takes ingredients from EndInv first. Clearing
+  the grid puts items back in EndInv. Items entering EndInv still unlock recipes and advancements.
+- **Built-in stations** (buttons on the EndInv screen):
+  - Crafting, Furnace, Smoker, Blast Furnace, Brewing Stand, Stonecutter, Grindstone and Smithing Table.
+  - Furnaces and brewing keep working after you close the screen, as long as you are online.
+- **Shared inventories, Storage Tracker and admin tools:** see the sections below.
+- **API for other client code:** `com.emma.endinv.api.EmmaEndInvApi`. It can loot the open
+  container into EndInv, swap an EndInv item with a menu slot, and read the Storage Tracker
+  index. Emma's bot bridge uses it.
+
+The EndInv screen, attached panel, keys and pickup list are client features, so players need
+the Fabric or NeoForge jar on their client. The server side (pickup, drops, recipe book,
+stations, storage tracking, commands) works on every server target.
+
+### Configuration
+
+Server settings are in `config/endless_inventory-server.json` (on Folia, in the plugin's data
+folder):
+
+| Key | Default | Meaning |
+|---|---|---|
+| `EndinvCreationMode` | `CREATE_PER_PLAYER` | `CREATE_PER_PLAYER`, `USE_GLOBAL_SHARED` (one EndInv for everyone) or `NONE` |
+| `DefaultAttach` | `true` | Show the attached EndInv panel on menus by default |
+| `specifiedMenuAttachability.container2attachable` | `[]` | Per-menu overrides, e.g. `"minecraft:generic_9x3:false"`, `"inventory:true"` |
+| `EnableAutoPick` | `true` | Auto-pickup into EndInv |
+| `defaultEndinvBehavior.MaxStackSize` | `2147483647` | Max count per item type in a new EndInv |
+| `defaultEndinvBehavior.EnableInfinity` | `false` | Items that reach the max count become infinite |
+| `defaultEndinvBehavior.Accessibility` | `PUBLIC` | Default access level for new EndInvs |
+| `defaultEndinvBehavior.ContentTransferMode` | `ALL` | `PART` syncs only the items on screen (for very large EndInvs) |
+| `Admins` | `[]` | Admin names/UUIDs; empty means operators with permission level 4 |
+
+Client settings (panel layout, hidden pages, texture) are in
+`config/endless_inventory-client.json` and in the in-game settings screen.
+
 ## Repository Layout
 
 - `java/emma-endinv/` - multi-loader Gradle project (`common`, `fabric`, `neoforge`, `folia`)
@@ -71,7 +146,15 @@ EndInv (`@loot`). The rail lab in EmmaMinecraft261 (`tools/rail_lab/`) runs this
 | EndInv saved every 60 s when changed | `PlayerEvents` server tick | data file rewritten every minute |
 | Re-sync after every respawn (also leaving the End) | `ServerPlayerEvents.AFTER_RESPAWN` | not live-tested |
 
-A player killed by a player keeps vanilla drops on Fabric. The Folia plugin sends them to the
+**NeoForge** has the same behaviour, built from NeoForge events in `NeoForgeEvents`:
+- `LivingDropsEvent` and `LivingExperienceDropEvent` for death loot and XP.
+- A 60 s save on the server tick.
+- `PlayerRespawnEvent` for re-sync.
+- The same common mixins for pickup and the recipe book.
+
+It compiles, but it hasn't been tested on a server yet.
+
+A player killed by a player keeps vanilla drops on Fabric and NeoForge. The Folia plugin sends them to the
 killer's EndInv, because `PlayerDeathEvent` is an `EntityDeathEvent`.
 
 The Fabric pickup has one difference from Folia, and it is deliberate. Paper fires

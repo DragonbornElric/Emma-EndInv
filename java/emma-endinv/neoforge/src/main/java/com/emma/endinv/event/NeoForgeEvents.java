@@ -4,6 +4,9 @@ import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ModInfo;
 import com.emma.endinv.ModRegistries;
 import com.emma.endinv.ServerLevelEndInv;
+import com.emma.endinv.autopick.AutoPickHelper;
+import com.emma.endinv.autopick.events.ILivingDropsEvent;
+import com.emma.endinv.autopick.events.ILivingExpDropsEvent;
 import com.emma.endinv.commands.ConfigCommand;
 import com.emma.endinv.commands.EndInvCommand;
 import com.emma.endinv.data.EndlessInventoryData;
@@ -16,9 +19,14 @@ import com.emma.endinv.options.ServerConfigs;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.neoforge.event.entity.living.LivingEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -26,6 +34,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEven
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -34,6 +43,9 @@ import java.util.UUID;
 public final class NeoForgeEvents {
 
     private static final Set<UUID> PENDING_SYNC = new HashSet<>();
+    /** Same period as the Folia plugin's save task: a crash loses at most a minute of EndInv changes. */
+    private static final int SAVE_INTERVAL_TICKS = 20 * 60;
+    private static int ticksSinceSave = 0;
 
     private NeoForgeEvents() {}
 
@@ -45,6 +57,9 @@ public final class NeoForgeEvents {
         NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerLogin);
         NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerLogout);
         NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerClone);
+        NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onPlayerRespawn);
+        NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onLivingDrops);
+        NeoForge.EVENT_BUS.addListener(NeoForgeEvents::onLivingExperienceDrop);
         NeoForgeStorageEvents.register();
     }
 
@@ -64,6 +79,69 @@ public final class NeoForgeEvents {
 
     private static void onServerTick(ServerTickEvent.Post event) {
         flushSync(event.getServer());
+        if (++ticksSinceSave >= SAVE_INTERVAL_TICKS) {
+            ticksSinceSave = 0;
+            EndlessInventoryData.saveNow(event.getServer().overworld());
+        }
+    }
+
+    /** Every respawn, including the alive one leaving the End, re-sends EndInv to the client. */
+    private static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        if (event.getEntity() instanceof ServerPlayer sp) {
+            PENDING_SYNC.add(sp.getUUID());
+        }
+    }
+
+    /**
+     * Mob killed by a player: its death drops go to the killer's EndInv, as the Folia plugin does
+     * from EntityDeathEvent. A dying player keeps vanilla drops. NeoForge buffers the drops before
+     * they reach the level, so fully absorbed entities are taken out of the list here.
+     */
+    private static void onLivingDrops(LivingDropsEvent event) {
+        if (event.getEntity() instanceof Player) return;
+        AutoPickHelper.onLivingDrops(new ILivingDropsEvent() {
+            @Override
+            public DamageSource getSource() {
+                return event.getSource();
+            }
+
+            @Override
+            public Collection<ItemEntity> getDrops() {
+                return event.getDrops();
+            }
+
+            @Override
+            public void setCanceled(boolean canceled) {
+                event.setCanceled(canceled);
+            }
+        });
+        event.getDrops().removeIf(Entity::isRemoved);
+    }
+
+    /** XP from a mob killed by a player goes straight to the killer. */
+    private static void onLivingExperienceDrop(LivingExperienceDropEvent event) {
+        if (event.getEntity() instanceof Player) return;
+        AutoPickHelper.onExpDrops(new ILivingExpDropsEvent() {
+            @Override
+            public int getDroppedExperience() {
+                return event.getDroppedExperience();
+            }
+
+            @Override
+            public void setDroppedExperience(int droppedExperience) {
+                event.setDroppedExperience(droppedExperience);
+            }
+
+            @Override
+            public Player getAttackingPlayer() {
+                return event.getAttackingPlayer();
+            }
+
+            @Override
+            public void setCanceled(boolean canceled) {
+                event.setCanceled(canceled);
+            }
+        });
     }
 
     private static void onPlayerLogin(PlayerLoggedInEvent event) {

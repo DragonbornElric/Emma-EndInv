@@ -110,8 +110,9 @@ Fabric-server parity with the Folia plugin (death loot and XP, pickup filter, En
 book, 60 s save, respawn re-sync) is listed in README "Fabric server behaves like the Folia
 plugin". The death-loot mixins are Fabric-only (`fabric/.../mixin/fabric/`, registered in
 `endless_inventory.fabric.mixins.json`). NeoForge buffers death drops in `captureDrops`
-before they reach the level, so a NeoForge port belongs in a `LivingDropsEvent` handler, not in
-these mixins.
+before they reach the level, so its port lives in `NeoForgeEvents` (`LivingDropsEvent`,
+`LivingExperienceDropEvent`, `PlayerRespawnEvent`, 60 s save on `ServerTickEvent.Post`); untested
+on a dedicated server.
 
 ## Conventions
 
