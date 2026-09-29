@@ -49,7 +49,8 @@ public final class NeoForgeClientEvents {
                 : null;
         if (openMenu != null) {
             while (openMenu.consumeClick()) {
-                ModInfo.getPacketDistributor().sendToServer(new OpenEndInvPayload());
+                // Same as Fabric: open a new EndInv screen (the no-arg payload only attaches to the open menu).
+                com.emma.endinv.client.ClientModInfo.sendOpenMenu();
             }
         }
     }
@@ -75,7 +76,8 @@ public final class NeoForgeClientEvents {
                 ScreenAttachment.configButtonParam(container),
                 () -> {
                     if (ScreenAttachment.attachment == null) {
-                        ModInfo.getPacketDistributor().sendToServer(new OpenEndInvPayload());
+                        // Same as Fabric: open a new EndInv screen (the no-arg payload only attaches to the open menu).
+                com.emma.endinv.client.ClientModInfo.sendOpenMenu();
                         ScreenAttachment.openAttachment(container, new IScreenEvent() {
                             @Override
                             public void addListener(AbstractWidget widget) {

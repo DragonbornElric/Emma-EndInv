@@ -8,13 +8,13 @@ Emma-EndInv is the Emma fork of Endless Inventory for Minecraft 26.1.2. It build
 
 ## Status
 
-> **Work in progress.** The tested, production setup is a **Folia server running the Folia
-> plugin, with players on the Fabric client jar**. The same plugin also runs on **Paper**
-> (tested). Fabric and NeoForge dedicated servers are
-> still being brought up to parity with the Folia plugin. A Fabric dedicated server has been
-> checked (see [Which jar goes where](#which-jar-goes-where)). A NeoForge dedicated server and
-> the NeoForge client with a Folia server have not been tested yet. Back up your world before
-> trying either of them.
+> **Work in progress, tested on live test servers.** The author's production server runs the
+> Folia plugin with Fabric clients on Minecraft 26.1.2. Every loader and Minecraft version below
+> was also tested in-game on dedicated Pelican test servers (2026-09-29): the servers load, the
+> client connects, the EndInv syncs, and auto-pickup, kill loot, `/autopick`, the Storage Tracker
+> and saving across restarts work. See [Test results](#test-results). Back up your world before
+> upgrading, and please report problems in
+> [Issues](https://github.com/DragonbornElric/Emma-EndInv/issues).
 
 ## Installation
 
@@ -34,14 +34,13 @@ Emma-EndInv is the Emma fork of Endless Inventory for Minecraft 26.1.2. It build
   the server and on every client. Use the jars from the branch for your Minecraft version
   (see [Minecraft versions](#minecraft-versions)).
 - **Match the loader on modded servers.** A Fabric server needs Fabric clients and a NeoForge
-  server needs NeoForge clients. A Folia/Paper server accepts either.
+  server needs NeoForge clients.
+- **Folia/Paper servers accept both Fabric and NeoForge clients.**
 - **Vanilla clients:** players without the mod can join a Folia/Paper server, but they don't get
   the EndInv screen, the panel beside chests, the keys or the pickup list. They only get the
   server-side parts and chat commands such as `/storage find` and `/autopick`. On a Fabric or
   NeoForge server, players need the mod to join at all.
-- **Tested so far:**
-  - A Folia server with Fabric clients (production), and the plugin on Paper.
-  - The other combinations build, and their servers start, but haven't been played on yet.
+- **What was tested:** see [Test results](#test-results).
 
 ## Minecraft versions
 
@@ -50,9 +49,9 @@ the branch that matches your game and server.
 
 | Minecraft | Branch | Fabric | NeoForge | Folia/Paper plugin |
 |---|---|---|---|---|
-| 26.1.2 | `main` | ✅ client + server | ✅ client + server | ✅ tested in production on Folia, also tested on Paper |
-| 26.2 | `mc-26.2` | ✅ builds, server starts | ✅ builds, server starts | 🧪 builds against Folia 26.2 (beta); not tested yet |
-| 26.3 | `mc-26.3` | ✅ builds, server starts | ✅ builds, server starts (NeoForge 26.3 is beta) | ✅ Paper 26.3: builds, plugin enables · ⏳ Folia 26.3: **pending testing once Folia releases 26.3** |
+| 26.1.2 | `main` | ✅ tested | ✅ tested | ✅ Folia (production + tested), ✅ Paper tested |
+| 26.2 | `mc-26.2` | ✅ tested | ✅ tested | ✅ Folia 26.2 (beta) tested, ✅ Paper tested |
+| 26.3 | `mc-26.3` | ✅ tested | ✅ tested (NeoForge 26.3 is beta) | ✅ Paper tested · ⏳ Folia 26.3: **pending testing once Folia releases 26.3** |
 
 **Folia 26.3: pending testing once released.** PaperMC hasn't released Folia for 26.3 yet
 ([build list](https://fill.papermc.io/v3/projects/folia)). Until it does, the 26.3 plugin is
@@ -61,6 +60,50 @@ expected to work on Folia 26.3 too, but that hasn't been tested yet. A daily che
 (`.github/workflows/folia-watch.yml`) opens an issue titled "Folia 26.3 is out: port the
 Folia plugin to 26.3" as soon as Folia 26.3 ships. Watch this repository's issues, or open one
 yourself if you see the release first.
+
+## Test results
+
+Tested 2026-09-29 with mod version 1.4.1 on dedicated Pelican servers (one per loader and
+Minecraft version), each seeded with a copy of a real server's EndInv data. The client was a
+real game client driven by a bot (Emma's bridge mod on 26.1.2; server console commands and
+screenshots on 26.2/26.3).
+
+| Check | What it verifies |
+|---|---|
+| Server loads | The server starts with the mod/plugin and loads every saved EndInv |
+| Client joins | The client connects and receives its EndInv (item list synced to the client) |
+| Block drop | A block the player breaks goes into EndInv, not the inventory *(26.1.2)* |
+| Walk-over pickup | Items the player walks over go into EndInv, with no duplicate in the inventory |
+| `/autopick off` / `on` / `status` | With auto-pickup off, pickups go to the normal inventory |
+| Kill loot | Loot and XP from a mob the player kills go straight to EndInv, nothing left on the ground |
+| Storage Tracker | Tagging a chest and `/storage find` locate its items *(26.1.2)* |
+| Restart | EndInv contents survive a server restart |
+| Clean log | No EndInv errors in the server log |
+
+| Minecraft | Server | Client | Result |
+|---|---|---|---|
+| 26.1.2 | Folia (build 8) | Fabric | ✅ all checks |
+| 26.1.2 | Paper | Fabric | ✅ all checks |
+| 26.1.2 | Paper | NeoForge | ✅ all checks (EndInv screen and attached panel checked by screenshot) |
+| 26.1.2 | Fabric | Fabric | ✅ all checks |
+| 26.1.2 | NeoForge 26.1.2.7-beta | NeoForge | ✅ all checks |
+| 26.2 | Folia (build 7, beta) | Fabric | ✅ all checks |
+| 26.2 | Paper | Fabric | ✅ all checks |
+| 26.2 | Fabric | Fabric | ✅ all checks |
+| 26.2 | NeoForge 26.2.0.88 | NeoForge | ✅ all checks |
+| 26.3 | Paper | Fabric | ✅ all checks |
+| 26.3 | Fabric | Fabric | ✅ all checks |
+| 26.3 | NeoForge 26.3.0.34-beta | NeoForge | ✅ all checks |
+| 26.3 | Folia | — | ⏳ no Folia 26.3 release yet |
+
+Bugs found by these tests and fixed in 1.4.1:
+- **Folia/Paper plugin duplicated walk-over pickups:** items went into EndInv *and* the
+  inventory. This happened only with auto-pickup on.
+- **Folia/Paper plugin left kill loot on the ground** instead of sending it to EndInv.
+- **NeoForge clients:** the I key didn't open the EndInv screen, the settings sync threw an
+  error, and NeoForge clients couldn't join Folia/Paper servers at all.
+- **`/storage find minecraft:<item>`** found nothing, because a full item id wasn't matched.
+- **The stack held on the cursor was hidden behind the EndInv panels.**
 
 ## Features
 
@@ -192,7 +235,7 @@ java/emma-endinv/folia/build/libs/emma_endinv-folia-<folia_version>*.jar
 |---|---|---|
 | Folia or Paper (production) | the Folia plugin jar in `plugins/` (same jar for both) | Fabric or NeoForge jar |
 | Fabric dedicated server | **the same Fabric jar** in `mods/` (+ Fabric API) | Fabric jar |
-| NeoForge dedicated server | the NeoForge jar in `mods/` (built as a client/server mod; not yet tested on a dedicated server) | NeoForge jar |
+| NeoForge dedicated server | the NeoForge jar in `mods/` (tested, see [Test results](#test-results)) | NeoForge jar |
 | Single player | nothing extra (the client jar runs the integrated server) | Fabric or NeoForge jar |
 
 The Fabric jar is a client **and** server mod. Verified 2026-09-29 on a Fabric 26.1.2
@@ -217,7 +260,7 @@ EndInv (`@loot`). The rail lab in EmmaMinecraft261 (`tools/rail_lab/`) runs this
 - `PlayerRespawnEvent` for re-sync.
 - The same common mixins for pickup and the recipe book.
 
-It compiles, but it hasn't been tested on a server yet.
+Tested on NeoForge dedicated servers for 26.1.2, 26.2 and 26.3 (see [Test results](#test-results)).
 
 A player killed by a player keeps vanilla drops on Fabric and NeoForge. The Folia plugin sends them to the
 killer's EndInv, because `PlayerDeathEvent` is an `EntityDeathEvent`.
