@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import org.jetbrains.annotations.Nullable;
@@ -43,23 +44,48 @@ public class ServerPlaceRecipeMixin<R extends Recipe<?>> {
         }
     }
 
-    @Inject(method = "moveItemToGrid", at = @At("RETURN"), cancellable = true)
+    /**
+     * EndInv first, as the Folia plugin places recipes: take the ingredient from EndInv, and only
+     * when EndInv has none of it let vanilla take it from the player inventory.
+     */
+    @Inject(method = "moveItemToGrid", at = @At("HEAD"), cancellable = true)
     private void ei$moveFromEndInv(Slot slot, Holder<Item> item, int count, CallbackInfoReturnable<Integer> cir) {
-        if (cir.getReturnValue() != -1) return;
         if (ei$endInv == null) return;
 
         ItemStack probe = new ItemStack(item);
+        ItemStack cur = slot.getItem();
+        if (!cur.isEmpty() && !ItemStack.isSameItemSameComponents(cur, probe)) return;
         if (!ei$endInv.hasItem(probe)) return;
         ItemStack taken = ei$endInv.takeItem(probe, count);
         if (taken.isEmpty()) return;
 
-        ItemStack cur = slot.getItem();
         if (cur.isEmpty()) {
             slot.set(taken);
         } else {
             cur.grow(taken.getCount());
         }
         cir.setReturnValue(count - taken.getCount());
+    }
+
+    /** Clearing the grid puts its contents back in EndInv; what EndInv can't hold goes the vanilla way. */
+    @Redirect(method = "clearGrid", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/player/Inventory;placeItemBackInInventory(Lnet/minecraft/world/item/ItemStack;Z)V"))
+    private void ei$clearToEndInv(Inventory inv, ItemStack stack, boolean sendPacket) {
+        if (ei$endInv != null && !stack.isEmpty()) {
+            ItemStack remain = ei$endInv.addItem(stack.copy());
+            stack.setCount(remain.getCount());
+        }
+        if (!stack.isEmpty()) {
+            inv.placeItemBackInInventory(stack, sendPacket);
+        }
+    }
+
+    /** The grid is cleared into EndInv, so a full player inventory doesn't block a placement. */
+    @Inject(method = "testClearGrid", at = @At("HEAD"), cancellable = true)
+    private void ei$gridClearsToEndInv(CallbackInfoReturnable<Boolean> cir) {
+        if (inventory.player instanceof ServerPlayer sp && ServerLevelEndInv.getEndInvForPlayer(sp).isPresent()) {
+            cir.setReturnValue(true);
+        }
     }
 
 }

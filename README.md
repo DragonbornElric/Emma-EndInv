@@ -61,6 +61,28 @@ dedicated server (Fabric Loader 0.19.2, Fabric API 0.155.3): the server loads
 and Emma's bridge reports `endinv_available: true` and moves a chest's contents into her
 EndInv (`@loot`). The rail lab in EmmaMinecraft261 (`tools/rail_lab/`) runs this setup.
 
+**Fabric server behaves like the Folia plugin** (checked on the same lab server, 2026-09-29):
+
+| Feature | Fabric (how) | Checked |
+|---|---|---|
+| Mob killed by a player: loot-table, custom and equipment drops go to the killer's EndInv, XP straight to the killer | Fabric-only mixins around `LivingEntity.dropAllDeathLoot` (`fabric/mixin/fabric/`) | cow, zombie, skeleton: drops in EndInv, XP gained, nothing left on the ground |
+| Walk-over pickup uses the Folia rule (`AutoPickHelper.shouldMoveTo`): an item that stacks onto something carried stays in the inventory | common `ItemEntityPickupMixin` | dirt stacked into the inventory, cobblestone into EndInv |
+| Recipe book takes ingredients from EndInv first, clears the grid into EndInv, and a full inventory doesn't block a placement | common `ServerPlaceRecipeMixin` | sticks crafted from EndInv planks; inventory planks untouched |
+| EndInv saved every 60 s when changed | `PlayerEvents` server tick | data file rewritten every minute |
+| Re-sync after every respawn (also leaving the End) | `ServerPlayerEvents.AFTER_RESPAWN` | not live-tested |
+
+A player killed by a player keeps vanilla drops on Fabric. The Folia plugin sends them to the
+killer's EndInv, because `PlayerDeathEvent` is an `EntityDeathEvent`.
+
+The Fabric pickup has one difference from Folia, and it is deliberate. Paper fires
+`EntityPickupItemEvent` only when the player inventory has room. So on Folia, autopick stops
+once the inventory is full. On Fabric, pickup still goes to EndInv when the inventory is full.
+
+Known quirk in the shared rule: swords, pickaxes and elytra are compared by item class
+(`hasSuch`). In 26.1 these are plain `Item`s, so carrying any plain item (for example dirt)
+counts as "already has one". The first sword therefore goes to EndInv too. This happens on
+both loaders.
+
 ## Deploy Helper
 
 Build all three jars and deploy the Fabric jar to the default PrismLauncher instances (Emma, Elric, CameraBot26.1) and to EmmaAI on emmabrain over ssh:

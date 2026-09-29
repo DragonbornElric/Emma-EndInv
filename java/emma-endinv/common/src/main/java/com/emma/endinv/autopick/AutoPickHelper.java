@@ -188,7 +188,7 @@ public final class AutoPickHelper {
      * 1. Player has mergeable items in the inventory.
      * 2. Player has unstackable some class items in inventory or worn.
      */
-    private static boolean shouldMoveTo(Player player, ItemStack stack){
+    public static boolean shouldMoveTo(Player player, ItemStack stack){
         if(stack.isEmpty()) return false;
         Item item = stack.getItem();
         if(item.builtInRegistryHolder().is(ItemTags.SWORDS)){

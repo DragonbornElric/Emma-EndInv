@@ -1,16 +1,19 @@
 package com.emma.endinv.event;
 
 import com.emma.endinv.EndlessInventory;
+import com.emma.endinv.FabricPacketDistributor;
 import com.emma.endinv.ModInfo;
 import com.emma.endinv.menu.Station;
 import com.emma.endinv.ModRegistries;
 import com.emma.endinv.ServerLevelEndInv;
+import com.emma.endinv.data.EndlessInventoryData;
 import com.emma.endinv.menu.EndlessInventoryMenu;
 import com.emma.endinv.network.payloads.SyncedConfig;
 import com.emma.endinv.network.payloads.toClient.EndInvContent;
 import com.emma.endinv.network.payloads.toClient.EndInvMetadata;
 import com.emma.endinv.options.ServerConfigs;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.MinecraftServer;
@@ -24,6 +27,9 @@ import java.util.UUID;
 public final class PlayerEvents {
 
     private static final Set<UUID> PENDING_SYNC = new HashSet<>();
+    /** Same period as the Folia plugin's save task: a crash loses at most a minute of EndInv changes. */
+    private static final int SAVE_INTERVAL_TICKS = 20 * 60;
+    private static int ticksSinceSave = 0;
 
     private PlayerEvents() {
     }
@@ -33,6 +39,11 @@ public final class PlayerEvents {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> scheduleSync(handler.player));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> removeViewer(handler.player));
         ServerPlayerEvents.COPY_FROM.register(PlayerEvents::copyFromOldPlayer);
+        // Every respawn, including the alive one leaving the End (COPY_FROM only re-syncs after a death).
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> scheduleSync(newPlayer));
+        ServerTickEvents.END_SERVER_TICK.register(PlayerEvents::periodicSave);
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> FabricPacketDistributor.server = server);
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> FabricPacketDistributor.server = null);
     }
 
     public static void markPlayersForSync(MinecraftServer server) {
@@ -77,6 +88,12 @@ public final class PlayerEvents {
                 }
             }
         }
+    }
+
+    private static void periodicSave(MinecraftServer server) {
+        if (++ticksSinceSave < SAVE_INTERVAL_TICKS) return;
+        ticksSinceSave = 0;
+        EndlessInventoryData.saveNow(server.overworld());
     }
 
     private static void removeViewer(ServerPlayer player) {

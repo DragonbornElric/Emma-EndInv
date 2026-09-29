@@ -101,6 +101,13 @@ reading and filling EndInv). Folia/Paper servers use the Folia plugin instead. T
 jar is built as a client/server mod too but has not been tested on a dedicated server yet.
 Don't describe the server side as "Folia only".
 
+Fabric-server parity with the Folia plugin (death loot and XP, pickup filter, EndInv-first recipe
+book, 60 s save, respawn re-sync) is listed in README "Fabric server behaves like the Folia
+plugin". The death-loot mixins are Fabric-only (`fabric/.../mixin/fabric/`, registered in
+`endless_inventory.fabric.mixins.json`). NeoForge buffers death drops in `captureDrops`
+before they reach the level, so a NeoForge port belongs in a `LivingDropsEvent` handler, not in
+these mixins.
+
 ## Conventions
 
 - Minecraft 26.1.2
@@ -119,7 +126,8 @@ Don't describe the server side as "Folia only".
 | Surface | Module |
 |---------|--------|
 | All payloads | `common` — vanilla `CustomPacketPayload`/`StreamCodec` only |
-| All 12 mixins | `common` — target vanilla classes only |
+| Shared mixins | `common` — target vanilla classes only |
+| Death-loot capture (drops + XP to the killer's EndInv) | `fabric/mixin/fabric/` + `fabric/event/DeathLootCapture` |
 | Menus, inventory, GUI, screens | `common` |
 | `ILoaderProvider` (isClient, isModLoaded, getConfigDir) | `common` interface, `fabric`/`neoforge`/`folia` service impl |
 | `FabricNetworking`, `FabricServerNetworking`, `FabricClientNetworking` | `fabric` |

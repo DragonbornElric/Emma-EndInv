@@ -57,6 +57,9 @@ public abstract class ItemEntityPickupMixin {
 
             ItemStack stack = self.getItem();
             if (stack.isEmpty()) return;
+            // Same rule as the Folia plugin: a first tool/weapon/armour piece, or an item that stacks
+            // onto something already carried, goes to the player inventory the vanilla way.
+            if (!com.emma.endinv.autopick.AutoPickHelper.shouldMoveTo(serverPlayer, stack)) return;
 
             var endInvOpt = ServerLevelEndInv.getEndInvForPlayer(serverPlayer);
             if (endInvOpt.isEmpty()) {

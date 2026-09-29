@@ -4,6 +4,7 @@ import com.emma.endinv.network.IPacketDistributor;
 import com.emma.endinv.network.payloads.ModPacketPayload;
 import com.emma.endinv.network.FabricClientNetworking;
 import com.emma.endinv.network.FabricNetworking;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 public class FabricPacketDistributor implements IPacketDistributor {
@@ -18,8 +19,15 @@ public class FabricPacketDistributor implements IPacketDistributor {
         FabricNetworking.sendToPlayer(player, payload);
     }
 
+    /** Set by PlayerEvents from the server lifecycle; null on a client with no server running. */
+    public static volatile MinecraftServer server;
+
     @Override
     public void sendToAllPlayer(ModPacketPayload payload) {
-
+        MinecraftServer current = server;
+        if (current == null) return;
+        for (ServerPlayer player : current.getPlayerList().getPlayers()) {
+            sendToPlayer(player, payload);
+        }
     }
 }
