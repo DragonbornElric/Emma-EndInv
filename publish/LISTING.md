@@ -16,7 +16,7 @@ Copy-paste text and settings for publishing **Emma's Endless Inventory**. Jars c
 | Issue tracker | https://github.com/DragonbornElric/Emma-EndInv/issues |
 | Wiki / docs | https://github.com/DragonbornElric/Emma-EndInv#readme |
 | Support | GitHub issues, or ask on the livestream (twitch.tv/Elric_Heart); no Discord |
-| Icon | `java/emma-endinv/common/src/main/resources/assets/emma_endinv/icon.png` (the original mod's icon, to replace later) |
+| Icon | `publish/logo.png` (512×512; the mod icon uses the same art) |
 | Environment | Client **and** server required |
 | Categories | Storage, Utility, Management; also Game Mechanics on Modrinth |
 
