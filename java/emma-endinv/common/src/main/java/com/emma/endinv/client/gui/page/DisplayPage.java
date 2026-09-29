@@ -334,10 +334,23 @@ public abstract class DisplayPage{
     private long lastClickedTime;
     private boolean skipNextRelease;
 
+    /**
+     * 26.3 mouse buttons use SDL numbering (left 1, middle 2, right 3); container clicks still expect
+     * vanilla's menu button (left 0, right 1). Same mapping as AbstractContainerScreen.getContainerClickButton.
+     */
+    protected static int toContainerButton(int mouseButton) {
+        return switch (mouseButton) {
+            case InputConstants.MOUSE_BUTTON_LEFT -> 0;
+            case InputConstants.MOUSE_BUTTON_RIGHT -> 1;
+            default -> mouseButton;
+        };
+    }
+
     public boolean mouseClicked(MouseButtonEvent clickEvent, boolean pre){
         double XOffset = clickEvent.x();
         double YOffset = clickEvent.y();
         int keyCode = clickEvent.button();
+        int containerButton = toContainerButton(keyCode);
         InputConstants.Key mouseKey = InputConstants.Type.MOUSE.getOrCreate(keyCode);
         boolean isKeyPicking = mc.options.keyPickItem.matchesMouse(clickEvent);//is mouse middle button and enabled for pickup or clone
         long clickTime = Util.getMillis();
@@ -360,7 +373,7 @@ public abstract class DisplayPage{
         }else {
             if(menu.getCarried().isEmpty()){
                 if (mc.options.keyPickItem.matchesMouse(clickEvent)) {
-                    pageClicked(XOffset, YOffset, keyCode, ContainerInput.CLONE);
+                    pageClicked(XOffset, YOffset, containerButton, ContainerInput.CLONE);
                 } else {
                     ContainerInput clicktype = ContainerInput.PICKUP;
                     if (Minecraft.getInstance().hasShiftDown()) {
@@ -368,11 +381,11 @@ public abstract class DisplayPage{
                         //this.lastQuickMoved = slot != null && slot.hasItem() ? slot.getItem().copy() : ItemStack.EMPTY;
                         clicktype = ContainerInput.QUICK_MOVE;
                     }
-                    pageClicked(XOffset, YOffset, keyCode, clicktype);
+                    pageClicked(XOffset, YOffset, containerButton, clicktype);
                 }
                 this.skipNextRelease = true;
             }else {//deference to vanilla
-                pageClicked(XOffset, YOffset, keyCode, ContainerInput.PICKUP);
+                pageClicked(XOffset, YOffset, containerButton, ContainerInput.PICKUP);
             }
         }
         this.lastClickedTime = clickTime;
@@ -389,7 +402,7 @@ public abstract class DisplayPage{
         if(Minecraft.getInstance().hasShiftDown()){
             int slotId = getSlotByMouseOffset(mouseX,mouseY);
             if(slotId>=0 && lastDraggedPageSlot>=0 && slotId!=lastDraggedPageSlot){
-                pageClicked(mouseX,mouseY,button,ContainerInput.QUICK_MOVE);
+                pageClicked(mouseX,mouseY,toContainerButton(button),ContainerInput.QUICK_MOVE);
             }
             lastDraggedPageSlot = slotId;
             return true;
@@ -398,12 +411,13 @@ public abstract class DisplayPage{
 
     public boolean mouseReleased(MouseButtonEvent event){
         int keyCode = event.button();
+        int containerButton = toContainerButton(keyCode);
         double XOffset = event.x();
         double YOffset = event.y();
         lastDraggedPageSlot = -1;
         //InputConstants.Key mouseKey = InputConstants.Type.MOUSE.getOrCreate(keyCode);
         if (this.doubleClick) {
-            this.pageClicked(XOffset,YOffset,keyCode,ContainerInput.PICKUP_ALL);
+            this.pageClicked(XOffset,YOffset,containerButton,ContainerInput.PICKUP_ALL);
             this.doubleClick = false;
             this.lastClickedTime = 0L;
             return true;
@@ -415,7 +429,7 @@ public abstract class DisplayPage{
             }
             if(!menu.getCarried().isEmpty()){
                 if (mc.options.keyPickItem.matchesMouse(event)) {
-                    this.pageClicked(XOffset,YOffset,keyCode,ContainerInput.CLONE);
+                    this.pageClicked(XOffset,YOffset,containerButton,ContainerInput.CLONE);
                     return true;
                 }
             }
@@ -433,7 +447,7 @@ public abstract class DisplayPage{
     }
 
     public boolean keyPressed(int keyCode, int scanCode, int modifiers, int mouseX, int mouseY){
-        boolean isNumericKey = InputConstants.Type.KEYSYM.getOrCreate(keyCode).getNumericKeyValue().isPresent();
+        boolean isNumericKey = InputConstants.Type.KEYBOARD.getOrCreate(keyCode).getNumericKeyValue().isPresent();
 
         if (isNumericKey && this.menu.getCarried().isEmpty()) {
             if (mc.options.keySwapOffhand.matches(new KeyEvent(keyCode, scanCode, modifiers))) {

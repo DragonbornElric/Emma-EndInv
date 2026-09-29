@@ -1,5 +1,6 @@
 package com.emma.endinv.network.payloads.toClient;
 
+import com.emma.endinv.network.BufCollections;
 import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.client.gui.page.ItemDisplay;
 import com.emma.endinv.network.payloads.ModPacketContext;
@@ -26,11 +27,11 @@ public record SetItemDisplayContentPayload(List<ItemStack> stacks) implements Mo
             new CustomPacketPayload.Type<>(AbstractModInitializer.withModLocation("itemdisplay_content"));
 
     public static void encode(SetItemDisplayContentPayload payload, FriendlyByteBuf o){
-        o.writeCollection(payload.stacks,(buf, stack) -> ItemStack.OPTIONAL_STREAM_CODEC.encode((net.minecraft.network.RegistryFriendlyByteBuf) buf, stack));
+        BufCollections.writeCollection(o, payload.stacks,(buf, stack) -> ItemStack.OPTIONAL_STREAM_CODEC.encode((net.minecraft.network.RegistryFriendlyByteBuf) buf, stack));
     }
 
     public static SetItemDisplayContentPayload decode(FriendlyByteBuf o){
-        return new SetItemDisplayContentPayload(o.readList(buf -> ItemStack.OPTIONAL_STREAM_CODEC.decode((net.minecraft.network.RegistryFriendlyByteBuf) buf)));
+        return new SetItemDisplayContentPayload(BufCollections.readList(o, buf -> ItemStack.OPTIONAL_STREAM_CODEC.decode((net.minecraft.network.RegistryFriendlyByteBuf) buf)));
     }
 
     // Registry-friendly versions used by the typed StreamCodec to avoid any ambiguity

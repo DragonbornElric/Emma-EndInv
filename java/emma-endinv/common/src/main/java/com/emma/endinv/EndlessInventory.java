@@ -4,6 +4,7 @@ package com.emma.endinv;
 import com.emma.endinv.menu.BrewingState;
 import com.emma.endinv.menu.FurnaceState;
 import com.emma.endinv.menu.Station;
+import com.emma.endinv.menu.StationProcessing;
 import com.emma.endinv.network.payloads.toClient.EndInvContent;
 import com.emma.endinv.network.payloads.toClient.EndInvMetadata;
 import com.emma.endinv.util.Accessibility;
@@ -14,6 +15,7 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.server.MinecraftServer;
@@ -24,9 +26,11 @@ import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.component.BrewingFuel;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
+import net.minecraft.world.level.storage.loot.LootContext;
 import org.slf4j.Logger;
 
 import org.jetbrains.annotations.Nullable;
@@ -225,6 +229,7 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
         int litDuration   = state.litDuration();
         int cookTime      = state.cookTime();
         int cookDuration  = state.cookDuration();
+        float speed       = state.speedMultiplier();
 
         boolean hasIngredient = !input.isEmpty();
         boolean hasFuel       = !fuel.isEmpty();
@@ -247,11 +252,19 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                     AbstractCookingRecipe recipeVal = optRecipe.get().value();
                     ItemStack burnResult = recipeVal.assemble(new SingleRecipeInput(input));
                     if (!burnResult.isEmpty() && canCookingBurn(result, burnResult)) {
-                        if (!isLit) {
-                            int newLitTime = level.fuelValues().burnDuration(fuel);
+                        if (!isLit && StationProcessing.isCookingFuel(fuel)) {
+                            // AbstractFurnaceBlockEntity.serverTick: data-driven burn time and speed
+                            LootContext ctx = StationProcessing.lootContext(level, st, stationPos(level));
+                            int newLitTime = StationProcessing.burnDuration(ctx, fuel);
+                            litTime     = newLitTime;
+                            litDuration = newLitTime;
+                            speed       = StationProcessing.cookingSpeed(ctx, fuel);
+                            if (cookDuration > 0 && cookTime < cookDuration) {
+                                float progress = (float) cookTime / cookDuration;
+                                cookDuration = StationProcessing.totalCookTime(recipeVal, speed);
+                                cookTime = (int) Math.ceil(progress * cookDuration);
+                            }
                             if (newLitTime > 0) {
-                                litTime    = newLitTime;
-                                litDuration = newLitTime;
                                 Item fuelItem = fuel.getItem();
                                 fuel.shrink(1);
                                 if (fuel.isEmpty()) {
@@ -264,10 +277,10 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                         }
                         if (isLit) {
                             cookTime++;
-                            if (cookDuration == 0) cookDuration = recipeVal.cookingTime();
+                            if (cookDuration == 0) cookDuration = StationProcessing.totalCookTime(recipeVal, speed);
                             if (cookTime >= cookDuration) {
                                 cookTime    = 0;
-                                cookDuration = recipeVal.cookingTime();
+                                cookDuration = StationProcessing.totalCookTime(recipeVal, speed);
                                 if (result.isEmpty()) {
                                     result = burnResult.copy();
                                 } else {
@@ -307,7 +320,7 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
         }
 
         if (changed) {
-            setCookingState(st, new FurnaceState(input, fuel, result, litTime, litDuration, cookTime, cookDuration));
+            setCookingState(st, new FurnaceState(input, fuel, result, litTime, litDuration, cookTime, cookDuration, speed));
             setChanged();
         }
     }
@@ -318,6 +331,7 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
 
         int fuelAmount = state.fuelAmount();
         int brewTime   = state.brewTime();
+        float speed    = state.speedMultiplier();
         ItemStack ingredient = state.ingredient().copy();
         ItemStack fuel       = state.fuel().copy();
         ItemStack potion0    = state.potion0().copy();
@@ -326,25 +340,39 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
 
         boolean changed = false;
 
-        // Refuel if depleted and blaze powder available
-        if (fuelAmount <= 0 && !fuel.isEmpty() && fuel.is(net.minecraft.tags.ItemTags.BREWING_FUEL)) {
-            fuelAmount = 20;
+        // Refuel if depleted and a brewing fuel (BREWING_FUEL component) is available
+        BrewingFuel brewingFuel = fuel.get(net.minecraft.core.component.DataComponents.BREWING_FUEL);
+        if (fuelAmount <= 0 && brewingFuel != null) {
+            LootContext ctx = StationProcessing.lootContext(level, Station.BREWING, stationPos(level));
+            fuelAmount = StationProcessing.brewingFuelUses(ctx, brewingFuel);
+            speed = StationProcessing.brewingSpeed(ctx, brewingFuel);
+            Item fuelItem = fuel.getItem();
             fuel.shrink(1);
+            ItemStackTemplate rem = fuelItem.getCraftingRemainder();
+            if (rem != null) {
+                if (fuel.isEmpty()) fuel = rem.create();
+                else addItem(rem.create());
+            }
             changed = true;
         }
 
-        net.minecraft.world.item.alchemy.PotionBrewing pb = level.potionBrewing();
-        boolean brewable = isBrewableBackground(pb, ingredient, potion0, potion1, potion2);
+        boolean brewable = StationProcessing.isBrewable(level, ingredient, potion0, potion1, potion2);
 
         if (brewTime > 0) {
             brewTime--;
             if (brewTime == 0) {
                 // doBrew
-                if (!ingredient.isEmpty()) {
-                    if (!potion0.isEmpty()) potion0 = pb.mix(ingredient, potion0);
-                    if (!potion1.isEmpty()) potion1 = pb.mix(ingredient, potion1);
-                    if (!potion2.isEmpty()) potion2 = pb.mix(ingredient, potion2);
+                if (!ingredient.isEmpty() && brewable) {
+                    potion0 = StationProcessing.brew(level, potion0, ingredient);
+                    potion1 = StationProcessing.brew(level, potion1, ingredient);
+                    potion2 = StationProcessing.brew(level, potion2, ingredient);
+                    Item ingredientItem = ingredient.getItem();
                     ingredient.shrink(1);
+                    ItemStackTemplate rem = ingredientItem.getCraftingRemainder();
+                    if (rem != null) {
+                        if (ingredient.isEmpty()) ingredient = rem.create();
+                        else addItem(rem.create());
+                    }
                 }
                 changed = true;
             } else if (!brewable) {
@@ -355,23 +383,20 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
             }
         } else if (fuelAmount > 0 && brewable) {
             fuelAmount--;
-            brewTime = 400;
+            brewTime = StationProcessing.brewTime(speed);
             changed  = true;
         }
 
         if (changed) {
-            brewingState = new BrewingState(ingredient, fuel, potion0, potion1, potion2, brewTime, fuelAmount);
+            brewingState = new BrewingState(ingredient, fuel, potion0, potion1, potion2, brewTime, fuelAmount, speed);
             setChanged();
         }
     }
 
-    private static boolean isBrewableBackground(
-            net.minecraft.world.item.alchemy.PotionBrewing pb,
-            ItemStack ingredient, ItemStack p0, ItemStack p1, ItemStack p2) {
-        if (ingredient.isEmpty() || !pb.isIngredient(ingredient)) return false;
-        return (!p0.isEmpty() && pb.hasMix(p0, ingredient))
-            || (!p1.isEmpty() && pb.hasMix(p1, ingredient))
-            || (!p2.isEmpty() && pb.hasMix(p2, ingredient));
+    /** Where the virtual station "stands" for data-driven fuel values: the owner, if online. */
+    private BlockPos stationPos(ServerLevel level) {
+        ServerPlayer ownerPlayer = owner == null ? null : level.getServer().getPlayerList().getPlayer(owner);
+        return ownerPlayer != null ? ownerPlayer.blockPosition() : BlockPos.ZERO;
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

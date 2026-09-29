@@ -1,5 +1,6 @@
 package com.emma.endinv.network.payloads.toClient;
 
+import com.emma.endinv.network.BufCollections;
 import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.client.CachedSrcInv;
 import com.emma.endinv.client.gui.page.ItemDisplay;
@@ -17,7 +18,7 @@ import java.util.Map;
 public record EndInvContent(Map<ItemKey, ItemState> itemMap) implements ModPacketPayload {
 
     public static void encode(RegistryFriendlyByteBuf o, EndInvContent content){
-        o.writeMap(
+        BufCollections.writeMap(o,
                 content.itemMap,
                 (buf, key) -> ItemKey.STREAM_CODEC.encode((RegistryFriendlyByteBuf) buf, key),
                 ItemState::encode
@@ -25,7 +26,7 @@ public record EndInvContent(Map<ItemKey, ItemState> itemMap) implements ModPacke
     }
 
     public static EndInvContent decode(RegistryFriendlyByteBuf o){
-        return new EndInvContent(o.readMap(Object2ObjectLinkedOpenHashMap::new,
+        return new EndInvContent(BufCollections.readMap(o, Object2ObjectLinkedOpenHashMap::new,
                 buf -> ItemKey.STREAM_CODEC.decode((RegistryFriendlyByteBuf) buf),
                 ItemState::decode
         ));

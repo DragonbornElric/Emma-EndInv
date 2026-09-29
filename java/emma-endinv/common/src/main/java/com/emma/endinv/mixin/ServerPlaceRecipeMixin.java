@@ -3,6 +3,7 @@ package com.emma.endinv.mixin;
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.util.recipeTransferHelper.RecipeItemProvider;
+import net.minecraft.util.Prediction;
 import net.minecraft.core.Holder;
 import net.minecraft.recipebook.ServerPlaceRecipe;
 import net.minecraft.server.level.ServerPlayer;
@@ -69,14 +70,14 @@ public class ServerPlaceRecipeMixin<R extends Recipe<?>> {
 
     /** Clearing the grid puts its contents back in EndInv; what EndInv can't hold goes the vanilla way. */
     @Redirect(method = "clearGrid", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/entity/player/Inventory;placeItemBackInInventory(Lnet/minecraft/world/item/ItemStack;Z)V"))
-    private void ei$clearToEndInv(Inventory inv, ItemStack stack, boolean sendPacket) {
+            target = "Lnet/minecraft/world/entity/player/Inventory;placeItemBackInInventory(Lnet/minecraft/world/item/ItemStack;ZLnet/minecraft/util/Prediction;)V"))
+    private void ei$clearToEndInv(Inventory inv, ItemStack stack, boolean sendPacket, Prediction prediction) {
         if (ei$endInv != null && !stack.isEmpty()) {
             ItemStack remain = ei$endInv.addItem(stack.copy());
             stack.setCount(remain.getCount());
         }
         if (!stack.isEmpty()) {
-            inv.placeItemBackInInventory(stack, sendPacket);
+            inv.placeItemBackInInventory(stack, sendPacket, prediction);
         }
     }
 

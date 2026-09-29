@@ -154,7 +154,6 @@ public class PageType {
     private static boolean isWeapon(ItemStack itemStack){
         Item item = itemStack.getItem();
         return
-                item instanceof  AxeItem ||
                 item instanceof  TridentItem ||
                 item instanceof ProjectileWeaponItem ||
                 WEAPON_TAGS.stream().anyMatch(itemStack::is);
@@ -163,9 +162,7 @@ public class PageType {
     private static boolean isTool(ItemStack itemStack){
         Item item = itemStack.getItem();
         return
-                item instanceof AxeItem ||
                 item instanceof ShearsItem ||
-                item instanceof ShovelItem ||
                 item instanceof FlintAndSteelItem ||
                 item instanceof FishingRodItem ||
                 TOOL_TAGS.stream().anyMatch(itemStack::is);

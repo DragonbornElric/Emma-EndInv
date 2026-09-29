@@ -1,5 +1,6 @@
 package com.emma.endinv.manage;
 
+import com.emma.endinv.network.BufCollections;
 import com.emma.endinv.util.Accessibility;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.FriendlyByteBuf;
@@ -34,8 +35,8 @@ public record EndInvSummary(UUID id,
         o.writeVarInt(s.index);
         o.writeUtf(s.owner);
         o.writeEnum(s.access);
-        o.writeCollection(s.whitelist, FriendlyByteBuf::writeUtf);
-        o.writeCollection(s.users, FriendlyByteBuf::writeUtf);
+        BufCollections.writeCollection(o, s.whitelist, FriendlyByteBuf::writeUtf);
+        BufCollections.writeCollection(o, s.users, FriendlyByteBuf::writeUtf);
         o.writeVarInt(s.itemTypes);
         o.writeVarLong(s.totalItems);
         o.writeBoolean(s.current);
@@ -50,8 +51,8 @@ public record EndInvSummary(UUID id,
                 o.readVarInt(),
                 o.readUtf(),
                 o.readEnum(Accessibility.class),
-                o.readList(FriendlyByteBuf::readUtf),
-                o.readList(FriendlyByteBuf::readUtf),
+                BufCollections.readList(o, FriendlyByteBuf::readUtf),
+                BufCollections.readList(o, FriendlyByteBuf::readUtf),
                 o.readVarInt(),
                 o.readVarLong(),
                 o.readBoolean(),

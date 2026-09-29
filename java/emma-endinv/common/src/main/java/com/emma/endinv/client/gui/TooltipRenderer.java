@@ -21,7 +21,7 @@ public final class TooltipRenderer {
         if (lines.isEmpty()) {
             return;
         }
-        guiGraphics.tooltip(font, toClientComponents(lines, Optional.empty()), mouseX, mouseY, DefaultTooltipPositioner.INSTANCE, null);
+        guiGraphics.tooltip(font, toClientComponents(lines, Optional.empty()), mouseX, mouseY, DefaultTooltipPositioner.INSTANCE, null, false);
     }
 
     public static void renderItem(
@@ -42,7 +42,8 @@ public final class TooltipRenderer {
                 mouseX,
                 mouseY,
                 DefaultTooltipPositioner.INSTANCE,
-            stack.get(DataComponents.TOOLTIP_STYLE)
+                stack.get(DataComponents.TOOLTIP_STYLE),
+                true
         );
     }
 

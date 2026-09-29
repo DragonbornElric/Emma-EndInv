@@ -1,5 +1,6 @@
 package com.emma.endinv.storage;
 
+import com.emma.endinv.network.BufCollections;
 import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.network.payloads.ModPacketContext;
 import com.emma.endinv.network.payloads.ModPacketPayload;
@@ -30,10 +31,10 @@ public record StorageIndexPayload(int part, boolean last, boolean admin, String 
                 buf.writeBoolean(p.last);
                 buf.writeBoolean(p.admin);
                 buf.writeUtf(p.message);
-                buf.writeCollection(p.containers, (b, c) -> TrackedContainer.encode((RegistryFriendlyByteBuf) b, c));
+                BufCollections.writeCollection(buf, p.containers, (b, c) -> TrackedContainer.encode((RegistryFriendlyByteBuf) b, c));
             },
             buf -> new StorageIndexPayload(buf.readVarInt(), buf.readBoolean(), buf.readBoolean(), buf.readUtf(),
-                    buf.readList(b -> TrackedContainer.decode((RegistryFriendlyByteBuf) b))));
+                    BufCollections.readList(buf, b -> TrackedContainer.decode((RegistryFriendlyByteBuf) b))));
 
     public static final CustomPacketPayload.Type<StorageIndexPayload> TYPE =
             new CustomPacketPayload.Type<>(AbstractModInitializer.withModLocation("storage_index"));

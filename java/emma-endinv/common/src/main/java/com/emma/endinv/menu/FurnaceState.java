@@ -6,10 +6,11 @@ import net.minecraft.world.item.ItemStack;
 
 public record FurnaceState(
         ItemStack input, ItemStack fuel, ItemStack result,
-        int litTime, int litDuration, int cookTime, int cookDuration) {
+        int litTime, int litDuration, int cookTime, int cookDuration,
+        float speedMultiplier) {
 
     public static final FurnaceState EMPTY = new FurnaceState(
-            ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY, 0, 0, 0, 0);
+            ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY, 0, 0, 0, 0, 1.0F);
 
     public static final Codec<FurnaceState> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
@@ -19,7 +20,8 @@ public record FurnaceState(
                     Codec.INT.optionalFieldOf("lit_time", 0).forGetter(FurnaceState::litTime),
                     Codec.INT.optionalFieldOf("lit_duration", 0).forGetter(FurnaceState::litDuration),
                     Codec.INT.optionalFieldOf("cook_time", 0).forGetter(FurnaceState::cookTime),
-                    Codec.INT.optionalFieldOf("cook_duration", 0).forGetter(FurnaceState::cookDuration)
+                    Codec.INT.optionalFieldOf("cook_duration", 0).forGetter(FurnaceState::cookDuration),
+                    Codec.FLOAT.optionalFieldOf("speed_multiplier", 1.0F).forGetter(FurnaceState::speedMultiplier)
             ).apply(instance, FurnaceState::new)
     );
 

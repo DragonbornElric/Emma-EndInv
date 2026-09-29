@@ -3,6 +3,7 @@ package com.emma.endinv.storage;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import net.minecraft.util.Prediction;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -104,7 +105,7 @@ public final class StorageCommand {
         ServerPlayer player = source.getPlayerOrException();
         var stack = StorageTag.create(count);
         player.getInventory().add(stack);
-        if (!stack.isEmpty()) player.drop(stack, false);
+        if (!stack.isEmpty()) player.drop(stack, false, Prediction.SERVER_ONLY);
         source.sendSuccess(() -> Component.literal("Gave " + count + " Storage Tag" + (count == 1 ? "" : "s") + "."), false);
         return count;
     }

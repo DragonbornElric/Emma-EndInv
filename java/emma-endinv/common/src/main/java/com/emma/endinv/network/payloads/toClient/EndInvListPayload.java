@@ -1,5 +1,6 @@
 package com.emma.endinv.network.payloads.toClient;
 
+import com.emma.endinv.network.BufCollections;
 import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.manage.EndInvSummary;
 import com.emma.endinv.network.payloads.ModPacketContext;
@@ -16,12 +17,12 @@ public record EndInvListPayload(boolean admin, List<EndInvSummary> entries, Stri
 
     public static void encode(EndInvListPayload payload, FriendlyByteBuf o) {
         o.writeBoolean(payload.admin);
-        o.writeCollection(payload.entries, (buf, entry) -> EndInvSummary.encode(entry, buf));
+        BufCollections.writeCollection(o, payload.entries, (buf, entry) -> EndInvSummary.encode(entry, buf));
         o.writeUtf(payload.message);
     }
 
     public static EndInvListPayload decode(FriendlyByteBuf o) {
-        return new EndInvListPayload(o.readBoolean(), o.readList(EndInvSummary::decode), o.readUtf());
+        return new EndInvListPayload(o.readBoolean(), BufCollections.readList(o, EndInvSummary::decode), o.readUtf());
     }
 
     public static final StreamCodec<RegistryFriendlyByteBuf, EndInvListPayload> STREAM_CODEC =

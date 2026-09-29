@@ -1,5 +1,6 @@
 package com.emma.endinv.menu;
 
+import net.minecraft.util.Prediction;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -105,10 +106,10 @@ public abstract class MenuClickHandler {
         if (slotId == -999) {//outside menu, regardless of pressing shift
             if (!EIM.getCarried().isEmpty()) {//drop all item when left-clicked
                 if (clickaction == ClickAction.PRIMARY) {
-                    player.drop(EIM.getCarried(), true);
+                    player.drop(EIM.getCarried(), true, Prediction.PREDICTED);
                     EIM.setCarried(ItemStack.EMPTY);
                 } else {//drop 1 item when right-clicked
-                    player.drop(EIM.getCarried().split(1), true);
+                    player.drop(EIM.getCarried().split(1), true, Prediction.PREDICTED);
                 }
             }
         } else if (slotId>=0) {
@@ -167,10 +168,10 @@ public abstract class MenuClickHandler {
         if (slotId == -999) {//outside menu, regardless of pressing shift
             if (!menu.getCarried().isEmpty()) {//drop all item when left-clicked
                 if (clickaction == ClickAction.PRIMARY) {
-                    player.drop(menu.getCarried(), true);
+                    player.drop(menu.getCarried(), true, Prediction.PREDICTED);
                     menu.setCarried(ItemStack.EMPTY);
                 } else {//drop 1 item when right-clicked
-                    player.drop(menu.getCarried().split(1), true);
+                    player.drop(menu.getCarried().split(1), true, Prediction.PREDICTED);
                 }
             }
         } else if (slotId < 0) {//on the frame of menu...
@@ -228,7 +229,7 @@ public abstract class MenuClickHandler {
                     hoveringSlot.setByPlayer(inventoryItem.split(k2));
                     hoveringSlot.onTake(player, hoveringSlotItem);
                     if (!inventory.add(hoveringSlotItem)) {
-                        player.drop(hoveringSlotItem, true);
+                        player.drop(hoveringSlotItem, true, Prediction.PREDICTED);
                     }
                 } else {
                     inventory.setItem(button, hoveringSlotItem);
@@ -245,13 +246,13 @@ public abstract class MenuClickHandler {
         Slot throwingSlot = menu.slots.get(slotId);
         int throwingCount = button == 0 ? 1 : throwingSlot.getItem().getCount(); // Q : ctrl+Q
         ItemStack thrown = throwingSlot.safeTake(throwingCount, Integer.MAX_VALUE, player);
-        player.drop(thrown, true);
+        player.drop(thrown, true, Prediction.PREDICTED);
 
         if (button == 1) {
             while (!thrown.isEmpty() && ItemStack.isSameItem(throwingSlot.getItem(), thrown)) {
 
                 thrown = throwingSlot.safeTake(throwingCount, Integer.MAX_VALUE, player);
-                player.drop(thrown, true);
+                player.drop(thrown, true, Prediction.PREDICTED);
             }
         }
     }

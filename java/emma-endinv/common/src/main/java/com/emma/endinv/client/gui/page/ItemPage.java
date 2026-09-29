@@ -12,6 +12,7 @@ import com.emma.endinv.network.payloads.toServer.*;
 import com.emma.endinv.util.ItemKey;
 import com.emma.endinv.util.NotNullWhenInitialized;
 import com.mojang.logging.LogUtils;
+import net.minecraft.util.Prediction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
@@ -267,7 +268,7 @@ public abstract class ItemPage extends GridPage {
     protected void handleThrow(ItemStack clicked){
         Player player = framework.getPlayer();
         ItemStack thrown = takeItem(clicked);
-        player.drop(thrown,true);
+        player.drop(thrown, true, Prediction.PREDICTED);
         setChanged();
     }
     protected void handlePickupAll(ItemStack clicked){

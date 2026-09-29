@@ -9,6 +9,7 @@ import com.emma.endinv.network.payloads.ModPacketPayload;
 import com.emma.endinv.util.ItemKey;
 import com.emma.endinv.util.ItemState;
 import com.mojang.logging.LogUtils;
+import net.minecraft.util.Prediction;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -117,7 +118,7 @@ public record ItemClickPayload(ItemKey key, int button, ContainerInput clickType
             case THROW -> {
                 ItemStack thrown = endInv.takeItem(snapStack, count);
                 LOGGER.debug("ItemClickPayload.THROW: thrown={}", thrown);
-                player.drop(thrown,true);
+                player.drop(thrown, true, Prediction.PREDICTED);
                 endInv.setChanged();
             }
             case PICKUP_ALL -> {

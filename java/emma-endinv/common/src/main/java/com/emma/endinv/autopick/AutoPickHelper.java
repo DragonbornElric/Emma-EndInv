@@ -16,6 +16,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -193,14 +194,14 @@ public final class AutoPickHelper {
         Item item = stack.getItem();
         if(item.builtInRegistryHolder().is(ItemTags.SWORDS)){
             return hasSuch(player,item);
-        }else if(item instanceof AxeItem axeItem){
-            return hasSuch(player,axeItem);
+        }else if(item.builtInRegistryHolder().is(ItemTags.AXES)){
+            return hasTagged(player,ItemTags.AXES);
         }else if(item.builtInRegistryHolder().is(ItemTags.PICKAXES)){
             return hasSuch(player,item);
-        }else if(item instanceof ShovelItem such){
-            return hasSuch(player,such);
-        }else if(item instanceof HoeItem such){
-            return hasSuch(player,such);
+        }else if(item.builtInRegistryHolder().is(ItemTags.SHOVELS)){
+            return hasTagged(player,ItemTags.SHOVELS);
+        }else if(item.builtInRegistryHolder().is(ItemTags.HOES)){
+            return hasTagged(player,ItemTags.HOES);
         }else if(item instanceof TridentItem such){
             return hasSuch(player,such);
         }else if(item instanceof ShieldItem such){
@@ -228,6 +229,11 @@ public final class AutoPickHelper {
 
     private static boolean hasSuch(Player player, Item item){
         return player.inventoryMenu.slots.stream().anyMatch(slot->slot.getItem().getItem().getClass()==item.getClass());
+    }
+
+    /** 26.3 dropped AxeItem/ShovelItem/HoeItem; "has one of these" is now "has an item in the tag". */
+    private static boolean hasTagged(Player player, TagKey<Item> tag){
+        return player.inventoryMenu.slots.stream().anyMatch(slot->slot.getItem().is(tag));
     }
 
     private static boolean hasOrSwearing(Player player,Item armor){

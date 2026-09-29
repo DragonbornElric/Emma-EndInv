@@ -1,5 +1,6 @@
 package com.emma.endinv.network.payloads.toClient;
 
+import com.emma.endinv.network.BufCollections;
 import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.client.CachedSrcInv;
 import com.emma.endinv.client.gui.page.StarredItemPage;
@@ -16,11 +17,11 @@ import java.util.List;
 public record SetStarredPagePayload(List<ItemStackLike> stacks) implements ModPacketPayload {
 
     public static void encode(SetStarredPagePayload payload, FriendlyByteBuf o){
-        o.writeCollection(payload.stacks, (buf, like) -> ItemStackLike.STREAM_CODEC.encode((net.minecraft.network.RegistryFriendlyByteBuf) buf, like));
+        BufCollections.writeCollection(o, payload.stacks, (buf, like) -> ItemStackLike.STREAM_CODEC.encode((net.minecraft.network.RegistryFriendlyByteBuf) buf, like));
     }
 
     public static SetStarredPagePayload decode(FriendlyByteBuf o){
-        return new SetStarredPagePayload(o.readList(buf -> ItemStackLike.STREAM_CODEC.decode((net.minecraft.network.RegistryFriendlyByteBuf) buf)));
+        return new SetStarredPagePayload(BufCollections.readList(o, buf -> ItemStackLike.STREAM_CODEC.decode((net.minecraft.network.RegistryFriendlyByteBuf) buf)));
     }
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SetStarredPagePayload> STREAM_CODEC =

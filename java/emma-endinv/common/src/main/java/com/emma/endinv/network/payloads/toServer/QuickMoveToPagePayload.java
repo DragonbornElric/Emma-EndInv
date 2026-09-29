@@ -1,5 +1,6 @@
 package com.emma.endinv.network.payloads.toServer;
 
+import com.emma.endinv.network.BufCollections;
 import com.emma.endinv.AbstractModInitializer;
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.ServerLevelEndInv;
@@ -29,11 +30,11 @@ public record QuickMoveToPagePayload(IntList slots) implements ModPacketPayload 
     }
 
     public static void encode(QuickMoveToPagePayload payload, FriendlyByteBuf o){
-        o.writeIntIdList(payload.slots);
+        BufCollections.writeIntIdList(o, payload.slots);
     }
 
     public static QuickMoveToPagePayload decode(FriendlyByteBuf o){
-        return new QuickMoveToPagePayload(o.readIntIdList());
+        return new QuickMoveToPagePayload(BufCollections.readIntIdList(o));
     }
 
     public static final StreamCodec<RegistryFriendlyByteBuf, QuickMoveToPagePayload> STREAM_CODEC =

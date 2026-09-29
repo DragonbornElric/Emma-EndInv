@@ -7,12 +7,12 @@ import net.minecraft.world.item.ItemStack;
 public record BrewingState(
         ItemStack ingredient, ItemStack fuel,
         ItemStack potion0, ItemStack potion1, ItemStack potion2,
-        int brewTime, int fuelAmount) {
+        int brewTime, int fuelAmount, float speedMultiplier) {
 
     public static final BrewingState EMPTY = new BrewingState(
             ItemStack.EMPTY, ItemStack.EMPTY,
             ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY,
-            0, 0);
+            0, 0, 1.0F);
 
     public static final Codec<BrewingState> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
@@ -22,7 +22,8 @@ public record BrewingState(
                     ItemStack.OPTIONAL_CODEC.optionalFieldOf("potion1", ItemStack.EMPTY).forGetter(BrewingState::potion1),
                     ItemStack.OPTIONAL_CODEC.optionalFieldOf("potion2", ItemStack.EMPTY).forGetter(BrewingState::potion2),
                     Codec.INT.optionalFieldOf("brew_time", 0).forGetter(BrewingState::brewTime),
-                    Codec.INT.optionalFieldOf("fuel_amount", 0).forGetter(BrewingState::fuelAmount)
+                    Codec.INT.optionalFieldOf("fuel_amount", 0).forGetter(BrewingState::fuelAmount),
+                    Codec.FLOAT.optionalFieldOf("speed_multiplier", 1.0F).forGetter(BrewingState::speedMultiplier)
             ).apply(instance, BrewingState::new)
     );
 

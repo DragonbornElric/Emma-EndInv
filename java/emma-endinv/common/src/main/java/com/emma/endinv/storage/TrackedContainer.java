@@ -1,5 +1,6 @@
 package com.emma.endinv.storage;
 
+import com.emma.endinv.network.BufCollections;
 import com.emma.endinv.util.ItemStackLike;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -81,8 +82,8 @@ public record TrackedContainer(ResourceKey<Level> dimension, BlockPos pos, Optio
         UUIDUtil.STREAM_CODEC.encode(buf, c.owner);
         buf.writeUtf(c.ownerName);
         buf.writeLong(c.updated);
-        buf.writeCollection(c.items, (b, like) -> ItemStackLike.STREAM_CODEC.encode((RegistryFriendlyByteBuf) b, like));
-        buf.writeCollection(c.nested, (b, like) -> ItemStackLike.STREAM_CODEC.encode((RegistryFriendlyByteBuf) b, like));
+        BufCollections.writeCollection(buf, c.items, (b, like) -> ItemStackLike.STREAM_CODEC.encode((RegistryFriendlyByteBuf) b, like));
+        BufCollections.writeCollection(buf, c.nested, (b, like) -> ItemStackLike.STREAM_CODEC.encode((RegistryFriendlyByteBuf) b, like));
     }
 
     public static TrackedContainer decode(RegistryFriendlyByteBuf buf) {
@@ -95,7 +96,7 @@ public record TrackedContainer(ResourceKey<Level> dimension, BlockPos pos, Optio
                 UUIDUtil.STREAM_CODEC.decode(buf),
                 buf.readUtf(),
                 buf.readLong(),
-                buf.readList(b -> ItemStackLike.STREAM_CODEC.decode((RegistryFriendlyByteBuf) b)),
-                buf.readList(b -> ItemStackLike.STREAM_CODEC.decode((RegistryFriendlyByteBuf) b)));
+                BufCollections.readList(buf, b -> ItemStackLike.STREAM_CODEC.decode((RegistryFriendlyByteBuf) b)),
+                BufCollections.readList(buf, b -> ItemStackLike.STREAM_CODEC.decode((RegistryFriendlyByteBuf) b)));
     }
 }

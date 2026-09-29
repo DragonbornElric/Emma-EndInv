@@ -10,7 +10,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -27,16 +26,16 @@ import org.jetbrains.annotations.Nullable;
 public abstract class BlockDropMixin {
 
     @Inject(method = "playerDestroy", at = @At("HEAD"))
-    private void endlessinv$captureBreaker(Level level, Player player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity, ItemStack tool, CallbackInfo ci) {
-        if (player instanceof ServerPlayer sp && AutoPickHelper.isEnabled(sp)) {
-            BlockBreakRedirect.pushBreaker(sp);
+    private void endlessinv$captureBreaker(ServerLevel level, ServerPlayer player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity, ItemStack tool, CallbackInfo ci) {
+        if (AutoPickHelper.isEnabled(player)) {
+            BlockBreakRedirect.pushBreaker(player);
         } else {
             BlockBreakRedirect.clearBreaker();
         }
     }
 
     @Inject(method = "playerDestroy", at = @At("TAIL"))
-    private void endlessinv$clearBreaker(Level level, Player player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity, ItemStack tool, CallbackInfo ci) {
+    private void endlessinv$clearBreaker(ServerLevel level, ServerPlayer player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity, ItemStack tool, CallbackInfo ci) {
         BlockBreakRedirect.clearBreaker();
     }
 
