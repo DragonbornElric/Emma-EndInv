@@ -391,6 +391,15 @@ From 1.4.0 the mod id is **`emma_endinv`** (before: `endless_inventory`, the ori
   - Items saved as `endless_inventory:…` load as `emma_endinv:…`.
   - Existing Storage Tags keep working and still stack with new ones.
 
+## Support
+
+Need help or found a bug?
+- **GitHub:** open an issue at https://github.com/DragonbornElric/Emma-EndInv/issues. Include
+  your Minecraft version, loader, the mod version and the log.
+- **Livestream:** catch the stream at **[twitch.tv/Elric_Heart](https://www.twitch.tv/Elric_Heart)** and ask.
+
+Please don't ask the original Endless Inventory author for help with this fork.
+
 ## Credits and License
 
 Emma-EndInv is a fork of **[Endless Inventory](https://github.com/kwwsyk/Endless-Inventory)** by

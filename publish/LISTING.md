@@ -15,6 +15,7 @@ Copy-paste text and settings for publishing **Emma's Endless Inventory**. Jars c
 | Source code | https://github.com/DragonbornElric/Emma-EndInv |
 | Issue tracker | https://github.com/DragonbornElric/Emma-EndInv/issues |
 | Wiki / docs | https://github.com/DragonbornElric/Emma-EndInv#readme |
+| Support | GitHub issues, or ask on the livestream (twitch.tv/Elric_Heart); no Discord |
 | Icon | `java/emma-endinv/common/src/main/resources/assets/emma_endinv/icon.png` (the original mod's icon, to replace later) |
 | Environment | Client **and** server required |
 | Categories | Storage, Utility, Management; also Game Mechanics on Modrinth |
@@ -81,6 +82,9 @@ Minecraft and mod versions must match on server and clients.
 ## Tested
 Every version is tested in-game on dedicated Folia, Paper, Fabric and NeoForge servers before release. See [TESTING.md](https://github.com/DragonbornElric/Emma-EndInv/blob/main/TESTING.md).
 
+## Support
+Need help? **Open an issue on [GitHub](https://github.com/DragonbornElric/Emma-EndInv/issues)**, or catch the livestream at **[twitch.tv/Elric_Heart](https://www.twitch.tv/Elric_Heart)** and ask. Comments here aren't monitored for support.
+
 ## Credits
 A fork of **[Endless Inventory](https://modrinth.com/mod/endless-inventory)** by Kay Zhang (kwwsyk). This fork ports it to Minecraft 26.x and adds the Folia/Paper plugin, shared inventories, the storage tracker and admin tools. Please report problems with this fork on [GitHub](https://github.com/DragonbornElric/Emma-EndInv/issues), not to the original mod.
 
@@ -97,6 +101,8 @@ Server plugin for **Emma's Endless Inventory**: endless per-player storage, auto
 **Players need the client mod** (Fabric or NeoForge) for the Endless Inventory screen: [Emma's Endless Inventory mod](<link to the CurseForge mod project>). Players without it can still use `/storage` and `/autopick`.
 
 Tested in-game on Folia and Paper servers before every release: [TESTING.md](https://github.com/DragonbornElric/Emma-EndInv/blob/main/TESTING.md).
+
+**Need help?** Open an issue on [GitHub](https://github.com/DragonbornElric/Emma-EndInv/issues) or ask on the livestream at [twitch.tv/Elric_Heart](https://www.twitch.tv/Elric_Heart).
 
 A fork of Endless Inventory by Kay Zhang (kwwsyk). MIT licensed. Source and issues: [GitHub](https://github.com/DragonbornElric/Emma-EndInv). Built live on stream: [twitch.tv/Elric_Heart](https://www.twitch.tv/Elric_Heart)
 ```
