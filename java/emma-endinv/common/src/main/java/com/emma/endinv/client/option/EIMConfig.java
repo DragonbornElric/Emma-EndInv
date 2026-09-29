@@ -109,10 +109,13 @@ public class EIMConfig extends ComplexConfigEntryImpl<EIMConfig.Param> {
         public Param adjust(){
             int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
             int screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+            // Resolve auto rows (<= 0) and clamp so the panel plus the station buttons above it fit.
+            int rows = com.emma.endinv.client.ClientModInfo.fitMenuRows(this.rows, screenHeight);
             return new Param(
                     rows,
                     (screenWidth - 176) / 2,
-                    (screenHeight - 114 - rows*18) / 2,
+                    com.emma.endinv.client.gui.EndlessInventoryScreen.panelTop(screenHeight,
+                            com.emma.endinv.client.gui.EndlessInventoryScreen.BASE_IMAGE_HEIGHT + rows * 18),
                     pages,
                     pageSwitchBarConfig,
                     searchBoxParam,
@@ -124,6 +127,12 @@ public class EIMConfig extends ComplexConfigEntryImpl<EIMConfig.Param> {
                             configButtonParam.height()),
                     reverseSortButtonParam
             );
+        }
+
+        /** The same layout anchored at the screen's actual panel position (it moves for the recipe book). */
+        public Param at(int leftPos, int topPos) {
+            return new Param(rows, leftPos, topPos, pages, pageSwitchBarConfig, searchBoxParam, sortBoxParam,
+                    configButtonParam, reverseSortButtonParam);
         }
 
         @Override
