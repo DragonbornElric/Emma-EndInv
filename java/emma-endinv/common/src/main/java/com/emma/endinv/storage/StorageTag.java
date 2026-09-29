@@ -24,7 +24,7 @@ import java.util.List;
 public final class StorageTag {
 
     public static final String MARKER = "endinv_storage_tag";
-    // The name/lore keys keep the pre-1.3 "endless_inventory" namespace: they are saved on every tag
+    // The name/lore keys keep the pre-1.4 "endless_inventory" namespace: they are saved on every tag
     // item, and new tags must stay identical to existing ones to stack with them.
     private static final CompoundTag MARKER_TAG = markerTag();
 
