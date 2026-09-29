@@ -4,16 +4,36 @@ Emma-EndInv is the Emma fork of Endless Inventory for Minecraft 26.1.2. It build
 
 - **Fabric** client/server mod
 - **NeoForge** client/server mod
-- **Folia** server plugin (Paper/Folia, no client mod required on the server side)
+- **Folia/Paper** server plugin (one jar runs on both Folia and Paper; players use the Fabric or NeoForge client jar)
 
 ## Status
 
 > **Work in progress.** The tested, production setup is a **Folia server running the Folia
-> plugin, with players on the Fabric client jar**. Fabric and NeoForge dedicated servers are
+> plugin, with players on the Fabric client jar**. The same plugin also runs on **Paper**
+> (tested). Fabric and NeoForge dedicated servers are
 > still being brought up to parity with the Folia plugin. A Fabric dedicated server has been
 > checked (see [Which jar goes where](#which-jar-goes-where)). A NeoForge dedicated server and
 > the NeoForge client with a Folia server have not been tested yet. Back up your world before
 > trying either of them.
+
+## Minecraft versions
+
+Each Minecraft version has its own branch and its own set of jars. Use the jars built from
+the branch that matches your game and server.
+
+| Minecraft | Branch | Fabric | NeoForge | Folia/Paper plugin |
+|---|---|---|---|---|
+| 26.1.2 | `main` | ✅ client + server | ✅ client + server | ✅ tested in production on Folia, also tested on Paper |
+| 26.2 | `mc-26.2` | ✅ builds, server starts | ✅ builds, server starts | 🧪 builds against Folia 26.2 (beta); not tested yet |
+| 26.3 | `mc-26.3` | ✅ builds, server starts | ✅ builds, server starts (NeoForge 26.3 is beta) | ⏳ **pending: Folia has no 26.3 release yet** |
+
+**Waiting for Folia 26.3?** PaperMC hasn't released Folia for 26.3 yet
+([build list](https://fill.papermc.io/v3/projects/folia)). The plugin is only built against Folia today, so there is no 26.3
+plugin for Paper either yet. A daily check
+(`.github/workflows/folia-watch.yml`) opens an issue titled "Folia 26.3 is out: port the
+Folia plugin to 26.3" as soon as it ships. Watch this repository's issues, or open one
+yourself if you see the release first. Until then, a 26.3 server can run the Fabric or
+NeoForge jar.
 
 ## Features
 
@@ -128,7 +148,7 @@ java/emma-endinv/folia/build/libs/endless_inventory-folia-<folia_version>*.jar
 
 | Server | Server side | Client side |
 |---|---|---|
-| Folia / Paper (production) | Folia plugin in `plugins/` | Fabric or NeoForge jar |
+| Folia or Paper (production) | the Folia plugin jar in `plugins/` (same jar for both) | Fabric or NeoForge jar |
 | Fabric dedicated server | **the same Fabric jar** in `mods/` (+ Fabric API) | Fabric jar |
 | NeoForge dedicated server | the NeoForge jar in `mods/` (built as a client/server mod; not yet tested on a dedicated server) | NeoForge jar |
 | Single player | nothing extra (the client jar runs the integrated server) | Fabric or NeoForge jar |

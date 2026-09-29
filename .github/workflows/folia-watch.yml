@@ -1,0 +1,46 @@
+# Daily check for a Folia build of the newest Minecraft version the mod targets without one.
+# When PaperMC publishes it, this opens an issue (once) so the Folia plugin gets ported.
+name: Watch for Folia 26.3
+
+on:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+env:
+  MC_VERSION: '26.3'
+  ISSUE_TITLE: 'Folia 26.3 is out: port the Folia plugin to 26.3'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Look for Folia builds
+        id: folia
+        run: |
+          # 404 until PaperMC publishes the version.
+          body=$(curl -fsS "https://fill.papermc.io/v3/projects/folia/versions/${MC_VERSION}/builds" || true)
+          builds=$(printf '%s' "$body" | jq 'if type == "array" then length else 0 end' 2>/dev/null || true)
+          builds=${builds:-0}
+          echo "Folia ${MC_VERSION} builds: ${builds}"
+          echo "builds=${builds}" >> "$GITHUB_OUTPUT"
+
+      - name: Open an issue
+        if: steps.folia.outputs.builds != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          open=$(gh issue list --state all --search "in:title \"${ISSUE_TITLE}\"" --json number --jq 'length')
+          if [ "$open" != "0" ]; then echo "Issue already exists"; exit 0; fi
+          gh issue create --title "${ISSUE_TITLE}" --body "PaperMC has published Folia builds for Minecraft ${MC_VERSION}: https://fill.papermc.io/v3/projects/folia/versions/${MC_VERSION}/builds
+
+          To port the Folia plugin, on the \`mc-${MC_VERSION}\` branch:
+          1. Set \`folia_version\` in \`java/emma-endinv/gradle.properties\` to the new dev bundle (see https://repo.papermc.io/repository/maven-public/dev/folia/dev-bundle/maven-metadata.xml).
+          2. Build with \`./gradlew :folia:build\` and fix what breaks.
+          3. Update the README version table and remove the \"Folia pending\" note.
+
+          (Opened automatically by .github/workflows/folia-watch.yml. Disable that workflow once this is done.)"
