@@ -15,6 +15,24 @@ Emma-EndInv is the Emma fork of Endless Inventory for Minecraft 26.1.2. It build
 > the NeoForge client with a Folia server have not been tested yet. Back up your world before
 > trying either of them.
 
+## Minecraft versions
+
+Each Minecraft version has its own branch and its own set of jars. Use the jars built from
+the branch that matches your game and server.
+
+| Minecraft | Branch | Fabric | NeoForge | Folia plugin |
+|---|---|---|---|---|
+| 26.1.2 | `main` | ✅ client + server | ✅ client + server | ✅ tested in production |
+| 26.2 | `mc-26.2` | ✅ builds, server starts | ✅ builds, server starts | 🧪 builds against Folia 26.2 (beta); not tested yet |
+| 26.3 | `mc-26.3` | 🚧 being ported | 🚧 being ported (NeoForge 26.3 is beta) | ⏳ **pending: Folia has no 26.3 release yet** |
+
+**Waiting for Folia 26.3?** PaperMC hasn't released Folia for 26.3 yet
+([build list](https://fill.papermc.io/v3/projects/folia)). A daily check
+(`.github/workflows/folia-watch.yml`) opens an issue titled "Folia 26.3 is out: port the
+Folia plugin to 26.3" as soon as it ships. Watch this repository's issues, or open one
+yourself if you see the release first. Until then, a 26.3 server can run the Fabric or
+NeoForge jar.
+
 ## Features
 
 **Endless Inventory (EndInv).** A per-player storage with no slot limit: each item type is one

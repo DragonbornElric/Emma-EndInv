@@ -5,6 +5,7 @@ java/emma-endinv/**/.gradle/
 java/emma-endinv/**/build/
 java/emma-endinv/**/bin/
 java/emma-endinv/**/.eclipse/
+java/emma-endinv/**/runs/
 /java/*/bin
 java/dist/
 
