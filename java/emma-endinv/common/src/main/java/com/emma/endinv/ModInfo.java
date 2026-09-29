@@ -7,7 +7,14 @@ import java.util.UUID;
 
 public final class ModInfo {
 
-    public static final String MOD_ID = "endless_inventory";
+    public static final String MOD_ID = "emma_endinv";
+
+    /**
+     * The upstream Endless Inventory mod id this fork used until 1.3. Saved data stays under it
+     * (world EndInv file, snapshots, player attachments) so existing worlds load unchanged; config
+     * files and item ids are migrated from it.
+     */
+    public static final String LEGACY_ID = "endless_inventory";
 
     public static final UUID DEFAULT_UUID = new UUID(0L, 0L);
 

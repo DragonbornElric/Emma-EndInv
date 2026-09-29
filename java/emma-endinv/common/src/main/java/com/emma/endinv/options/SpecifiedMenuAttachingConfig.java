@@ -168,7 +168,7 @@ public class SpecifiedMenuAttachingConfig{
         public static final String[] configComments = new String[]{
                 "The list holds menu attachability configs",
                 "The format is \"namespace:id\"",
-                "Such as \"endless_inventory:endinv_menu:false\" (Meanwhile, notice that endinv_menu will never be attached)",
+                "Such as \"emma_endinv:endinv_menu:false\" (Meanwhile, notice that endinv_menu will never be attached)",
                 "Use \"inventory:true(false)\" for inventory menu."
         };
 

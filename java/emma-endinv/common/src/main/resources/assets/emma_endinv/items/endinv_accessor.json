@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "emma_endinv:item/endinv_accessor"
+  }
+}

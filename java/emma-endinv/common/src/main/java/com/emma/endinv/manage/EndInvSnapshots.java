@@ -32,7 +32,7 @@ public final class EndInvSnapshots {
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
-    private static final String KEY = "endless_inventory";
+    private static final String KEY = com.emma.endinv.ModInfo.LEGACY_ID; // matches the saved-data key
 
     private EndInvSnapshots() {}
 

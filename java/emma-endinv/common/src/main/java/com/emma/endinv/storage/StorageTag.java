@@ -18,12 +18,14 @@ import java.util.List;
  * unchanged on Folia (where plugins cannot add items) and for vanilla clients. Right-clicking a container with it
  * tracks that container in the {@link StorageIndex}; the tag itself is never consumed or stored in the container.
  *
- * <p>Keep {@link #create} in sync with {@code data/endless_inventory/recipe/storage_tag.json} so crafted and
+ * <p>Keep {@link #create} in sync with {@code data/emma_endinv/recipe/storage_tag.json} so crafted and
  * command-given tags stack together.
  */
 public final class StorageTag {
 
     public static final String MARKER = "endinv_storage_tag";
+    // The name/lore keys keep the pre-1.3 "endless_inventory" namespace: they are saved on every tag
+    // item, and new tags must stay identical to existing ones to stack with them.
     private static final CompoundTag MARKER_TAG = markerTag();
 
     private StorageTag() {}

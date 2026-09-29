@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "endless_inventory:item/endinv_accessor"
+    "layer0": "emma_endinv:item/endinv_accessor"
   }
 }
