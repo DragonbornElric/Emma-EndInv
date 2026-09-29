@@ -1,6 +1,6 @@
-# Emma-EndInv
+# Emma's Endless Inventory
 
-Emma-EndInv is the Emma fork of Endless Inventory for Minecraft 26.1.2. It builds for three targets from one Gradle project:
+**Emma's Endless Inventory** (repository: Emma-EndInv, mod id `emma_endinv`) by **Elric Heart** is the Emma fork of [Endless Inventory](https://github.com/kwwsyk/Endless-Inventory) for Minecraft 26.1.2, 26.2 and 26.3. It builds for three targets from one Gradle project:
 
 - **Fabric** client/server mod
 - **NeoForge** client/server mod
