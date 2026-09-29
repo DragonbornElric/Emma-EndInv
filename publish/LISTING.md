@@ -107,6 +107,16 @@ Tested in-game on Folia and Paper servers before every release: [TESTING.md](htt
 A fork of Endless Inventory by Kay Zhang (kwwsyk). MIT licensed. Source and issues: [GitHub](https://github.com/DragonbornElric/Emma-EndInv). Built live on stream: [twitch.tv/Elric_Heart](https://www.twitch.tv/Elric_Heart)
 ```
 
+## Changelog for 1.4.3 (per file)
+
+```markdown
+Fixed (client GUI):
+- Typing in the Endless Inventory search box no longer triggers game keys (E closed the screen, Q dropped items, 1–9 swapped hotbar slots), and results update as you type
+- The station buttons (crafting table, furnaces, …) above the panel stay on screen at large GUI scales or small windows; the panel's row count is capped to fit
+- With the recipe book open, the Endless Inventory panel and its page tabs sit fully right of the book instead of overlapping its tabs (player inventory and the Endless Inventory screen)
+- Each built-in station keeps its own recipe book open/closed state
+```
+
 ## Changelog for 1.4.1 (per file)
 
 ```markdown

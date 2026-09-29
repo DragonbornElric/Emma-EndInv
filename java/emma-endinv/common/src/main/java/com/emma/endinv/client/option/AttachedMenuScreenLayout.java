@@ -17,6 +17,11 @@ public abstract class AttachedMenuScreenLayout implements SFParamProvider{
 
     private static final int PANEL_HORIZONTAL_CHROME = 16;
     private static final int PANEL_RIGHT_BORDER_WIDTH = 8;
+    /** Vanilla RecipeBookComponent.OFFSET_X_POSITION (private): book x shift while visible. */
+    private static final int RECIPE_BOOK_X_OFFSET = 86;
+    /** Vanilla recipe category tabs start 30px left of the book panel. */
+    private static final int RECIPE_TAB_OVERHANG = 30;
+    private static final int RECIPE_BOOK_GAP = 2;
 
     static final IRectangleParam PAGE_RECTANGLE = new ScreenRectangleWidgetParam(0,0,9*18 + 8 + 8, 17 + 15*18 + 12);
     static final IRectangleParam SEARCH_BOX = new ScreenRectangleWidgetParam(1, 17 + 15*18 + 12, 8 + 9*18 + 8, 15);
@@ -88,9 +93,14 @@ public abstract class AttachedMenuScreenLayout implements SFParamProvider{
             int centeredLeft = (screen.width - ClientModInfo.containerScreenHelper.getGuiXSize(screen)) / 2;
             int referenceLeft;
             if (actualLeft > centeredLeft + 4) {
-                // Container shifted right — recipe book is open.
-                // Reserve the EndInv right border so it does not cover the recipe-book category tabs.
-                referenceLeft = actualLeft - RecipeBookComponent.IMAGE_WIDTH - PANEL_RIGHT_BORDER_WIDTH;
+                // Container shifted right — recipe book is open (vanilla, not width-too-narrow).
+                // Vanilla draws the book at (width - 147) / 2 - 86 and its category tabs 30px further
+                // left (RecipeBookComponent#updateTabs), i.e. ~179px left of the container, so end
+                // the EndInv panel before the tabs rather than 155px left of the container.
+                int recipeTabsLeft = (screen.width - RecipeBookComponent.IMAGE_WIDTH) / 2
+                        - RECIPE_BOOK_X_OFFSET - RECIPE_TAB_OVERHANG;
+                referenceLeft = Math.min(recipeTabsLeft, actualLeft - RecipeBookComponent.IMAGE_WIDTH)
+                        - RECIPE_BOOK_GAP;
             } else {
                 // No recipe book — snap to container's left edge.
                 referenceLeft = actualLeft;

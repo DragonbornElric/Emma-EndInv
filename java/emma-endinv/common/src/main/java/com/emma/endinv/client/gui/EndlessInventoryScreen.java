@@ -79,6 +79,24 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
     @Nullable private StationIconButton brewingButton;
     @Nullable private StorageTrackerButton storageButton;
 
+    /** imageHeight without page rows ({@code imageHeight = BASE_IMAGE_HEIGHT + rows * 18}). */
+    public static final int BASE_IMAGE_HEIGHT = 114;
+    /** Space above the panel taken by the two 22px station-button rows. */
+    public static final int STATION_BAR_HEIGHT = 44;
+
+    /**
+     * Panel top: centred, but pushed down so the station buttons above it stay on screen,
+     * as long as that does not push the panel's bottom off screen.
+     */
+    public static int panelTop(int screenHeight, int imageHeight) {
+        int centered = (screenHeight - imageHeight) / 2;
+        return Math.max(centered, Math.min(STATION_BAR_HEIGHT + 2, screenHeight - imageHeight));
+    }
+
+    /** How far the page tabs stick out left of the panel; measured from the framework after each build. */
+    private int tabOverhang = 34;
+    private boolean relayoutPending;
+
     // Static capture so we can store the super() argument in a final field
     @Nullable private static EndInvCraftingRecipeBookComponent pendingCraftingComp;
 
@@ -93,16 +111,41 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
 
     @Override
     protected ScreenPosition getRecipeBookButtonPosition() {
-        int centeredLeft = (this.width - this.imageWidth) / 2;
-        int centeredTop = (this.height - this.imageHeight) / 2;
-        return new ScreenPosition(centeredLeft, centeredTop - 22);
+        return new ScreenPosition(panelLeft(), panelTop(this.height, this.imageHeight) - 22);
+    }
+
+    /**
+     * Panel left: centred, or right of the open recipe book with room for the page tabs.
+     * Vanilla only leaves room for the panel itself, so the tabs would sit on the book.
+     */
+    private int panelLeft() {
+        int centered = (this.width - this.imageWidth) / 2;
+        if (this.width < 379 || !getRecipeCompForStation(menu.getActiveStation()).isVisible()) return centered;
+        int bookRight = (this.width - RecipeBookComponent.IMAGE_WIDTH) / 2 - 86 + RecipeBookComponent.IMAGE_WIDTH;
+        return Math.max(centered, Math.min(bookRight + tabOverhang + 2, this.width - this.imageWidth));
+    }
+
+    /** Moving the panel sideways means rebuilding the framework's widgets; done on the next tick. */
+    private void requestRelayoutIfMoved() {
+        if (panelLeft() != this.leftPos) relayoutPending = true;
     }
 
     @Override
     protected void onRecipeBookButtonClick() {
-        this.leftPos = (this.width - this.imageWidth) / 2;
-        this.topPos = (this.height - this.imageHeight) / 2;
+        // ARBS just set vanilla's leftPos; keep the panel where its widgets are until the relayout.
+        if (frameWork != null) this.leftPos = frameWork.leftPos;
+        this.topPos = panelTop(this.height, this.imageHeight);
         updateStationButtonPositions();
+        requestRelayoutIfMoved();
+    }
+
+    @Override
+    public void containerTick() {
+        super.containerTick();
+        if (relayoutPending) {
+            relayoutPending = false;
+            rebuildWidgets();
+        }
     }
 
     @Override
@@ -110,18 +153,26 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         // Ensure ARBS always initialises and adds the crafting component, regardless of previous state
         ((AbstractRecipeBookScreenAccessor) this).setRecipeBookComponent(craftingRecipeBookComponent);
         super.init();
+        for (Station st : EndlessInventoryMenu.COOKING_STATIONS) {
+            cookingComponents.computeIfAbsent(st, s -> EndInvCookingRecipeBookComponent.forStation(menu, s));
+        }
+        // Restore active station from menu (handles screen resize) before placing the panel,
+        // since the panel goes right of that station's recipe book when it is open.
+        activeStation = Station.NONE;
+        Station savedStation = menu.getActiveStation();
+        if (savedStation != Station.NONE) {
+            applyStationSwap(Station.NONE, savedStation);
+            activeStation = savedStation;
+        }
         this.inventoryLabelY = this.imageHeight - 94;
-        this.leftPos = (this.width - this.imageWidth) / 2;
-        this.topPos = (this.height - this.imageHeight) / 2;
+        this.leftPos = panelLeft();
+        this.topPos = panelTop(this.height, this.imageHeight);
 
         var existing = ScreenFramework.getInstance();
         if (existing != null) existing.onClose();
         this.frameWork = new ScreenFramework(this);
         frameWork.addWidgetToScreen(this::addRenderableWidget);
-
-        for (Station st : EndlessInventoryMenu.COOKING_STATIONS) {
-            cookingComponents.computeIfAbsent(st, s -> EndInvCookingRecipeBookComponent.forStation(menu, s));
-        }
+        tabOverhang = this.leftPos - frameWork.getLeftEdge();
 
         craftingButton = new StationIconButton(0, 0, new ItemStack(Items.CRAFTING_TABLE), Station.CRAFTING,
                 Component.translatable("emma_endinv.button.crafting_table"));
@@ -151,13 +202,8 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         addRenderableWidget(storageButton);
         updateStationButtonPositions();
 
-        // Restore active station from menu (handles screen resize)
-        activeStation = Station.NONE;
-        Station savedStation = menu.getActiveStation();
-        if (savedStation != Station.NONE) {
-            applyStationSwap(Station.NONE, savedStation);
-            activeStation = savedStation;
-        }
+        // The first build measures the real tab overhang; move again if it differed from the guess.
+        requestRelayoutIfMoved();
 
         if (this.frameWork != null) {
             this.frameWork.resizePageRows(menu.getVisibleRows());
@@ -169,7 +215,8 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         RecipeBookComponent<?> newComp = getRecipeCompForStation(to);
         if (oldComp == newComp) return;
 
-        if (oldComp.isVisible()) oldComp.toggleVisibility();
+        // No toggleVisibility() on the old book: it writes the open state for the menu's *current*
+        // recipe book type (already the new station's), closing the new book. Removing it is enough.
         removeWidget(oldComp);
         newComp.init(this.width, this.height, this.minecraft, this.width < 379);
         ((AbstractRecipeBookScreenAccessor) this).setRecipeBookComponent(newComp);
@@ -193,13 +240,13 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         applyStationSwap(old, newStation);
 
         int previousTop = this.topPos;
-        this.leftPos = (this.width - this.imageWidth) / 2;
-        this.topPos = (this.height - this.imageHeight) / 2;
+        this.topPos = panelTop(this.height, this.imageHeight);
         updateStationButtonPositions();
         if (frameWork != null) {
             frameWork.resizePageRows(menu.getVisibleRows());
             frameWork.move(0, this.topPos - previousTop);
         }
+        requestRelayoutIfMoved();
     }
 
     private void updateStationButtonPositions() {
@@ -207,13 +254,15 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
                 || stonecutterButton == null || grindstoneButton == null || smithingButton == null || brewingButton == null) return;
         int rightEdge = this.leftPos + this.imageWidth - 8;
         // Row 1 (y = topPos - 22): crafting, furnace, smoker, blast furnace
-        int row1Y = this.topPos - 22;
+        // Never above the window edge (e.g. window shrunk while the menu is open): overlap the
+        // panel's top margin rather than becoming unclickable.
+        int row1Y = Math.max(this.topPos - 22, 24);
         blastFurnaceButton.setX(rightEdge - 22);       blastFurnaceButton.setY(row1Y);
         smokerButton.setX(rightEdge - 22 - 24);        smokerButton.setY(row1Y);
         furnaceButton.setX(rightEdge - 22 - 48);       furnaceButton.setY(row1Y);
         craftingButton.setX(rightEdge - 22 - 72);      craftingButton.setY(row1Y);
         // Row 2 (y = topPos - 44): stonecutter, grindstone, smithing, brewing
-        int row2Y = this.topPos - 44;
+        int row2Y = row1Y - 22;
         brewingButton.setX(rightEdge - 22);            brewingButton.setY(row2Y);
         smithingButton.setX(rightEdge - 22 - 24);      smithingButton.setY(row2Y);
         grindstoneButton.setX(rightEdge - 22 - 48);    grindstoneButton.setY(row2Y);
@@ -402,11 +451,13 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
 
     @Override
     public boolean keyPressed(KeyEvent p_445387_) {
+        // Framework first: a focused search box must swallow the inventory key and hotbar/drop keys.
+        if (frameWork.keyPressed(p_445387_)) return true;
         if (this.minecraft != null && this.minecraft.options.keyInventory.matches(p_445387_)) {
             this.onClose();
             return true;
         }
-        return frameWork.keyPressed(p_445387_) || super.keyPressed(p_445387_);
+        return super.keyPressed(p_445387_);
     }
 
     @Override

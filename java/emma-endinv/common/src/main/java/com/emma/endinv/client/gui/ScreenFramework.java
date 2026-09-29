@@ -104,7 +104,7 @@ public class ScreenFramework implements PageManager, GuiEventListener {
         this.imageWidth = screen.getXSize();
         this.imageHeight = screen.getYSize();
         //row and columns affects the structure
-        EIMConfig.Param param = ClientConfigs.EIM_CONFIG.get().adjust();
+        EIMConfig.Param param = ClientConfigs.EIM_CONFIG.get().adjust().at(leftPos, topPos);
         this.rows = param.rows();//row and columns affects the structure
         this.columns = param.columns();
         //renderer may need structure and widget data --here YES: needs row/col/left/top...
@@ -223,6 +223,10 @@ public class ScreenFramework implements PageManager, GuiEventListener {
         this.sortTypeSwitchBox = new SortTypeSwitchBox(this,  sortBoxParam);
 
         this.searchBox.setValue(searching());
+        // Filter live while typing (the widget pipeline edits the box; nothing else read it back).
+        this.searchBox.setResponder(value -> {
+            if (!value.equals(searching)) refreshSearchResults();
+        });
 
         if (pageBarCount < getPages().size()) {
             Button up = Button.builder(Component.literal("^"), btn -> {
@@ -543,6 +547,13 @@ public class ScreenFramework implements PageManager, GuiEventListener {
         int modifiers = event.modifiers();
         this.ignoreTextInput = false;
 
+        // While the search box has focus it owns the keyboard (like the anvil name box):
+        // otherwise E closes the screen, A stars, Q drops and 1-9/F swap items mid-typing.
+        if (searchBox != null && searchBox.isVisible() && searchBox.canConsumeInput()) {
+            if (searchBox.keyPressed(event)) return true;
+            return keyCode != InputConstants.KEY_ESCAPE;
+        }
+
         if (inputHandler.isActiveAndMatches(KeyMappings.STAR_ITEM, event)) {
             Slot clicked = findSlot(roughMouseX, roughMouseY);
             if (clicked != null && clicked.hasItem()) {
@@ -601,6 +612,11 @@ public class ScreenFramework implements PageManager, GuiEventListener {
     public int getPageY() {
         // Combine the static anchor and the debug offset for consistent hit tests.
         return pageY;
+    }
+
+    /** Leftmost x of the framework: the page tabs stick out left of the panel. */
+    public int getLeftEdge() {
+        return Math.min(leftPos, pageSwitchBar.getX());
     }
 
     public void move(int deltaX, int deltaY) {
