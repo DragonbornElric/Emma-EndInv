@@ -124,21 +124,21 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         }
 
         craftingButton = new StationIconButton(0, 0, new ItemStack(Items.CRAFTING_TABLE), Station.CRAFTING,
-                Component.translatable("endless_inventory.button.crafting_table"));
+                Component.translatable("emma_endinv.button.crafting_table"));
         furnaceButton = new StationIconButton(0, 0, new ItemStack(Items.FURNACE), Station.FURNACE,
-                Component.translatable("endless_inventory.button.furnace"));
+                Component.translatable("emma_endinv.button.furnace"));
         smokerButton = new StationIconButton(0, 0, new ItemStack(Items.SMOKER), Station.SMOKER,
-                Component.translatable("endless_inventory.button.smoker"));
+                Component.translatable("emma_endinv.button.smoker"));
         blastFurnaceButton = new StationIconButton(0, 0, new ItemStack(Items.BLAST_FURNACE), Station.BLAST_FURNACE,
-                Component.translatable("endless_inventory.button.blast_furnace"));
+                Component.translatable("emma_endinv.button.blast_furnace"));
         stonecutterButton = new StationIconButton(0, 0, new ItemStack(Items.STONECUTTER), Station.STONECUTTER,
-                Component.translatable("endless_inventory.button.stonecutter"));
+                Component.translatable("emma_endinv.button.stonecutter"));
         grindstoneButton = new StationIconButton(0, 0, new ItemStack(Items.GRINDSTONE), Station.GRINDSTONE,
-                Component.translatable("endless_inventory.button.grindstone"));
+                Component.translatable("emma_endinv.button.grindstone"));
         smithingButton = new StationIconButton(0, 0, new ItemStack(Items.SMITHING_TABLE), Station.SMITHING,
-                Component.translatable("endless_inventory.button.smithing_table"));
+                Component.translatable("emma_endinv.button.smithing_table"));
         brewingButton = new StationIconButton(0, 0, new ItemStack(Items.BREWING_STAND), Station.BREWING,
-                Component.translatable("endless_inventory.button.brewing_stand"));
+                Component.translatable("emma_endinv.button.brewing_stand"));
         addRenderableWidget(craftingButton);
         addRenderableWidget(furnaceButton);
         addRenderableWidget(smokerButton);

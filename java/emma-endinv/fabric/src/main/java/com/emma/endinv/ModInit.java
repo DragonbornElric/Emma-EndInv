@@ -35,7 +35,7 @@ import java.util.function.Supplier;
 public class ModInit extends AbstractModInitializer implements ModInitializer {
 
     public static final AttachmentType<UUID> ENDINV_UUID = AttachmentRegistry.create(
-            withModLocation("endinv_uuid"),
+            Identifier.fromNamespaceAndPath(ModInfo.LEGACY_ID, "endinv_uuid"), // saved in player data: legacy id kept
             builder -> builder
                     .initializer(UUID::randomUUID)
                     .persistent(UUIDUtil.CODEC)
@@ -46,7 +46,7 @@ public class ModInit extends AbstractModInitializer implements ModInitializer {
                     )
     );
     public static final AttachmentType<SyncedConfig> SYNCED_CONFIG = AttachmentRegistry.create(
-            withModLocation("synced_config"),
+            Identifier.fromNamespaceAndPath(ModInfo.LEGACY_ID, "synced_config"), // saved in player data: legacy id kept
             builder -> builder
                     .initializer(()-> SyncedConfig.DEFAULT)
                     .persistent(SyncedConfig.CODEC)
@@ -91,7 +91,7 @@ public class ModInit extends AbstractModInitializer implements ModInitializer {
 
     @Override
     protected void loadServerConfig() {
-        new JsonConfigurationHandler(ILoaderProvider.get().getConfigDir().resolve("endless_inventory-server.json"), ServerConfigs.getConfigs())
+        new JsonConfigurationHandler(com.emma.endinv.options.config.ConfigFiles.resolve(ILoaderProvider.get().getConfigDir(), "server.json"), ServerConfigs.getConfigs())
                 .load();
     }
 
@@ -103,6 +103,8 @@ public class ModInit extends AbstractModInitializer implements ModInitializer {
                 Identifier location = withModLocation(id);
                 R item = supplier.get();
                 R registered = net.minecraft.core.Registry.register(BuiltInRegistries.ITEM, location, item);
+                // Stacks saved under the upstream id (endless_inventory:<id>) load as this item.
+                BuiltInRegistries.ITEM.addAlias(Identifier.fromNamespaceAndPath(ModInfo.LEGACY_ID, id), location);
                 return () -> registered;
             }
         };

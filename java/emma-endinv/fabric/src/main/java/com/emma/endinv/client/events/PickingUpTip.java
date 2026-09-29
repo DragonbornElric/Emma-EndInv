@@ -9,7 +9,7 @@ import net.minecraft.resources.Identifier;
 
 public final class PickingUpTip {
 
-    private static final Identifier HUD_ID = Identifier.fromNamespaceAndPath("endless_inventory", "picking_up_tip");
+    private static final Identifier HUD_ID = Identifier.fromNamespaceAndPath("emma_endinv", "picking_up_tip");
 
     private PickingUpTip() {
     }

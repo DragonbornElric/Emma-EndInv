@@ -25,7 +25,7 @@ Emma-EndInv is the Emma fork of Endless Inventory for Minecraft 26.1.2. It build
 
 | Server type | Install on the server | Each player installs |
 |---|---|---|
-| **Folia or Paper** | the plugin jar (`endless_inventory-folia-…jar`) in `plugins/` | Fabric Loader + Fabric API + the Fabric jar, **or** NeoForge + the NeoForge jar |
+| **Folia or Paper** | the plugin jar (`emma_endinv-folia-…jar`) in `plugins/` | Fabric Loader + Fabric API + the Fabric jar, **or** NeoForge + the NeoForge jar |
 | **Fabric** dedicated server | Fabric Loader + Fabric API + the **same Fabric jar** in `mods/` | Fabric Loader + Fabric API + the Fabric jar |
 | **NeoForge** dedicated server | NeoForge + the **same NeoForge jar** in `mods/` | NeoForge + the NeoForge jar |
 | **Single player / LAN** | nothing (the client runs the server) | Fabric or NeoForge client with the mod |
@@ -127,7 +127,7 @@ stations, storage tracking, commands) works on every server target.
 
 ### Configuration
 
-Server settings are in `config/endless_inventory-server.json` (on Folia, in the plugin's data
+Server settings are in `config/emma_endinv-server.json` (on Folia, in the plugin's data
 folder):
 
 | Key | Default | Meaning |
@@ -143,7 +143,7 @@ folder):
 | `Admins` | `[]` | Admin names/UUIDs; empty means operators with permission level 4 |
 
 Client settings (panel layout, hidden pages, texture) are in
-`config/endless_inventory-client.json` and in the in-game settings screen.
+`config/emma_endinv-client.json` and in the in-game settings screen.
 
 ## Repository Layout
 
@@ -180,9 +180,9 @@ cd java/emma-endinv
 Output jars:
 
 ```text
-java/emma-endinv/fabric/build/libs/endless_inventory-fabric-<mc_version>*.jar
-java/emma-endinv/neoforge/build/libs/endless_inventory-neoforge-<mc_version>*.jar
-java/emma-endinv/folia/build/libs/endless_inventory-folia-<folia_version>*.jar
+java/emma-endinv/fabric/build/libs/emma_endinv-fabric-<mc_version>*.jar
+java/emma-endinv/neoforge/build/libs/emma_endinv-neoforge-<mc_version>*.jar
+java/emma-endinv/folia/build/libs/emma_endinv-folia-<folia_version>*.jar
 ```
 
 ## Which jar goes where
@@ -196,7 +196,7 @@ java/emma-endinv/folia/build/libs/endless_inventory-folia-<folia_version>*.jar
 
 The Fabric jar is a client **and** server mod. Verified 2026-09-29 on a Fabric 26.1.2
 dedicated server (Fabric Loader 0.19.2, Fabric API 0.155.3): the server loads
-`endless_inventory 1.3.0`, a Fabric client with the same jar joins,
+`endless_inventory 1.3.0` (the mod id before 1.4), a Fabric client with the same jar joins,
 and Emma's bridge reports `endinv_available: true` and moves a chest's contents into her
 EndInv (`@loot`). The rail lab in EmmaMinecraft261 (`tools/rail_lab/`) runs this setup.
 
@@ -330,6 +330,20 @@ Each of these writes a snapshot of the source inventory first, to `<world>/endin
 Restoring adds items and does not overwrite. If you restore the snapshot taken before a **Take all** or **Move all**, the moved items end up in both places.
 
 **Folia persistence:** Folia's autosave does not write mod saved data. The plugin writes EndInv data itself every 60 seconds when something has changed, and again on shutdown.
+
+## Upgrading from 1.3 (mod id change)
+
+From 1.4.0 the mod id is **`emma_endinv`** (before: `endless_inventory`, the original mod's id).
+- **Jar names** change to `emma_endinv-…jar`. Delete the old `endless_inventory-…jar` from
+  `mods/` or `plugins/` so the mod isn't loaded twice.
+- **Update the server and every client together:** 1.3 and 1.4 can't talk to each other.
+- **Your data carries over:**
+  - EndInvs, shared-inventory choices, snapshots and the storage index are saved under the same
+    keys as before.
+  - Config files are renamed (`endless_inventory-server.json` becomes `emma_endinv-server.json`)
+    on first start, and the old file is kept as `.migrated`.
+  - Items saved as `endless_inventory:…` load as `emma_endinv:…`.
+  - Existing Storage Tags keep working and still stack with new ones.
 
 ## Credits and License
 
