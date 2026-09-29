@@ -52,7 +52,7 @@ java/emma-endinv/folia/build/libs/endless_inventory-folia-<folia_version>*.jar
 |---|---|---|
 | Folia / Paper (production) | Folia plugin in `plugins/` | Fabric or NeoForge jar |
 | Fabric dedicated server | **the same Fabric jar** in `mods/` (+ Fabric API) | Fabric jar |
-| NeoForge dedicated server | the NeoForge jar in `mods/` | NeoForge jar |
+| NeoForge dedicated server | the NeoForge jar in `mods/` (built as a client/server mod; not yet tested on a dedicated server) | NeoForge jar |
 | Single player | nothing extra (the client jar runs the integrated server) | Fabric or NeoForge jar |
 
 The Fabric jar is a client **and** server mod. Verified 2026-09-29 on a Fabric 26.1.2
