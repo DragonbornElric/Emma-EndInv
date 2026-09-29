@@ -24,9 +24,20 @@ FABRIC_MODS_DIR="C:/Users/Owner/Fabric Mods"
 EMMABRAIN_HOST="emmabrain"
 EMMABRAIN_MODS="/home/emmabrain/.var/app/org.prismlauncher.PrismLauncher/data/PrismLauncher/instances/EmmaAI/minecraft/mods"
 
+# The local instances, emmabrain and the default drop folders run this Minecraft version.
+# Builds of other versions (the mc-26.2 / mc-26.3 branches) are only staged in dist/,
+# unless a --*-mods-dir is given explicitly.
+LOCAL_MC_VERSION="26.1.2"
+AUTO_DEPLOY=1
+[[ "$MC_VERSION" != "$LOCAL_MC_VERSION" ]] && AUTO_DEPLOY=0
+
 FABRIC_MODS_DIRS=()
-NEOFORGE_MODS_DIRS=("C:/Users/Owner/Neoforge Mods")
-FOLIA_MODS_DIRS=("C:/Users/Owner/Paper Plugins")
+NEOFORGE_MODS_DIRS=()
+FOLIA_MODS_DIRS=()
+if [[ $AUTO_DEPLOY -eq 1 ]]; then
+    NEOFORGE_MODS_DIRS=("C:/Users/Owner/Neoforge Mods")
+    FOLIA_MODS_DIRS=("C:/Users/Owner/Paper Plugins")
+fi
 GRADLE_ARGS=()
 
 resolve_mods_dir() {
@@ -138,6 +149,9 @@ quiet_gradle() {
     | grep -v "^$"
 }
 
+# No Folia build pinned for this Minecraft version yet (folia_version empty in gradle.properties).
+[[ -z "$FOLIA_VERSION" ]] && SKIP_FOLIA=1
+
 GRADLE_TARGETS=(:fabric:build)
 [[ $SKIP_NEOFORGE -eq 0 ]] && GRADLE_TARGETS+=(:neoforge:build)
 [[ $SKIP_FOLIA -eq 0 ]] && GRADLE_TARGETS+=(:folia:build)
@@ -165,7 +179,9 @@ if [[ $SKIP_NEOFORGE -eq 0 ]]; then
     echo "Staged NeoForge jar: $DIST_DIR/$NEOFORGE_JAR_NAME"
 fi
 
-if [[ $EMMABRAIN_ONLY -eq 0 ]]; then
+if [[ $AUTO_DEPLOY -eq 0 ]]; then
+    echo "Minecraft $MC_VERSION is not the local version ($LOCAL_MC_VERSION): jars staged in dist/ only"
+elif [[ $EMMABRAIN_ONLY -eq 0 ]]; then
     echo "=== Deploying Fabric jar to default instances ==="
 
     for named_target in \
@@ -185,7 +201,9 @@ if [[ $EMMABRAIN_ONLY -eq 0 ]]; then
 fi
 
 # Emma on emmabrain: same jar as local Emma, deployed over ssh/scp (Flatpak PrismLauncher, Linux box).
-if ssh -o ConnectTimeout=5 -o BatchMode=yes "$EMMABRAIN_HOST" "mkdir -p '$EMMABRAIN_MODS'" 2>/dev/null; then
+if [[ $AUTO_DEPLOY -eq 0 ]]; then
+    :
+elif ssh -o ConnectTimeout=5 -o BatchMode=yes "$EMMABRAIN_HOST" "mkdir -p '$EMMABRAIN_MODS'" 2>/dev/null; then
     scp "$FABRIC_JAR" "$EMMABRAIN_HOST:$EMMABRAIN_MODS/$FABRIC_JAR_NAME"
     echo "Deployed Fabric to emmabrain (EmmaAI): $EMMABRAIN_MODS"
 else

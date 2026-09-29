@@ -28,4 +28,8 @@ rootProject.name = 'emma-endinv'
 include('common')
 include('fabric')
 include('neoforge')
-include('folia')
+// Folia ships later than Minecraft: leave folia_version empty in gradle.properties when there is
+// no Folia build for this Minecraft version yet, and the folia module is left out.
+if (!providers.gradleProperty('folia_version').getOrElse('').isBlank()) {
+    include('folia')
+}
