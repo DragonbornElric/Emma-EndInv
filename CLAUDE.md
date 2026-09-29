@@ -102,7 +102,7 @@ The Folia jar is staged in `dist/` but not auto-deployed (server install paths v
 
 The Fabric jar is a client **and** server mod: it runs on a Fabric dedicated server as well
 as on the client (verified on a Fabric 26.1.2 dedicated server, 2026-09-29, with Emma's bridge
-reading and filling EndInv). Folia/Paper servers use the Folia plugin instead. The NeoForge
+reading and filling EndInv). Folia and Paper servers use the Folia plugin instead (the same jar runs on both; tested on Paper too). The NeoForge
 jar is built as a client/server mod too but has not been tested on a dedicated server yet.
 Don't describe the server side as "Folia only".
 
