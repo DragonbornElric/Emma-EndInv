@@ -25,15 +25,15 @@ the branch that matches your game and server.
 |---|---|---|---|---|
 | 26.1.2 | `main` | ✅ client + server | ✅ client + server | ✅ tested in production on Folia, also tested on Paper |
 | 26.2 | `mc-26.2` | ✅ builds, server starts | ✅ builds, server starts | 🧪 builds against Folia 26.2 (beta); not tested yet |
-| 26.3 | `mc-26.3` | ✅ builds, server starts | ✅ builds, server starts (NeoForge 26.3 is beta) | ⏳ **pending: Folia has no 26.3 release yet** |
+| 26.3 | `mc-26.3` | ✅ builds, server starts | ✅ builds, server starts (NeoForge 26.3 is beta) | ✅ Paper 26.3: builds, plugin enables · ⏳ Folia 26.3: **pending testing once Folia releases 26.3** |
 
-**Waiting for Folia 26.3?** PaperMC hasn't released Folia for 26.3 yet
-([build list](https://fill.papermc.io/v3/projects/folia)). The plugin is only built against Folia today, so there is no 26.3
-plugin for Paper either yet. A daily check
+**Folia 26.3: pending testing once released.** PaperMC hasn't released Folia for 26.3 yet
+([build list](https://fill.papermc.io/v3/projects/folia)). Until it does, the 26.3 plugin is
+built against Paper 26.3 and runs on Paper servers. It is written for Folia's threading and is
+expected to work on Folia 26.3 too, but that hasn't been tested yet. A daily check
 (`.github/workflows/folia-watch.yml`) opens an issue titled "Folia 26.3 is out: port the
-Folia plugin to 26.3" as soon as it ships. Watch this repository's issues, or open one
-yourself if you see the release first. Until then, a 26.3 server can run the Fabric or
-NeoForge jar.
+Folia plugin to 26.3" as soon as Folia 26.3 ships. Watch this repository's issues, or open one
+yourself if you see the release first.
 
 ## Features
 
