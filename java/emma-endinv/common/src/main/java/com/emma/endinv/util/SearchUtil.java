@@ -30,6 +30,9 @@ public class SearchUtil {
             return matchesTooltip(stack, term.substring(1));
         } else if (term.startsWith("@")) {
             return matchesNamespace(stack, term.substring(1));
+        } else if (term.indexOf(':') > 0) {
+            // A full id such as "minecraft:lapis_block" (what /storage find users type) matches the id.
+            return matchesId(stack, term);
         } else {
             return matchesName(stack, term); // 无前缀：只匹配 HoverName 和 ID，不匹配 Tooltip
         }

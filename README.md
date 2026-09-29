@@ -75,6 +75,7 @@ entry with a count of up to 2,147,483,647. Press **I** to open it. It is saved i
   - `#tag` matches an item tag.
   - `@mod` matches a mod namespace.
   - `*id` matches the full item id.
+  - A term with a colon, such as `minecraft:lapis_block`, also matches the full item id.
   - A term with no prefix matches the name or the id.
   - Right-click the search box to clear it.
 - **Keys:**
