@@ -109,6 +109,9 @@ public class AttachingScreen<T extends AbstractContainerMenu>{
 
         frameWork.renderBg(guiGraphics, mouseX, mouseY, partialTick);
         frameWork.render(guiGraphics, mouseX, mouseY, partialTick);
+        // The panel is drawn after the screen, so draw the stack held on the cursor again on top of it.
+        guiGraphics.nextStratum();
+        screen.extractCarriedItem(guiGraphics, mouseX, mouseY);
     }
 
 
