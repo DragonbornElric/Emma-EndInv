@@ -31,7 +31,18 @@ public class FoliaLivingDropsAdapter implements ILivingDropsEvent {
 
     @Override
     public DamageSource getSource() {
-        return ((CraftLivingEntity) event.getEntity()).getHandle().getLastDamageSource();
+        // The entity's last damage source is not reliable by the time EntityDeathEvent fires, which
+        // left player kills looking like non-player deaths (drops stayed on the ground). Use the
+        // event's own source, then the recorded killer.
+        var handle = ((CraftLivingEntity) event.getEntity()).getHandle();
+        if (event.getDamageSource() instanceof org.bukkit.craftbukkit.damage.CraftDamageSource source) {
+            DamageSource nms = source.getHandle();
+            if (nms.getEntity() != null) return nms;
+        }
+        if (event.getEntity().getKiller() instanceof org.bukkit.craftbukkit.entity.CraftPlayer killer) {
+            return handle.damageSources().playerAttack(killer.getHandle());
+        }
+        return handle.getLastDamageSource();
     }
 
     @Override
