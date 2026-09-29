@@ -16,6 +16,31 @@ Emma-EndInv is the Emma fork of Endless Inventory for Minecraft 26.1.2. It build
 > the NeoForge client with a Folia server have not been tested yet. Back up your world before
 > trying either of them.
 
+## Installation
+
+**This mod needs to be installed on both sides.** Every player runs a **Fabric** or
+**NeoForge** client with this mod in their `mods/` folder, and the server runs it too:
+
+| Server type | Install on the server | Each player installs |
+|---|---|---|
+| **Folia or Paper** | the plugin jar (`endless_inventory-folia-…jar`) in `plugins/` | Fabric Loader + Fabric API + the Fabric jar, **or** NeoForge + the NeoForge jar |
+| **Fabric** dedicated server | Fabric Loader + Fabric API + the **same Fabric jar** in `mods/` | Fabric Loader + Fabric API + the Fabric jar |
+| **NeoForge** dedicated server | NeoForge + the **same NeoForge jar** in `mods/` | NeoForge + the NeoForge jar |
+| **Single player / LAN** | nothing (the client runs the server) | Fabric or NeoForge client with the mod |
+
+- **Match the versions.** The Minecraft version, and the mod version, must be the same on
+  the server and on every client. Use the jars from the branch for your Minecraft version
+  (see [Minecraft versions](#minecraft-versions)).
+- **Match the loader on modded servers.** A Fabric server needs Fabric clients and a NeoForge
+  server needs NeoForge clients. A Folia/Paper server accepts either.
+- **Vanilla clients:** players without the mod can join a Folia/Paper server, but they don't get
+  the EndInv screen, the panel beside chests, the keys or the pickup list. They only get the
+  server-side parts and chat commands such as `/storage find` and `/autopick`. On a Fabric or
+  NeoForge server, players need the mod to join at all.
+- **Tested so far:**
+  - A Folia server with Fabric clients (production), and the plugin on Paper.
+  - The other combinations build, and their servers start, but haven't been played on yet.
+
 ## Minecraft versions
 
 Each Minecraft version has its own branch and its own set of jars. Use the jars built from
