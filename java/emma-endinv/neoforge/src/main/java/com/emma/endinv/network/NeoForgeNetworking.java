@@ -20,7 +20,9 @@ public final class NeoForgeNetworking {
     }
 
     private static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar reg = event.registrar(com.emma.endinv.ModInfo.MOD_ID);
+        // optional(): lets NeoForge clients join servers without NeoForge (the Folia/Paper plugin),
+        // where the payloads travel over the channels the plugin registers.
+        PayloadRegistrar reg = event.registrar(com.emma.endinv.ModInfo.MOD_ID).optional();
 
         // C2S
         reg.playToServer(ItemClickPayload.TYPE, ItemClickPayload.STREAM_CODEC,
@@ -71,10 +73,12 @@ public final class NeoForgeNetworking {
         reg.playBidirectional(
                 SyncedConfig.TYPE,
                 SyncedConfig.STREAM_CODEC,
-                (payload, ctx) ->
-                        ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))),
-                (payload, ctx) ->
-                        ctx.enqueueWork(() -> payload.handle(serverCtx((ServerPlayer) ctx.player()))));
+                // Pick the side from the player itself: the two-handler form ran the server
+                // handler on the client (LocalPlayer cast to ServerPlayer).
+                (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(
+                        ctx.player() instanceof ServerPlayer sp ? serverCtx(sp) : clientCtx(ctx.player()))),
+                (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(
+                        ctx.player() instanceof ServerPlayer sp ? serverCtx(sp) : clientCtx(ctx.player()))));
     }
 
     private static ModPacketContext serverCtx(ServerPlayer player) { return () -> player; }
