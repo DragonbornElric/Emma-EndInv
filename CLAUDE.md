@@ -152,6 +152,10 @@ on a dedicated server.
 | Storage tracker logic, index, payloads, `/storage` command | `common/storage/` (loader-neutral; payloads live here so the Folia build includes them) |
 | Storage tracker hooks (use-block, 1 s poll, load/save) | `fabric/event/StorageEvents.java`, `neoforge/event/NeoForgeStorageEvents.java`, `folia/FoliaStorageTracker.java` (per-chunk region polling + Bukkit recipe) |
 
+## Testing
+
+In-game test results and methodology are in `TESTING.md` (Pelican test servers for every loader and MC version; last run 2026-09-29, 1.4.1). Update it and the README "Test results" section when re-testing. Harness scripts live outside the repo (author's home lab).
+
 ## Review Guidance
 
 - Treat comments as claims, not proof. Verify behavior from the code path.
