@@ -377,6 +377,13 @@ Restoring adds items and does not overwrite. If you restore the snapshot taken b
 
 **Folia persistence:** Folia's autosave does not write mod saved data. The plugin writes EndInv data itself every 60 seconds when something has changed, and again on shutdown.
 
+## For mod developers
+
+Other mods can read a player's Endless Inventory, put items in, take items out, and use Loot All,
+slot swapping and the Storage Tracker, on Fabric, NeoForge and the Folia/Paper plugin. See
+**[docs/API.md](docs/API.md)** for the dependency setup, the full method list and examples
+(including how Emma's AI bridge uses it).
+
 ## Upgrading from 1.3 (mod id change)
 
 From 1.4.0 the mod id is **`emma_endinv`** (before: `endless_inventory`, the original mod's id).
