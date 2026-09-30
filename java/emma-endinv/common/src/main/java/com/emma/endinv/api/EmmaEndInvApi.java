@@ -28,6 +28,25 @@ public final class EmmaEndInvApi {
         return SwapMenuSlotAction.swapWithMenuSlot(key, menuSlotIndex);
     }
 
+    /** How many of {@code like} (item + components, count ignored) the client's copy of the player's
+     *  EndInv holds. The copy is synced from the server; it's empty until the player joins a server
+     *  that has EndInv. Client thread only. */
+    public static int count(net.minecraft.world.item.ItemStack like) {
+        if (like.isEmpty()) return 0;
+        var state = com.emma.endinv.client.CachedSrcInv.INSTANCE.getItemMap().get(ItemKey.asKey(like));
+        return state == null ? 0 : Math.max(0, state.count());
+    }
+
+    /** A copy of the client's view of the player's EndInv: each key is a 1-count stack (one per item
+     *  type, with its components), each value the stored count. Client thread only. */
+    public static java.util.Map<net.minecraft.world.item.ItemStack, Integer> contents() {
+        java.util.Map<net.minecraft.world.item.ItemStack, Integer> out = new java.util.LinkedHashMap<>();
+        com.emma.endinv.client.CachedSrcInv.INSTANCE.getItemMap().forEach((key, state) -> {
+            if (state != null && state.count() > 0) out.put(key.toStack(1), state.count());
+        });
+        return out;
+    }
+
     /** Ask the server for the storage index (every container tagged with a Storage Tag and its contents).
      *  The reply arrives asynchronously; read it with {@link #getStorageIndex()}. Client thread only. */
     public static void requestStorageIndex() {
