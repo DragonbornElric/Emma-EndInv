@@ -107,6 +107,17 @@ Tested in-game on Folia and Paper servers before every release: [TESTING.md](htt
 A fork of Endless Inventory by Kay Zhang (kwwsyk). MIT licensed. Source and issues: [GitHub](https://github.com/DragonbornElric/Emma-EndInv). Built live on stream: [twitch.tv/Elric_Heart](https://www.twitch.tv/Elric_Heart)
 ```
 
+## Changelog for 1.4.4 (per file)
+
+```markdown
+Added:
+- Public API for other mods: `EmmaEndInvServerApi` (Fabric, NeoForge, Folia/Paper: count, insert, extract, contents) and client-side `EmmaEndInvApi.count` / `contents`. See docs/API.md on GitHub
+
+Fixed (auto-pickup):
+- A full stack of an item no longer keeps more of that item out of Endless Inventory: with a full inventory, given or dropped items now go to EndInv instead of staying on the ground
+- Folia/Paper plugin: items are picked into EndInv even when the inventory has no room for them
+```
+
 ## Changelog for 1.4.3 (per file)
 
 ```markdown
