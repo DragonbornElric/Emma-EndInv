@@ -67,6 +67,18 @@ public class FoliaEventListeners implements Listener {
         AutoPickHelper.onPickupItem(new FoliaPickupItemAdapter(event));
     }
 
+    /**
+     * Inventory with no room for the item: Paper calls EntityPickupItemEvent only when
+     * {@code Inventory.canHold > 0} (ItemEntity.playerTouch), so EndInv never saw it and the item
+     * lay on the ground. PlayerAttemptPickupItemEvent is fired on every touch; act on it only when
+     * nothing fits (otherwise onItemPickup above handles it).
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onItemPickupAttempt(org.bukkit.event.player.PlayerAttemptPickupItemEvent event) {
+        if (event.getRemaining() < event.getItem().getItemStack().getAmount()) return;
+        AutoPickHelper.onPickupItem(new FoliaPickupItemAdapter(event));
+    }
+
     // ── Player lifecycle ─────────────────────────────────────────────────────
 
     @EventHandler(priority = EventPriority.MONITOR)
