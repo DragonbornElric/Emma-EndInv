@@ -227,8 +227,16 @@ public final class AutoPickHelper {
         }
     }
 
+    /**
+     * A carried stack of the same item with room left. A full stack doesn't count: with every
+     * cobblestone stack at 64 and the inventory full, dropped cobblestone stayed for the vanilla
+     * pickup, which couldn't take it, and lay on the ground for good (Emma, 1,577 cobblestone).
+     */
     private static boolean canMerge(Player player, ItemStack stack){
-        return player.inventoryMenu.slots.stream().anyMatch(slot -> ItemStack.isSameItemSameComponents(slot.getItem(), stack));
+        return player.inventoryMenu.slots.stream().anyMatch(slot -> {
+            ItemStack carried = slot.getItem();
+            return ItemStack.isSameItemSameComponents(carried, stack) && carried.getCount() < carried.getMaxStackSize();
+        });
     }
 
     private static boolean hasSuch(Player player, Item item){
