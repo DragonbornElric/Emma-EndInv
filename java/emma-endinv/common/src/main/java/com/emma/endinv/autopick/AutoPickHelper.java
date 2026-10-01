@@ -264,9 +264,27 @@ public final class AutoPickHelper {
         return c.slot();
     }
 
-    //copied from ExperienceOrb.java
-    private static int repairPlayerItems(Player player, int repairAmount) {
-        // Simplified for 1.21.x: defer repairing via Mending to vanilla mechanics
-        return repairAmount;
+    /**
+     * Mending first, as a vanilla orb does (ExperienceOrb.repairPlayerItems, 26.1): a random
+     * damaged item with Mending is repaired, again until the XP or the damage runs out; returns
+     * the XP left for the player's levels. Auto-picked XP never becomes an orb, so without this
+     * Mending gear was never repaired from mining or kills. Server setting AutoPickMendingFirst.
+     */
+    public static int repairPlayerItems(Player player, int amount) {
+        if (!ServerConfigs.AUTOPICK_MENDING_FIRST.get()) return amount;
+        var selected = net.minecraft.world.item.enchantment.EnchantmentHelper.getRandomItemWith(
+                net.minecraft.world.item.enchantment.EnchantmentEffectComponents.REPAIR_WITH_XP,
+                player, ItemStack::isDamaged);
+        if (selected.isEmpty()) return amount;
+        ItemStack itemStack = selected.get().itemStack();
+        int toRepairFromXpAmount = net.minecraft.world.item.enchantment.EnchantmentHelper
+                .modifyDurabilityToRepairFromXp((ServerLevel) player.level(), itemStack, amount);
+        int repair = Math.min(toRepairFromXpAmount, itemStack.getDamageValue());
+        itemStack.setDamageValue(itemStack.getDamageValue() - repair);
+        if (repair > 0) {
+            int remaining = amount - repair * amount / toRepairFromXpAmount;
+            if (remaining > 0) return repairPlayerItems(player, remaining);
+        }
+        return 0;
     }
 }

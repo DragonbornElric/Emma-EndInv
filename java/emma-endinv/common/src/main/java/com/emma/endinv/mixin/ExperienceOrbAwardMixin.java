@@ -22,13 +22,9 @@ public abstract class ExperienceOrbAwardMixin {
         ServerPlayer target = MobDeathRedirect.get();
         if (target == null) return;
 
-        int repaired = eiRepairPlayerItems(target, amount);
-        target.giveExperiencePoints(repaired);
+        // Mending first, then levels (as the orb would have done).
+        int left = com.emma.endinv.autopick.AutoPickHelper.repairPlayerItems(target, amount);
+        if (left > 0) target.giveExperiencePoints(left);
         ci.cancel();
-    }
-
-    // Use a unique name to avoid clashing with ExperienceOrb's own methods.
-    private static int eiRepairPlayerItems(ServerPlayer player, int value) {
-        return value;
     }
 }
