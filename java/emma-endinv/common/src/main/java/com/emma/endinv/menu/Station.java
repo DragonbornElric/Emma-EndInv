@@ -53,6 +53,14 @@ public enum Station {
      * The block item that unlocks this station when stations are not free
      * ({@code FreeCraftingStations = false}); null for {@link #NONE}.
      */
+    /** The station whose {@link #unlockItem()} is {@code item}, or null. */
+    public static @Nullable Station forUnlockItem(Item item) {
+        for (Station st : values()) {
+            if (st.unlockItem() == item) return st;
+        }
+        return null;
+    }
+
     public @Nullable Item unlockItem() {
         return switch (this) {
             case NONE -> null;

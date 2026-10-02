@@ -25,6 +25,7 @@ public final class FabricNetworking {
         c2s.register(BulkQuickMoveFromPagePayload.TYPE, BulkQuickMoveFromPagePayload.STREAM_CODEC);
         c2s.register(StarItemPayload.TYPE, StarItemPayload.STREAM_CODEC);
         c2s.register(SetActiveStationPayload.TYPE, SetActiveStationPayload.STREAM_CODEC);
+        c2s.register(com.emma.endinv.network.payloads.toServer.UnlockStationPayload.TYPE, com.emma.endinv.network.payloads.toServer.UnlockStationPayload.STREAM_CODEC);
         c2s.register(SyncedConfig.TYPE, SyncedConfig.STREAM_CODEC);
         c2s.register(SwapMenuSlotPayload.TYPE, SwapMenuSlotPayload.STREAM_CODEC);
         c2s.register(ManageEndInvPayload.TYPE, ManageEndInvPayload.STREAM_CODEC);

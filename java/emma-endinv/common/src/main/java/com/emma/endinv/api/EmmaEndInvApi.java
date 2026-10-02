@@ -47,6 +47,41 @@ public final class EmmaEndInvApi {
         return out;
     }
 
+    /**
+     * Put one station block (crafting table, furnace, smoker, blast furnace, stonecutter, grindstone,
+     * smithing table or brewing stand) into its EndInv station to unlock it, as a player does by
+     * clicking the locked button holding it. The block is taken from the player's inventory, or from
+     * EndInv when the inventory has none. Needs no open screen. The server does nothing when stations
+     * are free, the station is already unlocked, or the player has no such block, so it is safe to
+     * call again. Client thread only.
+     * @return true if the request was sent ({@code block} is a station block)
+     * @since 1.4.5
+     */
+    public static boolean unlockStation(net.minecraft.world.item.Item block) {
+        com.emma.endinv.menu.Station st = com.emma.endinv.menu.Station.forUnlockItem(block);
+        if (st == null) return false;
+        com.emma.endinv.ModInfo.getPacketDistributor().sendToServer(
+                new com.emma.endinv.network.payloads.toServer.UnlockStationPayload(st));
+        return true;
+    }
+
+    /**
+     * Whether the station that {@code block} unlocks can be used: TRUE or FALSE as of the open EndInv
+     * screen, or the last one that was open; null when no EndInv screen has been opened yet (or
+     * {@code block} is not a station block). Stations are all TRUE when the server has them free.
+     * Client thread only.
+     * @since 1.4.5
+     */
+    public static Boolean isStationUnlocked(net.minecraft.world.item.Item block) {
+        com.emma.endinv.menu.Station st = com.emma.endinv.menu.Station.forUnlockItem(block);
+        if (st == null) return null;
+        var mc = net.minecraft.client.Minecraft.getInstance();
+        int mask = mc.player != null && mc.player.containerMenu instanceof com.emma.endinv.menu.EndlessInventoryMenu menu
+                ? menu.getStationUnlockMask()
+                : com.emma.endinv.menu.StationUnlocks.lastSeenClientMask;
+        return mask < 0 ? null : com.emma.endinv.menu.StationUnlocks.isUnlocked(mask, st);
+    }
+
     /** Ask the server for the storage index (every container tagged with a Storage Tag and its contents).
      *  The reply arrives asynchronously; read it with {@link #getStorageIndex()}. Client thread only. */
     public static void requestStorageIndex() {

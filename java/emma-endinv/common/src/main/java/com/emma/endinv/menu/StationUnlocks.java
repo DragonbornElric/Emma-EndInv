@@ -3,6 +3,8 @@ package com.emma.endinv.menu;
 import com.emma.endinv.EndlessInventory;
 import com.emma.endinv.SourceInventory;
 import com.emma.endinv.options.ServerConfigs;
+import com.emma.endinv.util.ItemKey;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
@@ -25,6 +27,9 @@ public final class StationUnlocks {
 
     /** Every station unlocked. Also the client's value before the server's first sync. */
     public static final int ALL = allMask();
+
+    /** Client side: the mask last seen on an open EndInv screen, or -1 before one was opened. */
+    public static volatile int lastSeenClientMask = -1;
 
     private StationUnlocks() {}
 
@@ -80,5 +85,34 @@ public final class StationUnlocks {
         }
         endInv.unlockStation(st);
         return true;
+    }
+
+    /**
+     * Server side, for the API and bots: unlock {@code st} with one of its blocks taken from the
+     * player's inventory, or from EndInv when the inventory has none. Needs no open screen.
+     * @return true when the station was unlocked (one block used up)
+     */
+    public static boolean tryUnlockFromStorage(Player player, @Nullable SourceInventory source, Station st) {
+        if (free() || !(source instanceof EndlessInventory endInv) || endInv.isStationUnlocked(st)) return false;
+        Item needed = st.unlockItem();
+        if (needed == null) return false;
+        if (!player.hasInfiniteMaterials() && !takeOne(player.getInventory(), needed)) {
+            ItemKey key = ItemKey.asKey(new ItemStack(needed));
+            if (!endInv.getItemMap().containsKey(key) || endInv.takeItem(key, 1).isEmpty()) return false;
+        }
+        endInv.unlockStation(st);
+        return true;
+    }
+
+    private static boolean takeOne(Inventory inv, Item item) {
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty() && stack.is(item)) {
+                stack.shrink(1);
+                inv.setChanged();
+                return true;
+            }
+        }
+        return false;
     }
 }

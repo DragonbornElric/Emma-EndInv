@@ -95,10 +95,56 @@ public class StationUnlockClientGameTest implements FabricClientGameTest {
             ctx.waitTicks(5);
             check(unlocked(ctx, Station.FURNACE), "furnace stays unlocked after reopening");
             check(!unlocked(ctx, Station.SMOKER), "smoker still locked after reopening");
+            ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
+            ctx.waitTicks(5);
+
+            // A running furnace shows a flame and a progress bar on its button.
+            sp.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().get(0);
+                com.emma.endinv.ServerLevelEndInv.getEndInvForPlayer(player).orElseThrow().setCookingState(Station.FURNACE,
+                        new com.emma.endinv.menu.FurnaceState(new net.minecraft.world.item.ItemStack(Items.RAW_IRON, 8),
+                                new net.minecraft.world.item.ItemStack(Items.COAL, 4), net.minecraft.world.item.ItemStack.EMPTY,
+                                1200, 1600, 100, 200));
+            });
+            ctx.waitTicks(2);
+            ctx.getInput().pressKey(GLFW.GLFW_KEY_I);
+            ctx.waitForScreen(EndlessInventoryScreen.class);
+            ctx.waitTicks(10);
+            check(ctx.computeOnClient(mc -> menu(mc).isCookingLit(Station.FURNACE)), "furnace lit while closed");
+            check(ctx.computeOnClient(mc -> menu(mc).getCookProgress(Station.FURNACE) > 0f), "furnace cook progress synced");
+            screenshot(ctx, "stations-4-furnace-running");
+            ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
+            ctx.waitTicks(5);
+
+            // API, no screen open: smoker from the inventory, blast furnace from EndInv.
+            sp.getServer().runCommand("give @a minecraft:smoker 1");
+            sp.getServer().runOnServer(server -> com.emma.endinv.api.EmmaEndInvServerApi.insert(
+                    server.getPlayerList().getPlayers().get(0), new net.minecraft.world.item.ItemStack(Items.BLAST_FURNACE, 3)));
+            ctx.waitTicks(10);
+            check(ctx.computeOnClient(mc -> com.emma.endinv.api.EmmaEndInvApi.unlockStation(Items.SMOKER)), "API sends smoker unlock");
+            check(ctx.computeOnClient(mc -> com.emma.endinv.api.EmmaEndInvApi.unlockStation(Items.BLAST_FURNACE)), "API sends blast furnace unlock");
+            check(!ctx.computeOnClient(mc -> com.emma.endinv.api.EmmaEndInvApi.unlockStation(Items.DIRT)), "API refuses a non-station block");
+            ctx.waitTicks(10);
+            check(sp.getServer().computeOnServer(server -> com.emma.endinv.api.EmmaEndInvServerApi.isStationUnlocked(
+                    server.getPlayerList().getPlayers().get(0), Items.SMOKER)), "API unlocked the smoker");
+            check(sp.getServer().computeOnServer(server -> com.emma.endinv.api.EmmaEndInvServerApi.isStationUnlocked(
+                    server.getPlayerList().getPlayers().get(0), Items.BLAST_FURNACE)), "API unlocked the blast furnace from EndInv");
+            check(sp.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).getInventory().countItem(Items.SMOKER)) == 0,
+                    "smoker taken from the inventory");
+            check(sp.getServer().computeOnServer(server -> com.emma.endinv.api.EmmaEndInvServerApi.count(
+                    server.getPlayerList().getPlayers().get(0), new net.minecraft.world.item.ItemStack(Items.BLAST_FURNACE))) == 2,
+                    "one blast furnace taken from EndInv");
+            check(!sp.getServer().computeOnServer(server -> com.emma.endinv.api.EmmaEndInvServerApi.unlockStation(
+                    server.getPlayerList().getPlayers().get(0), Items.GRINDSTONE)), "server API: no grindstone, no unlock");
+            ctx.getInput().pressKey(GLFW.GLFW_KEY_I);
+            ctx.waitForScreen(EndlessInventoryScreen.class);
+            ctx.waitTicks(5);
+            check(Boolean.TRUE.equals(ctx.computeOnClient(mc -> com.emma.endinv.api.EmmaEndInvApi.isStationUnlocked(Items.SMOKER))), "client API sees the smoker unlocked");
+            check(Boolean.FALSE.equals(ctx.computeOnClient(mc -> com.emma.endinv.api.EmmaEndInvApi.isStationUnlocked(Items.GRINDSTONE))), "client API sees the grindstone locked");
 
             sp.getServer().runCommand("endinv config freeStations true");
             ctx.waitTicks(10);
-            check(unlocked(ctx, Station.SMOKER), "freeStations true unlocks every station again");
+            check(unlocked(ctx, Station.GRINDSTONE), "freeStations true unlocks every station again");
 
             ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
             ctx.waitTicks(5);

@@ -146,6 +146,7 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         // The book can also open or close itself (a recipe click on a narrow screen, the book state
         // syncing in tick()); the panel and the recipe book button follow it here.
         requestRelayoutIfMoved();
+        StationUnlocks.lastSeenClientMask = menu.getStationUnlockMask();
         // The server closes a station that became locked (FreeCraftingStations turned off); follow it.
         if (activeStation != Station.NONE && !menu.isStationUnlocked(activeStation)) {
             setActiveStation(activeStation);
@@ -586,6 +587,44 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
                 graphics.fill(this.getX() + 3, this.getY() + 3, this.getX() + 19, this.getY() + 19, 0x80FFFFFF);
             } else {
                 graphics.item(icon, this.getX() + 3, this.getY() + 3, 0);
+                extractRunningEffects(graphics);
+            }
+        }
+
+        /**
+         * While a furnace, smoker, blast furnace or brewing stand works (open or in the background):
+         * a flickering flame in the corner and a progress bar along the bottom of its button.
+         */
+        private void extractRunningEffects(GuiGraphicsExtractor graphics) {
+            EndlessInventoryMenu m = EndlessInventoryScreen.this.menu;
+            float progress;
+            int barColor;
+            boolean lit;
+            if (station.isCooking()) {
+                lit = m.isCookingLit(station);
+                progress = m.getCookProgress(station);
+                barColor = 0xFFFFFFFF;
+            } else if (station == Station.BREWING) {
+                float left = m.getBrewingProgress();
+                lit = false;
+                progress = left > 0f ? 1f - left : 0f;
+                barColor = 0xFFC86EFF;
+            } else {
+                return;
+            }
+            if (!lit && progress <= 0f) return;
+            graphics.nextStratum();
+            int x = this.getX();
+            int y = this.getY();
+            if (lit) {
+                // Flame flickers between two sizes, like a lit furnace's fire.
+                long t = net.minecraft.util.Util.getMillis() / 150;
+                int size = (t % 3 == 0) ? 7 : 8;
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, LIT_PROGRESS_SPRITE, x + 13 + (8 - size), y + 11 + (8 - size), size, size);
+            }
+            if (progress > 0f) {
+                graphics.fill(x + 3, y + 18, x + 19, y + 20, 0xFF373737);
+                graphics.fill(x + 3, y + 18, x + 3 + Math.max(1, Math.round(16 * progress)), y + 19, barColor);
             }
         }
 

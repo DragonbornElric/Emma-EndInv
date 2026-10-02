@@ -519,6 +519,11 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         if (!isStationUnlocked(activeStation)) setActiveStation(Station.NONE);
     }
 
+    /** Client side: the synced mask of unlocked stations ({@link StationUnlocks}). */
+    public int getStationUnlockMask() {
+        return stationUnlockMask.get();
+    }
+
     public boolean isStationUnlocked(Station st) {
         if (player instanceof ServerPlayer) return StationUnlocks.isUnlocked(StationUnlocks.mask(sourceInventory), st);
         return StationUnlocks.isUnlocked(stationUnlockMask.get(), st);
@@ -674,6 +679,19 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         DataSlot[] ds = cookingDataSlots.get(activeStation);
         int duration = ds[1].get();
         return duration == 0 ? 0f : ds[0].get() / (float) duration;
+    }
+
+    /** Whether {@code st}'s fire is burning, open or not (each cooking station's data is synced). */
+    public boolean isCookingLit(Station st) {
+        DataSlot[] ds = cookingDataSlots.get(st);
+        return ds != null && ds[0].get() > 0;
+    }
+
+    /** How far {@code st}'s current item is cooked, 0..1. */
+    public float getCookProgress(Station st) {
+        DataSlot[] ds = cookingDataSlots.get(st);
+        if (ds == null || ds[3].get() == 0) return 0f;
+        return ds[2].get() / (float) ds[3].get();
     }
 
     public float getBurnProgress() {

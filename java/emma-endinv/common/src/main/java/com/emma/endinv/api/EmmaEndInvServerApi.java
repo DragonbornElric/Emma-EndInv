@@ -5,6 +5,9 @@ import com.emma.endinv.ServerLevelEndInv;
 import com.emma.endinv.util.ItemKey;
 import com.emma.endinv.util.ItemState;
 import net.minecraft.server.level.ServerPlayer;
+import com.emma.endinv.menu.Station;
+import com.emma.endinv.menu.StationUnlocks;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.LinkedHashMap;
@@ -59,6 +62,31 @@ public final class EmmaEndInvServerApi {
             if (state.count() > 0) out.put(key.toStack(1), state.count());
         }));
         return out;
+    }
+
+    /**
+     * Whether the station that {@code block} (crafting table, furnace, smoker, blast furnace,
+     * stonecutter, grindstone, smithing table, brewing stand) unlocks can be used in the player's
+     * EndInv. Always true when the server has {@code FreeCraftingStations} on.
+     * @since 1.4.5
+     */
+    public static boolean isStationUnlocked(ServerPlayer player, Item block) {
+        Station st = Station.forUnlockItem(block);
+        if (st == null) return false;
+        return StationUnlocks.isUnlocked(StationUnlocks.mask(endInv(player).orElse(null)), st);
+    }
+
+    /**
+     * Unlock that station with one block from the player's inventory, or from EndInv when the
+     * inventory has none (used up; nothing is taken in creative).
+     * @return true if it was unlocked now; false when stations are free, it was already unlocked,
+     *         or the player has no such block
+     * @since 1.4.5
+     */
+    public static boolean unlockStation(ServerPlayer player, Item block) {
+        Station st = Station.forUnlockItem(block);
+        if (st == null) return false;
+        return StationUnlocks.tryUnlockFromStorage(player, endInv(player).orElse(null), st);
     }
 
     private static Optional<EndlessInventory> endInv(ServerPlayer player) {
