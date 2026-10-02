@@ -5,6 +5,7 @@ import com.emma.endinv.client.gui.recipebook.EndInvCookingRecipeBookComponent;
 import com.emma.endinv.client.gui.recipebook.EndInvCraftingRecipeBookComponent;
 import com.emma.endinv.menu.EndlessInventoryMenu;
 import com.emma.endinv.menu.Station;
+import com.emma.endinv.menu.StationUnlocks;
 import com.emma.endinv.mixin.AbstractRecipeBookScreenAccessor;
 import com.emma.endinv.network.payloads.toServer.SetActiveStationPayload;
 import com.emma.endinv.util.NotNullWhenInitialized;
@@ -145,6 +146,10 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         // The book can also open or close itself (a recipe click on a narrow screen, the book state
         // syncing in tick()); the panel and the recipe book button follow it here.
         requestRelayoutIfMoved();
+        // The server closes a station that became locked (FreeCraftingStations turned off); follow it.
+        if (activeStation != Station.NONE && !menu.isStationUnlocked(activeStation)) {
+            setActiveStation(activeStation);
+        }
         if (relayoutPending) {
             relayoutPending = false;
             rebuildWidgets();
@@ -516,27 +521,72 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         return (menu.getStonecutterRecipes().size() + 3) / 4 - 3;
     }
 
+    /**
+     * A station button. With {@code FreeCraftingStations = false} it starts locked: it shows the
+     * station's block greyed out, and clicking it while holding that block puts the block in
+     * (used up) and unlocks the station.
+     */
     private class StationIconButton extends AbstractButton {
         private final ItemStack icon;
         private final Station station;
+        private final Tooltip unlockedTooltip;
+        private final Tooltip lockedTooltip;
+        private boolean showingLocked;
 
         StationIconButton(int x, int y, ItemStack icon, Station station, Component tooltip) {
             super(x, y, 22, 22, CommonComponents.EMPTY);
             this.icon = icon;
             this.station = station;
-            this.setTooltip(Tooltip.create(tooltip));
+            this.unlockedTooltip = Tooltip.create(tooltip);
+            this.lockedTooltip = Tooltip.create(Component.translatable("emma_endinv.station.locked", tooltip, icon.getHoverName()));
+            this.setTooltip(unlockedTooltip);
             this.setOverrideRenderHighlightedSprite(() -> EndlessInventoryScreen.this.activeStation == this.station);
+        }
+
+        private boolean locked() {
+            return !EndlessInventoryScreen.this.menu.isStationUnlocked(station);
         }
 
         @Override
         public void onPress(InputWithModifiers input) {
-            EndlessInventoryScreen.this.setActiveStation(this.station);
+            if (!locked()) {
+                EndlessInventoryScreen.this.setActiveStation(this.station);
+                return;
+            }
+            ItemStack carried = EndlessInventoryScreen.this.menu.getCarried();
+            if (!carried.isEmpty() && carried.is(icon.getItem())) {
+                EndlessInventoryScreen.this.minecraft.gameMode.handleInventoryButtonClick(
+                        EndlessInventoryScreen.this.menu.containerId, StationUnlocks.BUTTON_BASE + station.ordinal());
+            }
+        }
+
+        @Override
+        public void playDownSound(net.minecraft.client.sounds.SoundManager soundManager) {
+            if (locked()) {
+                ItemStack carried = EndlessInventoryScreen.this.menu.getCarried();
+                if (carried.isEmpty() || !carried.is(icon.getItem())) return;
+                soundManager.play(SimpleSoundInstance.forUI(SoundEvents.ITEM_FRAME_ADD_ITEM, 1.0F));
+                return;
+            }
+            super.playDownSound(soundManager);
         }
 
         @Override
         protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+            boolean locked = locked();
+            if (locked != showingLocked) {
+                showingLocked = locked;
+                this.setTooltip(locked ? lockedTooltip : unlockedTooltip);
+            }
             this.extractDefaultSprite(graphics);
-            graphics.item(icon, this.getX() + 3, this.getY() + 3, 0);
+            if (locked) {
+                // An empty slot with the block's ghost in it: drawn like the recipe book's ghost items.
+                graphics.fill(this.getX() + 3, this.getY() + 3, this.getX() + 19, this.getY() + 19, 0xFF8B8B8B);
+                graphics.fakeItem(icon, this.getX() + 3, this.getY() + 3);
+                graphics.fill(this.getX() + 3, this.getY() + 3, this.getX() + 19, this.getY() + 19, 0x80FFFFFF);
+            } else {
+                graphics.item(icon, this.getX() + 3, this.getY() + 3, 0);
+            }
         }
 
         @Override

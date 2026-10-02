@@ -2,6 +2,8 @@ package com.emma.endinv.menu;
 
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.inventory.RecipeBookType;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeType;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,5 +47,23 @@ public enum Station {
 
     public boolean isBrewing() {
         return this == BREWING;
+    }
+
+    /**
+     * The block item that unlocks this station when stations are not free
+     * ({@code FreeCraftingStations = false}); null for {@link #NONE}.
+     */
+    public @Nullable Item unlockItem() {
+        return switch (this) {
+            case NONE -> null;
+            case CRAFTING -> Items.CRAFTING_TABLE;
+            case FURNACE -> Items.FURNACE;
+            case SMOKER -> Items.SMOKER;
+            case BLAST_FURNACE -> Items.BLAST_FURNACE;
+            case STONECUTTER -> Items.STONECUTTER;
+            case GRINDSTONE -> Items.GRINDSTONE;
+            case SMITHING -> Items.SMITHING_TABLE;
+            case BREWING -> Items.BREWING_STAND;
+        };
     }
 }

@@ -169,6 +169,11 @@ entry with a count of up to 2,147,483,647. Press **I** to open it. It is saved i
   - Furnaces and the brewing stand keep cooking and brewing after you close the screen, as long
     as you are online.
   - Cooking XP is given to you.
+  - Free by default. A server can make players earn them instead (`FreeCraftingStations: false`,
+    or `/endinv config freeStations false`): each station's button then shows its block greyed
+    out, and stays locked until you click it holding that block (crafted or found). The block is
+    used up and the station stays unlocked for that EndInv, so everyone sharing an EndInv shares
+    its stations. Turning the setting back on frees every station again.
 - **Shared inventories, Storage Tracker and admin tools:** see the sections below.
 - **API for other client code:** `com.emma.endinv.api.EmmaEndInvApi`. It can loot the open
   container into EndInv, swap an EndInv item with a menu slot, and read the Storage Tracker
@@ -189,6 +194,7 @@ folder):
 | `DefaultAttach` | `true` | Show the attached EndInv panel on menus by default |
 | `specifiedMenuAttachability.container2attachable` | `[]` | Per-menu overrides, e.g. `"minecraft:generic_9x3:false"`, `"inventory:true"` |
 | `EnableAutoPick` | `true` | Auto-pickup into EndInv |
+| `FreeCraftingStations` | `true` | Every EndInv has all stations; `false`: each one is unlocked by putting its block into its button |
 | `defaultEndinvBehavior.MaxStackSize` | `2147483647` | Max count per item type in a new EndInv |
 | `defaultEndinvBehavior.EnableInfinity` | `false` | Items that reach the max count become infinite |
 | `defaultEndinvBehavior.Accessibility` | `PUBLIC` | Default access level for new EndInvs |

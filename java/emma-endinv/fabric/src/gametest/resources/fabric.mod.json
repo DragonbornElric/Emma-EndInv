@@ -6,7 +6,8 @@
   "environment": "*",
   "entrypoints": {
     "fabric-client-gametest": [
-      "com.emma.endinv.gametest.RecipeBookClientGameTest"
+      "com.emma.endinv.gametest.RecipeBookClientGameTest",
+      "com.emma.endinv.gametest.StationUnlockClientGameTest"
     ]
   },
   "depends": {

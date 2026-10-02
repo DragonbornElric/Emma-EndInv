@@ -34,6 +34,13 @@ public class ConfigCommand {
                                                                 )
                                                 )
                                 )
+                                .then(
+                                        Commands.literal("freeStations")
+                                                .then(
+                                                        Commands.argument("enable", BoolArgumentType.bool())
+                                                                .executes(context -> cmdSetFreeStations(context.getSource(), BoolArgumentType.getBool(context, "enable")))
+                                                )
+                                )
                 )
         );
         // Per-player switch, open to everyone (the /endinv root needs permission level 2).
@@ -60,6 +67,18 @@ public class ConfigCommand {
         if (!server) text += " (turned off on this server)";
         player.sendSystemMessage(Component.literal(text));
         return mine && server ? 1 : 0;
+    }
+
+    private static int cmdSetFreeStations(CommandSourceStack source, boolean free) {
+        try {
+            ServerConfigs.FREE_CRAFTING_STATIONS.set(free);
+            source.sendSuccess(() -> Component.literal(free
+                    ? "Crafting stations are free in every EndInv"
+                    : "Crafting stations in EndInv are locked until a player puts that block in"), true);
+            return 1;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private static int cmdSetAutoPick(CommandSourceStack source,boolean enable){

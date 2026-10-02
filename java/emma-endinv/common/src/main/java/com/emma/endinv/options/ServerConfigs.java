@@ -41,6 +41,9 @@ public final class ServerConfigs {
     public static final SpecifiedMenuAttachingConfig.Entry SPECIFIED_ATTACHABILITY = register(SpecifiedMenuAttachingConfig.Entry.INSTANCE);
     public static final ConfigEntryImpl<Boolean> ENABLE_AUTOPICK = register(new ConfigEntryImpl.BooleanEntry("EnableAutoPick", new String[]{"Whether the endless inventory will auto pick up items when they are dropped"}, true));
     public static final ConfigEntryImpl<Boolean> AUTOPICK_MENDING_FIRST = register(new ConfigEntryImpl.BooleanEntry("AutoPickMendingFirst", new String[]{"Auto-picked XP (mining, kills) repairs Mending gear first, like a vanilla orb; the rest goes to levels. Off: all of it goes to levels"}, true));
+    public static final ConfigEntryImpl<Boolean> FREE_CRAFTING_STATIONS = register(new ConfigEntryImpl.BooleanEntry("FreeCraftingStations", new String[]{
+            "Whether every Endless Inventory has all crafting stations (crafting table, furnace, smoker, blast furnace, stonecutter, grindstone, smithing table, brewing stand) for free.",
+            "false: each station's button on the EndInv screen is locked until a player puts that block (crafted or found) into it; the block is used up and the station stays unlocked for that EndInv."}, true));
     public static final ConfigEntryImpl.ListEntry<String> ADMINS = register(new ConfigEntryImpl.ListEntry<>("Admins", new String[]{
             "Player names or UUIDs allowed to manage every Endless Inventory (view, share, select, take, move, clear, delete).",
             "If empty, operators with permission level 4 (server owners) are admins."}, new ArrayList<>()));

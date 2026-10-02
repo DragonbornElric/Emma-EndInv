@@ -148,6 +148,8 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     private static final int CRAFTING_ROWS = CRAFT_GRID_HEIGHT;
 
     private final DataSlot infinityMode = DataSlot.standalone();
+    /** Unlocked stations as a bit mask ({@link StationUnlocks}); all of them until the server says otherwise. */
+    private final DataSlot stationUnlockMask = DataSlot.standalone();
     private int displayingPageIndex;
     private String displayingPageId;
     private PageType displayingPageType;
@@ -256,6 +258,9 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         addDataSlot(stonecutterSelectedRecipe);
         addDataSlot(brewingTimeSlot);
         addDataSlot(brewingFuelSlot);
+        // Last, so a client talking to a server without it keeps every station unlocked.
+        stationUnlockMask.set(StationUnlocks.mask(endlessInventory));
+        addDataSlot(stationUnlockMask);
     }
 
     public void applyPageData(PageData pageData){
@@ -501,7 +506,22 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     @Override
     public void broadcastChanges() {
         tickCookingStations();
+        refreshStationUnlocks();
         super.broadcastChanges();
+    }
+
+    // ── Station unlocks (FreeCraftingStations = false) ───────────────────────
+
+    /** Server side: re-read the unlocked stations; a station that became locked (config change) closes. */
+    private void refreshStationUnlocks() {
+        if (!(player instanceof ServerPlayer)) return;
+        stationUnlockMask.set(StationUnlocks.mask(sourceInventory));
+        if (!isStationUnlocked(activeStation)) setActiveStation(Station.NONE);
+    }
+
+    public boolean isStationUnlocked(Station st) {
+        if (player instanceof ServerPlayer) return StationUnlocks.isUnlocked(StationUnlocks.mask(sourceInventory), st);
+        return StationUnlocks.isUnlocked(stationUnlockMask.get(), st);
     }
 
     private void tickCookingStations() {
@@ -753,6 +773,12 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
+        Station toUnlock = StationUnlocks.stationForButton(id);
+        if (toUnlock != null) {
+            if (!StationUnlocks.tryUnlock(this, player, sourceInventory, toUnlock)) return false;
+            stationUnlockMask.set(StationUnlocks.mask(sourceInventory));
+            return true;
+        }
         if (activeStation == Station.STONECUTTER && id >= 0 && id < stonecutterRecipes.size()) {
             stonecutterSelectedRecipe.set(id);
             setupStonecutterResult(id);
