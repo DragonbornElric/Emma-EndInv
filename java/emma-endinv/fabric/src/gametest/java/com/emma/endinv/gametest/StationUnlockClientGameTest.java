@@ -146,6 +146,27 @@ public class StationUnlockClientGameTest implements FabricClientGameTest {
             ctx.waitTicks(10);
             check(unlocked(ctx, Station.GRINDSTONE), "freeStations true unlocks every station again");
 
+            // The open menu writes its cooking state back on close, so set the new state with it closed.
+            ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
+            ctx.waitTicks(5);
+            // Every running station gives off its block's particles: smoker, blast furnace and furnace lit, brewing stand smoking.
+            sp.getServer().runOnServer(server -> {
+                var endInv = com.emma.endinv.ServerLevelEndInv.getEndInvForPlayer(server.getPlayerList().getPlayers().get(0)).orElseThrow();
+                for (Station st : new Station[] {Station.SMOKER, Station.BLAST_FURNACE}) {
+                    endInv.setCookingState(st, new com.emma.endinv.menu.FurnaceState(
+                            new net.minecraft.world.item.ItemStack(st == Station.SMOKER ? Items.BEEF : Items.RAW_IRON, 8),
+                            new net.minecraft.world.item.ItemStack(Items.COAL, 4), net.minecraft.world.item.ItemStack.EMPTY,
+                            1200, 1600, 40, 100));
+                }
+            });
+            ctx.waitTicks(2);
+            ctx.getInput().pressKey(GLFW.GLFW_KEY_I);
+            ctx.waitForScreen(EndlessInventoryScreen.class);
+            ctx.waitTicks(40);
+            check(ctx.computeOnClient(mc -> menu(mc).isCookingLit(Station.SMOKER) && menu(mc).isCookingLit(Station.BLAST_FURNACE)),
+                    "smoker and blast furnace lit");
+            screenshot(ctx, "stations-5-all-running");
+
             ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
             ctx.waitTicks(5);
             if (!failures.isEmpty()) throw new AssertionError("[EndInvTest] " + failures.size() + " check(s) failed: " + failures);

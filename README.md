@@ -159,8 +159,13 @@ entry with a count of up to 2,147,483,647. Press **I** to open it. It is saved i
 - **Built-in stations** (buttons on the EndInv screen): Crafting Table, Furnace, Smoker, Blast
   Furnace, Brewing Stand, Stonecutter, Grindstone, Smithing Table and Enchanting Table. They work
   straight from EndInv, with no block to place.
-  - While a furnace, smoker, blast furnace or brewing stand is working, its button shows a flame
-    and a progress bar, even when that station isn't open.
+  - A station's button shows what its block does in the world, even when that station isn't open: a
+    lit furnace, smoker or blast furnace switches to its lit block model (the smoker's and blast
+    furnace's fronts are animated) and gives off the block's own particles (furnace: smoke and flame
+    at the front; smoker: smoke out of the top; blast furnace: smoke at the front), a brewing stand
+    smokes, and the enchanting table draws glyphs in from its bookshelves (more of them the more
+    bookshelves it has; in the open station they fly from the bookshelf slot to the book). Cooking
+    and brewing also show a progress bar.
   - **Enchanting Table:** works like the vanilla table (item, lapis, three offers). Its power comes
     from bookshelves put into the station instead of bookshelves around a block: click the
     bookshelf slot holding bookshelves to add them (15 at most, full power), right-click to take

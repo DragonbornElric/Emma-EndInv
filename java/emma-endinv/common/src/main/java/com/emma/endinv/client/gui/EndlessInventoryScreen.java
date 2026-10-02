@@ -80,6 +80,9 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
     @Nullable private StationIconButton brewingButton;
     @Nullable private StationIconButton enchantingButton;
     private static final Identifier ENCHANTING_TEXTURE = Identifier.withDefaultNamespace("textures/gui/container/enchanting_table.png");
+    /** The enchanting book's box, relative to leftPos and enchantTop(). */
+    private static final int BOOK_X = 29, BOOK_Y = -3;
+    private final StationParticles enchantParticles = new StationParticles();
     private static final Identifier ENCHANTING_BOOK_TEXTURE = Identifier.withDefaultNamespace("textures/entity/enchantment/enchanting_table_book.png");
     private static final Identifier ENCHANT_SLOT_SPRITE = Identifier.withDefaultNamespace("container/enchanting_table/enchantment_slot");
     private static final Identifier ENCHANT_SLOT_DISABLED_SPRITE = Identifier.withDefaultNamespace("container/enchanting_table/enchantment_slot_disabled");
@@ -175,7 +178,15 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         if (activeStation != Station.NONE && !menu.isStationUnlocked(activeStation)) {
             setActiveStation(activeStation);
         }
-        if (menu.getActiveStation() == Station.ENCHANTING) tickBook();
+        if (menu.getActiveStation() == Station.ENCHANTING) {
+            tickBook();
+            tickEnchantingGlyphs();
+        } else {
+            enchantParticles.clear();
+        }
+        for (StationIconButton button : new StationIconButton[] {furnaceButton, smokerButton, blastFurnaceButton, brewingButton, enchantingButton}) {
+            if (button != null) button.tickParticles();
+        }
         if (relayoutPending) {
             relayoutPending = false;
             rebuildWidgets();
@@ -567,6 +578,18 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         return x >= bx && x < bx + 18 && y >= by && y < by + 18;
     }
 
+    /** Glyphs flying from the bookshelf box to the book, more of them the more bookshelves (EnchantingTableBlock.animateTick). */
+    private void tickEnchantingGlyphs() {
+        enchantParticles.tick();
+        int shelves = menu.getEnchanting().getBookshelves();
+        var random = enchantParticles.random();
+        for (int i = 0; i < shelves; i++) {
+            if (random.nextInt(160) != 0) continue;
+            enchantParticles.glyph(10 + 3 + random.nextFloat() * 12, 2 + 3 + random.nextFloat() * 12,
+                    BOOK_X + 15, BOOK_Y + 13);
+        }
+    }
+
     private void drawEnchantingStation(GuiGraphicsExtractor graphics, int mouseX, int mouseY, int craftYScreen) {
         var ench = menu.getEnchanting();
         int top = enchantTop();
@@ -591,9 +614,10 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
             float a = this.minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
             float open = Mth.lerp(a, bookOOpen, bookOpen);
             float flip = Mth.lerp(a, bookOFlip, bookFlip);
-            int x0 = this.leftPos + 29, y0 = top + 1;
+            int x0 = this.leftPos + BOOK_X, y0 = top + BOOK_Y;
             graphics.book(bookModel, ENCHANTING_BOOK_TEXTURE, 32.0F, open, flip, x0, y0, x0 + 30, y0 + 30);
         }
+        enchantParticles.extract(graphics, this.leftPos, top, this.minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false));
         net.minecraft.client.gui.screens.inventory.EnchantmentNames.getInstance().initSeed(ench.getSeed());
         int lapis = ench.getLapisCount();
         for (int i = 0; i < 3; i++) {
@@ -721,7 +745,11 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
      */
     private class StationIconButton extends AbstractButton {
         private final ItemStack icon;
+        /** The icon with the station's lit block model, for a cooking station; null otherwise. */
+        @org.jetbrains.annotations.Nullable
+        private final ItemStack litIcon;
         private final Station station;
+        private final StationParticles particles = new StationParticles();
         private final Tooltip unlockedTooltip;
         private final Tooltip lockedTooltip;
         private boolean showingLocked;
@@ -729,11 +757,23 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         StationIconButton(int x, int y, ItemStack icon, Station station, Component tooltip) {
             super(x, y, 22, 22, CommonComponents.EMPTY);
             this.icon = icon;
+            this.litIcon = litIcon(icon, station);
             this.station = station;
             this.unlockedTooltip = Tooltip.create(tooltip);
             this.lockedTooltip = Tooltip.create(Component.translatable("emma_endinv.station.locked", tooltip, icon.getHoverName()));
             this.setTooltip(unlockedTooltip);
             this.setOverrideRenderHighlightedSprite(() -> EndlessInventoryScreen.this.activeStation == this.station);
+        }
+
+        /** A copy of {@code icon} drawn with {@code emma_endinv:lit_<block>}, which points at the block's {@code _on} model. */
+        @org.jetbrains.annotations.Nullable
+        private static ItemStack litIcon(ItemStack icon, Station station) {
+            if (!station.isCooking()) return null;
+            ItemStack lit = icon.copy();
+            String block = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(icon.getItem()).getPath();
+            lit.set(net.minecraft.core.component.DataComponents.ITEM_MODEL,
+                    Identifier.fromNamespaceAndPath(com.emma.endinv.ModInfo.MOD_ID, "lit_" + block));
+            return lit;
         }
 
         private boolean locked() {
@@ -778,14 +818,63 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
                 graphics.fakeItem(icon, this.getX() + 3, this.getY() + 3);
                 graphics.fill(this.getX() + 3, this.getY() + 3, this.getX() + 19, this.getY() + 19, 0x80FFFFFF);
             } else {
-                graphics.item(icon, this.getX() + 3, this.getY() + 3, 0);
+                graphics.item(litIcon != null && isLit() ? litIcon : icon, this.getX() + 3, this.getY() + 3, 0);
                 extractRunningEffects(graphics);
+                particles.extract(graphics, this.getX(), this.getY(),
+                        EndlessInventoryScreen.this.minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false));
             }
         }
 
         /**
+         * The block's own particles while it works, at the rate and place the block gives them off
+         * (FurnaceBlock, SmokerBlock, BlastFurnaceBlock, BrewingStandBlock, EnchantingTableBlock animateTick).
+         * Positions are on the 16 px icon, which sits at (3, 3) on the button.
+         */
+        void tickParticles() {
+            particles.tick();
+            if (locked()) {
+                particles.clear();
+                return;
+            }
+            var random = particles.random();
+            switch (station) {
+                case FURNACE, BLAST_FURNACE -> {
+                    if (!isLit() || random.nextInt(10) != 0) return;
+                    // Across the lit front (the icon's right face), low down: 6/16 of the height for a
+                    // furnace, 9/16 for a blast furnace; the furnace adds a flame to its smoke.
+                    float u = 0.2f + random.nextFloat() * 0.6f;
+                    float h = random.nextFloat() * (station == Station.FURNACE ? 6f : 9f) / 16f;
+                    float x = 11 + u * 8f, y = 18 - u * 4f - h * 10f;
+                    particles.smoke(x, y);
+                    if (station == Station.FURNACE) particles.flame(x, y);
+                }
+                case SMOKER -> {
+                    if (isLit() && random.nextInt(10) == 0) particles.smoke(11, 5);
+                }
+                case BREWING -> {
+                    // A brewing stand smokes all the time, brewing or not, just above its bottles.
+                    if (random.nextInt(10) == 0) particles.smoke(9.4f + random.nextFloat() * 3.2f, 3 + random.nextFloat() * 5f);
+                }
+                case ENCHANTING -> {
+                    int shelves = EndlessInventoryScreen.this.menu.getEnchanting().getBookshelves();
+                    for (int i = 0; i < shelves; i++) {
+                        if (random.nextInt(160) != 0) continue;
+                        double angle = random.nextDouble() * Math.PI * 2;
+                        particles.glyph(11 + (float) Math.cos(angle) * 12f, 6 + (float) Math.sin(angle) * 8f - 4f, 11, 7);
+                    }
+                }
+                default -> {}
+            }
+        }
+
+        private boolean isLit() {
+            return station.isCooking() && EndlessInventoryScreen.this.menu.isCookingLit(station);
+        }
+
+        /**
          * While a furnace, smoker, blast furnace or brewing stand works (open or in the background):
-         * a flickering flame in the corner and a progress bar along the bottom of its button.
+         * a progress bar along the bottom of its button. A lit cooking station's icon is its lit
+         * block model ({@code litIcon}), with the animated fire of the smoker and blast furnace.
          */
         private void extractRunningEffects(GuiGraphicsExtractor graphics) {
             EndlessInventoryMenu m = EndlessInventoryScreen.this.menu;
@@ -808,12 +897,6 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
             graphics.nextStratum();
             int x = this.getX();
             int y = this.getY();
-            if (lit) {
-                // Flame flickers between two sizes, like a lit furnace's fire.
-                long t = net.minecraft.util.Util.getMillis() / 150;
-                int size = (t % 3 == 0) ? 7 : 8;
-                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, LIT_PROGRESS_SPRITE, x + 13 + (8 - size), y + 11 + (8 - size), size, size);
-            }
             if (progress > 0f) {
                 graphics.fill(x + 3, y + 18, x + 19, y + 20, 0xFF373737);
                 graphics.fill(x + 3, y + 18, x + 3 + Math.max(1, Math.round(16 * progress)), y + 19, barColor);
