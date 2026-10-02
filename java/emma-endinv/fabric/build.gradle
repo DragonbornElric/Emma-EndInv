@@ -41,3 +41,14 @@ sourceSets.configureEach {
         }
     }
 }
+
+// Client game test (headless-capable with xvfb-run): ./gradlew :fabric:runClientGameTest
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'emma_endinv_gametest'
+        enableGameTests = false
+        enableClientGameTests = true
+        eula = true
+    }
+}

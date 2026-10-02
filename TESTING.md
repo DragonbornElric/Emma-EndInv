@@ -92,6 +92,23 @@ Checked by screenshot on Fabric 26.1.2 and NeoForge 26.3 clients, with a small g
 | Open the recipe book in the EndInv screen (crafting, then furnace) | The panel and its page tabs sit right of the book; hovering items shows the right tooltips; closing the book re-centres the panel |
 | Switch stations with their books open | Each station keeps its own book open or closed |
 
+## Client game test (1.4.5)
+
+`fabric/src/gametest` holds a Fabric client game test that drives a real 26.2 client with mouse
+input in a fresh single-player world (1600×900, GUI scale 3, so the book sits beside the panel).
+It runs headless, e.g. in a cloud container with Xvfb and Mesa:
+
+```bash
+cd java/emma-endinv
+xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew :fabric:runClientGameTest
+```
+
+Screenshots land in `fabric/build/run/clientGameTest/screenshots/`. It checks issue #1: in the
+crafting station the recipe book stays open after a recipe click, closing it re-centres the panel,
+reopening it draws the book left of the panel and it takes clicks again, and Escape closes the
+screen. Passed on 2026-10-02 (failed on 1.4.4: the book closed after the recipe click and the
+panel stayed shifted).
+
 ## Not covered by these tests
 
 Not functionally tested in this run; they work in normal play on the author's server, but have
