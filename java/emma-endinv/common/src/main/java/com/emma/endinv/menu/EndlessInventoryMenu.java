@@ -156,6 +156,12 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     private static final int CRAFTING_ROWS = CRAFT_GRID_HEIGHT;
 
     private final DataSlot infinityMode = DataSlot.standalone();
+    /** Unlocked stations as a bit mask ({@link StationUnlocks}); all of them until the server says otherwise. */
+    private final DataSlot stationUnlockMask = DataSlot.standalone();
+    /** Enchanting station; its two slots come after the player inventory so earlier slot indices stay put. */
+    private final EnchantingStation enchanting;
+    private static final int ENCHANT_ITEM  = PLAYER_INV_END;                                 // = 69
+    private static final int ENCHANT_LAPIS = PLAYER_INV_END + 1;                             // = 70
     private int displayingPageIndex;
     private String displayingPageId;
     private PageType displayingPageType;
@@ -231,6 +237,8 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         this.sourceInventory = endlessInventory != null ? endlessInventory
                 : (com.emma.endinv.platform.ILoaderProvider.get().isClient() ? CachedSrcInv.INSTANCE : new SourceInventory.Empty());
 
+        this.enchanting = new EnchantingStation(this.player, this.sourceInventory);
+
         PageType initialType = PageTypeRegistry.byId(PageType.DEFAULT_KEY);
         if (initialType == null && PageTypeRegistry.size() > 0) {
             initialType = PageTypeRegistry.byIndex(0);
@@ -264,6 +272,10 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         addDataSlot(stonecutterSelectedRecipe);
         addDataSlot(brewingTimeSlot);
         addDataSlot(brewingFuelSlot);
+        // Last, so a client talking to a server without it keeps every station unlocked.
+        stationUnlockMask.set(StationUnlocks.mask(endlessInventory));
+        addDataSlot(stationUnlockMask);
+        enchanting.addDataSlots(this::addDataSlot);
     }
 
     public void applyPageData(PageData pageData){
@@ -336,6 +348,9 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
 
         int invY = 18 * baseRows + 31;
         addStandardInventorySlots(playerInventory, 8, invY);
+
+        // Enchanting slots (69–70), after the player inventory. Texture positions: item=(15,47), lapis=(35,47).
+        for (Slot slot : enchanting.createSlots(craftY, Station.ENCHANTING, () -> activeStation)) this.addSlot(slot);
     }
 
     // ── Slot index helpers ───────────────────────────────────────────────────
@@ -509,7 +524,40 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
     @Override
     public void broadcastChanges() {
         tickCookingStations();
+        refreshStationUnlocks();
+        enchanting.tick();
         super.broadcastChanges();
+    }
+
+    // ── Station unlocks (FreeCraftingStations = false) ───────────────────────
+
+    /** Server side: re-read the unlocked stations; a station that became locked (config change) closes. */
+    private void refreshStationUnlocks() {
+        if (!(player instanceof ServerPlayer)) return;
+        stationUnlockMask.set(StationUnlocks.mask(sourceInventory));
+        if (!isStationUnlocked(activeStation)) setActiveStation(Station.NONE);
+    }
+
+    /** Client side: the synced mask of unlocked stations ({@link StationUnlocks}). */
+    public int getStationUnlockMask() {
+        return stationUnlockMask.get();
+    }
+
+    private boolean moveStackIntoEnchanting(ItemStack stack) {
+        int idx = EnchantingStation.isLapis(stack) ? ENCHANT_LAPIS : ENCHANT_ITEM;
+        int before = stack.getCount();
+        this.moveItemStackTo(stack, idx, idx + 1, false);
+        return stack.getCount() < before;
+    }
+
+    /** The enchanting station (slots, costs and clues synced to the client, bookshelf count). */
+    public EnchantingStation getEnchanting() {
+        return enchanting;
+    }
+
+    public boolean isStationUnlocked(Station st) {
+        if (player instanceof ServerPlayer) return StationUnlocks.isUnlocked(StationUnlocks.mask(sourceInventory), st);
+        return StationUnlocks.isUnlocked(stationUnlockMask.get(), st);
     }
 
     private void tickCookingStations() {
@@ -674,6 +722,19 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         return duration == 0 ? 0f : ds[0].get() / (float) duration;
     }
 
+    /** Whether {@code st}'s fire is burning, open or not (each cooking station's data is synced). */
+    public boolean isCookingLit(Station st) {
+        DataSlot[] ds = cookingDataSlots.get(st);
+        return ds != null && ds[0].get() > 0;
+    }
+
+    /** How far {@code st}'s current item is cooked, 0..1. */
+    public float getCookProgress(Station st) {
+        DataSlot[] ds = cookingDataSlots.get(st);
+        if (ds == null || ds[3].get() == 0) return 0f;
+        return ds[2].get() / (float) ds[3].get();
+    }
+
     public float getBurnProgress() {
         if (!activeStation.isCooking()) return 0f;
         DataSlot[] ds = cookingDataSlots.get(activeStation);
@@ -771,6 +832,18 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
+        if (id == EnchantingStation.BOOKSHELF_INSERT_BUTTON || id == EnchantingStation.BOOKSHELF_TAKE_BUTTON) {
+            return isStationUnlocked(Station.ENCHANTING) && enchanting.clickButton(this, player, id, false);
+        }
+        if (activeStation == Station.ENCHANTING && id >= 0 && id < 3) {
+            return enchanting.clickButton(this, player, id, true);
+        }
+        Station toUnlock = StationUnlocks.stationForButton(id);
+        if (toUnlock != null) {
+            if (!StationUnlocks.tryUnlock(this, player, sourceInventory, toUnlock)) return false;
+            stationUnlockMask.set(StationUnlocks.mask(sourceInventory));
+            return true;
+        }
         if (activeStation == Station.STONECUTTER && id >= 0 && id < stonecutterRecipes.size()) {
             stonecutterSelectedRecipe.set(id);
             setupStonecutterResult(id);
@@ -969,6 +1042,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
                 grindstoneResult.clearContent();
                 grindstoneXpReward = 0;
             }
+            case ENCHANTING -> enchanting.returnToPlayer();
             case SMITHING -> {
                 returnContainerToPlayer(inv, smithingInput);
                 smithingResult.clearContent();
@@ -1364,6 +1438,8 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
                 stationAccepted = this.moveItemStackTo(stack, SMITHING_BASE, SMITHING_BASE + 1, false);
             if (!stationAccepted && ra.propertySet(RecipePropertySet.SMITHING_ADDITION).test(stack))
                 stationAccepted = this.moveItemStackTo(stack, SMITHING_ADDITION, SMITHING_ADDITION + 1, false);
+        } else if (activeStation == Station.ENCHANTING) {
+            stationAccepted = moveStackIntoEnchanting(stack);
         } else if (activeStation == Station.BREWING) {
             if (!stationAccepted && StationProcessing.isBrewingFuel(stack))
                 stationAccepted = this.moveItemStackTo(stack, BREWING_FUEL_SLOT, BREWING_FUEL_SLOT + 1, false);
@@ -1524,6 +1600,9 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
             if (!moved && ra.propertySet(RecipePropertySet.SMITHING_ADDITION).test(stack))
                 moved = this.moveItemStackTo(stack, SMITHING_ADDITION, SMITHING_ADDITION + 1, false);
             return moved;
+        }
+        if (activeStation == Station.ENCHANTING) {
+            return moveStackIntoEnchanting(stack);
         }
         if (activeStation == Station.BREWING) {
             boolean moved = false;

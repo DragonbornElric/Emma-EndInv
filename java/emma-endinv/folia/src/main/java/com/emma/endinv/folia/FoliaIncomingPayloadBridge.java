@@ -38,6 +38,8 @@ public final class FoliaIncomingPayloadBridge implements PluginMessageListener {
             Map.entry(channel(BulkQuickMoveFromPagePayload.TYPE),    decodeWith(BulkQuickMoveFromPagePayload.STREAM_CODEC)),
             Map.entry(channel(StarItemPayload.TYPE),                 decodeWith(StarItemPayload.STREAM_CODEC)),
             Map.entry(channel(SetActiveStationPayload.TYPE),         decodeWith(SetActiveStationPayload.STREAM_CODEC)),
+            Map.entry(channel(com.emma.endinv.network.payloads.toServer.UnlockStationPayload.TYPE), decodeWith(com.emma.endinv.network.payloads.toServer.UnlockStationPayload.STREAM_CODEC)),
+            Map.entry(channel(com.emma.endinv.network.payloads.toServer.AddBookshelvesPayload.TYPE), decodeWith(com.emma.endinv.network.payloads.toServer.AddBookshelvesPayload.STREAM_CODEC)),
             Map.entry(channel(SwapMenuSlotPayload.TYPE),             decodeWith(SwapMenuSlotPayload.STREAM_CODEC)),
             Map.entry(channel(ManageEndInvPayload.TYPE),             decodeWith(ManageEndInvPayload.STREAM_CODEC)),
             Map.entry(channel(com.emma.endinv.storage.StorageRequestPayload.TYPE), decodeWith(com.emma.endinv.storage.StorageRequestPayload.STREAM_CODEC)),

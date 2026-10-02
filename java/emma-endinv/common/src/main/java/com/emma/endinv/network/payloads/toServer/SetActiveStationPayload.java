@@ -44,7 +44,8 @@ public record SetActiveStationPayload(Station station) implements ModPacketPaylo
         Player player = context.player();
         if (player == null) return;
         if (player.containerMenu instanceof EndlessInventoryMenu menu) {
-            menu.setActiveStation(station);
+            // A locked station (FreeCraftingStations = false) can't be opened; the client follows the synced mask.
+            menu.setActiveStation(menu.isStationUnlocked(station) ? station : Station.NONE);
             menu.broadcastChanges();
         }
     }

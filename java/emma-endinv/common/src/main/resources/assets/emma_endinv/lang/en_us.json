@@ -111,6 +111,10 @@
   "emma_endinv.button.grindstone": "Grindstone",
   "emma_endinv.button.smithing_table": "Smithing Table",
   "emma_endinv.button.brewing_stand": "Brewing Stand",
+  "emma_endinv.button.enchanting_table": "Enchanting Table",
+  "emma_endinv.enchanting.bookshelves": "Bookshelves: %s/%s (enchanting power)",
+  "emma_endinv.enchanting.bookshelves.hint": "Click holding bookshelves to add them. Right-click to take one out.",
+  "emma_endinv.station.locked": "%s (locked)\nClick here holding a %s to unlock it. The block is used up.",
 
   "title.endinv.manager": "Endless Inventory Manager",
   "endinv.manager.open": "Manage inventories…",
