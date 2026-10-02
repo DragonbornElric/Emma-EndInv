@@ -1,0 +1,68 @@
+name: Bug report
+description: Something in Emma's Endless Inventory doesn't work as it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! The details below let us reproduce the problem quickly.
+        Quick questions can also go to the livestream at [twitch.tv/Elric_Heart](https://www.twitch.tv/Elric_Heart).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. Screenshots or a short video help a lot.
+      placeholder: |
+        1. Opened a chest next to the Endless Inventory panel
+        2. Clicked Loot All
+        3. Expected the items in EndInv, but ...
+    validations:
+      required: true
+  - type: input
+    id: mod-version
+    attributes:
+      label: Mod version
+      description: From the jar name, e.g. `emma_endinv-fabric-26.2-1.4.4.jar`
+      placeholder: "1.4.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: mc-version
+    attributes:
+      label: Minecraft version
+      options: ["26.2", "26.3", "26.1.2", "Other (say which below)"]
+    validations:
+      required: true
+  - type: dropdown
+    id: client
+    attributes:
+      label: Client loader
+      options: ["Fabric", "NeoForge"]
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where are you playing?
+      options:
+        - Single player
+        - Fabric server
+        - NeoForge server
+        - Paper server (plugin)
+        - Folia server (plugin)
+        - Other (say which below)
+    validations:
+      required: true
+  - type: textarea
+    id: mods
+    attributes:
+      label: Other mods or plugins
+      description: Especially inventory, recipe-viewer (JEI, REI, EMI) or GUI mods. "None" is fine.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Client: `logs/latest.log` (and `crash-reports/` if it crashed). Server: the server's `logs/latest.log`.
+        Paste the relevant part, or upload the file to https://mclo.gs and paste the link.
+      render: text
