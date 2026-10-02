@@ -78,6 +78,30 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
     @Nullable private StationIconButton grindstoneButton;
     @Nullable private StationIconButton smithingButton;
     @Nullable private StationIconButton brewingButton;
+    @Nullable private StationIconButton enchantingButton;
+    private static final Identifier ENCHANTING_TEXTURE = Identifier.withDefaultNamespace("textures/gui/container/enchanting_table.png");
+    private static final Identifier ENCHANTING_BOOK_TEXTURE = Identifier.withDefaultNamespace("textures/entity/enchantment/enchanting_table_book.png");
+    private static final Identifier ENCHANT_SLOT_SPRITE = Identifier.withDefaultNamespace("container/enchanting_table/enchantment_slot");
+    private static final Identifier ENCHANT_SLOT_DISABLED_SPRITE = Identifier.withDefaultNamespace("container/enchanting_table/enchantment_slot_disabled");
+    private static final Identifier ENCHANT_SLOT_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("container/enchanting_table/enchantment_slot_highlighted");
+    private static final Identifier[] ENCHANT_LEVEL_SPRITES = {
+            Identifier.withDefaultNamespace("container/enchanting_table/level_1"),
+            Identifier.withDefaultNamespace("container/enchanting_table/level_2"),
+            Identifier.withDefaultNamespace("container/enchanting_table/level_3")};
+    private static final Identifier[] ENCHANT_LEVEL_DISABLED_SPRITES = {
+            Identifier.withDefaultNamespace("container/enchanting_table/level_1_disabled"),
+            Identifier.withDefaultNamespace("container/enchanting_table/level_2_disabled"),
+            Identifier.withDefaultNamespace("container/enchanting_table/level_3_disabled")};
+    /**
+     * The station area above the "Inventory" label is 56 px, vanilla's table needs 72: the texture is
+     * drawn from this row and the three options are 17 px tall instead of 19.
+     */
+    private static final int ENCHANT_TEX_Y = 10;
+    private static final int ENCHANT_OPTION_H = 17;
+    @Nullable private net.minecraft.client.model.object.book.BookModel bookModel;
+    private final net.minecraft.util.RandomSource bookRandom = net.minecraft.util.RandomSource.create();
+    private float bookFlip, bookOFlip, bookFlipT, bookFlipA, bookOpen, bookOOpen;
+    private ItemStack bookLastItem = ItemStack.EMPTY;
     @Nullable private StorageTrackerButton storageButton;
 
     /** imageHeight without page rows ({@code imageHeight = BASE_IMAGE_HEIGHT + rows * 18}). */
@@ -151,6 +175,7 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         if (activeStation != Station.NONE && !menu.isStationUnlocked(activeStation)) {
             setActiveStation(activeStation);
         }
+        if (menu.getActiveStation() == Station.ENCHANTING) tickBook();
         if (relayoutPending) {
             relayoutPending = false;
             rebuildWidgets();
@@ -206,7 +231,12 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         addRenderableWidget(stonecutterButton);
         addRenderableWidget(grindstoneButton);
         addRenderableWidget(smithingButton);
+        enchantingButton = new StationIconButton(0, 0, new ItemStack(Items.ENCHANTING_TABLE), Station.ENCHANTING,
+                Component.translatable("emma_endinv.button.enchanting_table"));
         addRenderableWidget(brewingButton);
+        addRenderableWidget(enchantingButton);
+        bookModel = new net.minecraft.client.model.object.book.BookModel(
+                this.minecraft.getEntityModels().bakeLayer(net.minecraft.client.model.geom.ModelLayers.BOOK));
         storageButton = new StorageTrackerButton(0, 0);
         addRenderableWidget(storageButton);
         updateStationButtonPositions();
@@ -276,6 +306,7 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         smithingButton.setX(rightEdge - 22 - 24);      smithingButton.setY(row2Y);
         grindstoneButton.setX(rightEdge - 22 - 48);    grindstoneButton.setY(row2Y);
         stonecutterButton.setX(rightEdge - 22 - 72);   stonecutterButton.setY(row2Y);
+        if (enchantingButton != null) { enchantingButton.setX(rightEdge - 22 - 96); enchantingButton.setY(row2Y); }
         // Storage tracker sits at the left end of row 2, above the recipe book button.
         if (storageButton != null) { storageButton.setX(this.leftPos); storageButton.setY(row2Y); }
     }
@@ -338,6 +369,8 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
                     guiGraphics.item(recipes.get(i).recipe().optionDisplay().resolveForFirstStack(context), posX, posY);
                 }
             }
+        } else if (st == Station.ENCHANTING) {
+            drawEnchantingStation(guiGraphics, mouseX, mouseY, craftYScreen);
         } else if (st == Station.GRINDSTONE) {
             guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GRINDSTONE_TEXTURE, this.leftPos, craftYScreen, 0, 0, 176, 58, 256, 256);
         } else if (st == Station.SMITHING) {
@@ -372,6 +405,7 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
     @Override
     protected void extractTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         super.extractTooltip(graphics, mouseX, mouseY);
+        if (menu.getActiveStation() == Station.ENCHANTING) extractEnchantingTooltip(graphics, mouseX, mouseY);
         if (menu.getActiveStation() == Station.STONECUTTER && stonecutterDisplayRecipes) {
             int craftYScreen = this.topPos + 18 * menu.getVisibleRows() + 18;
             int baseX = this.leftPos + 52;
@@ -415,6 +449,9 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
             if (event.x() >= scrollX && event.x() < scrollX + 12 && event.y() >= scrollY && event.y() < scrollY + 54) {
                 stonecutterScrolling = true;
             }
+        }
+        if (menu.getActiveStation() == Station.ENCHANTING && enchantingClicked(event)) {
+            return true;
         }
         for (GuiEventListener guieventlistener : this.children()) {
             if (guieventlistener.mouseClicked(event, pre)) {
@@ -512,6 +549,161 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
 
     public int getYSize() {
         return imageHeight;
+    }
+
+    // ── Enchanting station ───────────────────────────────────────────────────
+
+    /** Top of the station area (where the station texture is drawn). */
+    private int enchantTop() {
+        return this.topPos + 18 * menu.getVisibleRows() + 18;
+    }
+
+    private int enchantOptionY(int i) {
+        return enchantTop() + 2 + ENCHANT_OPTION_H * i;
+    }
+
+    private boolean inBookshelfBox(double x, double y) {
+        int bx = this.leftPos + 10, by = enchantTop() + 2;
+        return x >= bx && x < bx + 18 && y >= by && y < by + 18;
+    }
+
+    private void drawEnchantingStation(GuiGraphicsExtractor graphics, int mouseX, int mouseY, int craftYScreen) {
+        var ench = menu.getEnchanting();
+        int top = enchantTop();
+        graphics.blit(RenderPipelines.GUI_TEXTURED, ENCHANTING_TEXTURE, this.leftPos, craftYScreen, 0, ENCHANT_TEX_Y, 176, 56, 256, 256);
+        // Bookshelves in the station: a slot with a bookshelf and the count, where the table's book usually sits.
+        int bx = this.leftPos + 10, by = top + 2;
+        graphics.fill(bx, by, bx + 18, by + 18, 0xFF373737);
+        graphics.fill(bx + 1, by + 1, bx + 18, by + 18, 0xFFFFFFFF);
+        graphics.fill(bx + 1, by + 1, bx + 17, by + 17, 0xFF8B8B8B);
+        int shelves = ench.getBookshelves();
+        if (shelves > 0) {
+            graphics.item(new ItemStack(Items.BOOKSHELF), bx + 1, by + 1);
+        } else {
+            graphics.fakeItem(new ItemStack(Items.BOOKSHELF), bx + 1, by + 1);
+            graphics.fill(bx + 1, by + 1, bx + 17, by + 17, 0x80FFFFFF);
+        }
+        if (inBookshelfBox(mouseX, mouseY)) graphics.fill(bx + 1, by + 1, bx + 17, by + 17, 0x80FFFFFF);
+        String count = shelves + "/" + com.emma.endinv.EndlessInventory.MAX_BOOKSHELVES;
+        graphics.text(this.font, count, bx + 9 - this.font.width(count) / 2, by + 20, shelves > 0 ? 0xFF404040 : 0xFF8B8B8B, false);
+        // The table's book: opens when there is something to enchant, turns its pages when the item changes.
+        if (bookModel != null) {
+            float a = this.minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+            float open = Mth.lerp(a, bookOOpen, bookOpen);
+            float flip = Mth.lerp(a, bookOFlip, bookFlip);
+            int x0 = this.leftPos + 29, y0 = top + 1;
+            graphics.book(bookModel, ENCHANTING_BOOK_TEXTURE, 32.0F, open, flip, x0, y0, x0 + 30, y0 + 30);
+        }
+        net.minecraft.client.gui.screens.inventory.EnchantmentNames.getInstance().initSeed(ench.getSeed());
+        int lapis = ench.getLapisCount();
+        for (int i = 0; i < 3; i++) {
+            int x = this.leftPos + 60;
+            int y = enchantOptionY(i);
+            int h = ENCHANT_OPTION_H;
+            int textX = x + 20;
+            int cost = ench.costs[i];
+            if (cost == 0) {
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ENCHANT_SLOT_DISABLED_SPRITE, x, y, 108, h);
+                continue;
+            }
+            String costText = String.valueOf(cost);
+            int textWidth = 86 - this.font.width(costText);
+            var message = net.minecraft.client.gui.screens.inventory.EnchantmentNames.getInstance().getRandomName(this.font, textWidth);
+            int col = 0xFF685E4A;
+            boolean creative = this.minecraft.player.getAbilities().instabuild;
+            if (((lapis < i + 1 || this.minecraft.player.experienceLevel < cost) && !creative) || ench.enchantClue[i] == -1) {
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ENCHANT_SLOT_DISABLED_SPRITE, x, y, 108, h);
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ENCHANT_LEVEL_DISABLED_SPRITES[i], x + 1, y, 16, 16);
+                graphics.textWithWordWrap(this.font, message, textX, y + 2, textWidth, net.minecraft.util.ARGB.opaque((col & 0xFEFEFE) >> 1), false);
+                col = 0xFF407F10;
+            } else {
+                if (mouseX >= x && mouseY >= y && mouseX < x + 108 && mouseY < y + h) {
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ENCHANT_SLOT_HIGHLIGHTED_SPRITE, x, y, 108, h);
+                    col = 0xFFFFFF80;
+                } else {
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ENCHANT_SLOT_SPRITE, x, y, 108, h);
+                }
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ENCHANT_LEVEL_SPRITES[i], x + 1, y, 16, 16);
+                graphics.textWithWordWrap(this.font, message, textX, y + 2, textWidth, col, false);
+                col = 0xFF80FF20;
+            }
+            graphics.text(this.font, costText, textX + 86 - this.font.width(costText), y + 8, col);
+        }
+    }
+
+    private void tickBook() {
+        ItemStack current = menu.getEnchanting().getItem();
+        if (!ItemStack.matches(current, bookLastItem)) {
+            bookLastItem = current.copy();
+            do {
+                bookFlipT += bookRandom.nextInt(4) - bookRandom.nextInt(4);
+            } while (bookFlip <= bookFlipT + 1.0F && bookFlip >= bookFlipT - 1.0F);
+        }
+        bookOFlip = bookFlip;
+        bookOOpen = bookOpen;
+        boolean shouldBeOpen = false;
+        for (int c : menu.getEnchanting().costs) if (c != 0) { shouldBeOpen = true; break; }
+        bookOpen = Mth.clamp(bookOpen + (shouldBeOpen ? 0.2F : -0.2F), 0.0F, 1.0F);
+        float diff = Mth.clamp((bookFlipT - bookFlip) * 0.4F, -0.2F, 0.2F);
+        bookFlipA += (diff - bookFlipA) * 0.9F;
+        bookFlip += bookFlipA;
+    }
+
+    private boolean enchantingClicked(MouseButtonEvent event) {
+        if (inBookshelfBox(event.x(), event.y())) {
+            boolean take = event.button() == InputConstants.MOUSE_BUTTON_RIGHT;
+            ItemStack carried = menu.getCarried();
+            if (!take && !carried.is(Items.BOOKSHELF)) return true;
+            this.minecraft.gameMode.handleInventoryButtonClick(menu.containerId,
+                    take ? com.emma.endinv.menu.EnchantingStation.BOOKSHELF_TAKE_BUTTON : com.emma.endinv.menu.EnchantingStation.BOOKSHELF_INSERT_BUTTON);
+            this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.BOOK_PAGE_TURN, 1.0F));
+            return true;
+        }
+        var ench = menu.getEnchanting();
+        for (int i = 0; i < 3; i++) {
+            double xx = event.x() - (this.leftPos + 60);
+            double yy = event.y() - enchantOptionY(i);
+            if (xx >= 0 && yy >= 0 && xx < 108 && yy < ENCHANT_OPTION_H) {
+                if (ench.costs[i] > 0) this.minecraft.gameMode.handleInventoryButtonClick(menu.containerId, i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void extractEnchantingTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        var ench = menu.getEnchanting();
+        if (inBookshelfBox(mouseX, mouseY)) {
+            graphics.setComponentTooltipForNextFrame(this.font, java.util.List.of(
+                    Component.translatable("emma_endinv.enchanting.bookshelves", ench.getBookshelves(), com.emma.endinv.EndlessInventory.MAX_BOOKSHELVES),
+                    Component.translatable("emma_endinv.enchanting.bookshelves.hint").withStyle(net.minecraft.ChatFormatting.GRAY)), mouseX, mouseY);
+            return;
+        }
+        boolean infinite = this.minecraft.player.hasInfiniteMaterials();
+        int lapis = ench.getLapisCount();
+        for (int i = 0; i < 3; i++) {
+            int minLevel = ench.costs[i];
+            int x = this.leftPos + 60, y = enchantOptionY(i);
+            if (minLevel <= 0 || mouseX < x || mouseY < y || mouseX >= x + 108 || mouseY >= y + ENCHANT_OPTION_H) continue;
+            var enchant = this.minecraft.level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).get(ench.enchantClue[i]);
+            java.util.List<Component> texts = new java.util.ArrayList<>();
+            texts.add(Component.translatable("container.enchant.clue", enchant.isEmpty() ? "" : net.minecraft.world.item.enchantment.Enchantment.getFullname(enchant.get(), ench.levelClue[i]))
+                    .withStyle(net.minecraft.ChatFormatting.WHITE));
+            int cost = i + 1;
+            if (!infinite && enchant.isPresent()) {
+                texts.add(CommonComponents.EMPTY);
+                if (this.minecraft.player.experienceLevel < minLevel) {
+                    texts.add(Component.translatable("container.enchant.level.requirement", minLevel).withStyle(net.minecraft.ChatFormatting.RED));
+                } else {
+                    texts.add((cost == 1 ? Component.translatable("container.enchant.lapis.one") : Component.translatable("container.enchant.lapis.many", cost))
+                            .withStyle(lapis >= cost ? net.minecraft.ChatFormatting.GRAY : net.minecraft.ChatFormatting.RED));
+                    texts.add((cost == 1 ? Component.translatable("container.enchant.level.one") : Component.translatable("container.enchant.level.many", cost))
+                            .withStyle(net.minecraft.ChatFormatting.GRAY));
+                }
+            }
+            graphics.setComponentTooltipForNextFrame(this.font, texts, mouseX, mouseY);
+            return;
+        }
     }
 
     private boolean isStonecutterScrollBarActive() {

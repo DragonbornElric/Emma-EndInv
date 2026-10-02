@@ -115,4 +115,29 @@ public final class StationUnlocks {
         }
         return false;
     }
+
+    /**
+     * Server side, a player died ({@code DropStationsOnDeath = true}, keepInventory off): take the
+     * station blocks put into their EndInv (when stations aren't free) and the enchanting station's
+     * bookshelves out of it, to be dropped where they died. Everyone sharing that EndInv loses them.
+     * @return the stacks to drop; empty when the setting is off
+     */
+    public static java.util.List<ItemStack> takeDeathDrops(Player player) {
+        if (!ServerConfigs.DROP_STATIONS_ON_DEATH.get()) return java.util.List.of();
+        EndlessInventory endInv = com.emma.endinv.ServerLevelEndInv.getEndInvForPlayer(player).orElse(null);
+        if (endInv == null) return java.util.List.of();
+        java.util.List<ItemStack> drops = new java.util.ArrayList<>();
+        if (!free()) {
+            for (Station st : endInv.getUnlockedStations()) {
+                Item block = st.unlockItem();
+                if (block != null) drops.add(new ItemStack(block));
+                endInv.lockStation(st);
+            }
+        }
+        if (endInv.getBookshelves() > 0) {
+            drops.add(new ItemStack(net.minecraft.world.item.Items.BOOKSHELF, endInv.getBookshelves()));
+            endInv.setBookshelves(0);
+        }
+        return drops;
+    }
 }

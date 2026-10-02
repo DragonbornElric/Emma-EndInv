@@ -61,6 +61,16 @@ public class FoliaEventListeners implements Listener {
         }
     }
 
+    /** DropStationsOnDeath: the station blocks and bookshelves in the dead player's EndInv drop with their items. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPlayerDeath(org.bukkit.event.entity.PlayerDeathEvent event) {
+        if (event.getKeepInventory()) return;
+        ServerPlayer player = ((CraftPlayer) event.getEntity()).getHandle();
+        for (net.minecraft.world.item.ItemStack stack : com.emma.endinv.menu.StationUnlocks.takeDeathDrops(player)) {
+            event.getDrops().add(org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(stack));
+        }
+    }
+
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onItemPickup(EntityPickupItemEvent event) {
         if (!(event.getEntity() instanceof Player)) return;

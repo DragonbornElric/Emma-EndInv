@@ -44,6 +44,9 @@ public final class ServerConfigs {
     public static final ConfigEntryImpl<Boolean> FREE_CRAFTING_STATIONS = register(new ConfigEntryImpl.BooleanEntry("FreeCraftingStations", new String[]{
             "Whether every Endless Inventory has all crafting stations (crafting table, furnace, smoker, blast furnace, stonecutter, grindstone, smithing table, brewing stand) for free.",
             "false: each station's button on the EndInv screen is locked until a player puts that block (crafted or found) into it; the block is used up and the station stays unlocked for that EndInv."}, true));
+    public static final ConfigEntryImpl<Boolean> DROP_STATIONS_ON_DEATH = register(new ConfigEntryImpl.BooleanEntry("DropStationsOnDeath", new String[]{
+            "Whether a player who dies drops the station blocks put into their EndInv (when FreeCraftingStations is false) and the enchanting station's bookshelves, which then have to be picked up again or rebuilt.",
+            "false: they are kept on death. The keepInventory game rule keeps them too."}, false));
     public static final ConfigEntryImpl.ListEntry<String> ADMINS = register(new ConfigEntryImpl.ListEntry<>("Admins", new String[]{
             "Player names or UUIDs allowed to manage every Endless Inventory (view, share, select, take, move, clear, delete).",
             "If empty, operators with permission level 4 (server owners) are admins."}, new ArrayList<>()));

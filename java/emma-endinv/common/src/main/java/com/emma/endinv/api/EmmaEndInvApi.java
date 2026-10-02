@@ -82,6 +82,30 @@ public final class EmmaEndInvApi {
         return mask < 0 ? null : com.emma.endinv.menu.StationUnlocks.isUnlocked(mask, st);
     }
 
+    /**
+     * Put up to {@code count} bookshelves into the EndInv enchanting station (15 at most in all; each
+     * one is a level of enchanting power, like bookshelves around a table). They come from the
+     * player's inventory, then EndInv. Needs no open screen. Read the count with
+     * {@link #bookshelves()}. Client thread only.
+     * @since 1.4.5
+     */
+    public static void addBookshelves(int count) {
+        if (count <= 0) return;
+        com.emma.endinv.ModInfo.getPacketDistributor().sendToServer(
+                new com.emma.endinv.network.payloads.toServer.AddBookshelvesPayload(count));
+    }
+
+    /**
+     * Bookshelves in the enchanting station as of the open EndInv screen, or -1 when no EndInv
+     * screen is open. Client thread only.
+     * @since 1.4.5
+     */
+    public static int bookshelves() {
+        var mc = net.minecraft.client.Minecraft.getInstance();
+        return mc.player != null && mc.player.containerMenu instanceof com.emma.endinv.menu.EndlessInventoryMenu menu
+                ? menu.getEnchanting().getBookshelves() : -1;
+    }
+
     /** Ask the server for the storage index (every container tagged with a Storage Tag and its contents).
      *  The reply arrives asynchronously; read it with {@link #getStorageIndex()}. Client thread only. */
     public static void requestStorageIndex() {

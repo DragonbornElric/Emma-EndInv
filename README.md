@@ -157,8 +157,14 @@ entry with a count of up to 2,147,483,647. Press **I** to open it. It is saved i
   - Clearing the grid puts the items back in EndInv.
   - Items going into EndInv still unlock recipes and advancements.
 - **Built-in stations** (buttons on the EndInv screen): Crafting Table, Furnace, Smoker, Blast
-  Furnace, Brewing Stand, Stonecutter, Grindstone and Smithing Table. They work straight from
-  EndInv, with no block to place.
+  Furnace, Brewing Stand, Stonecutter, Grindstone, Smithing Table and Enchanting Table. They work
+  straight from EndInv, with no block to place.
+  - While a furnace, smoker, blast furnace or brewing stand is working, its button shows a flame
+    and a progress bar, even when that station isn't open.
+  - **Enchanting Table:** works like the vanilla table (item, lapis, three offers). Its power comes
+    from bookshelves put into the station instead of bookshelves around a block: click the
+    bookshelf slot holding bookshelves to add them (15 at most, full power), right-click to take
+    one back out. With none, offers top out at level 8; with 15, at level 30.
   - Furnace, Smoker and Blast Furnace each have their own slots and their own recipe book.
   - **Shift-click** an item from an EndInv page or your inventory to send it to the open station:
     - Ingredients go to the input slot, and fuel (coal, wood, lava buckets and so on) goes to
@@ -174,6 +180,10 @@ entry with a count of up to 2,147,483,647. Press **I** to open it. It is saved i
     out, and stays locked until you click it holding that block (crafted or found). The block is
     used up and the station stays unlocked for that EndInv, so everyone sharing an EndInv shares
     its stations. Turning the setting back on frees every station again.
+  - Station blocks and bookshelves you put in are kept when you die. A server can make them drop
+    instead (`DropStationsOnDeath: true`, or `/endinv config dropStationsOnDeath true`): they fall
+    where you died with your items, so you recover them or build them again. With the
+    `keepInventory` game rule on nothing drops. Everyone sharing that EndInv loses them.
 - **Shared inventories, Storage Tracker and admin tools:** see the sections below.
 - **API for other client code:** `com.emma.endinv.api.EmmaEndInvApi`. It can loot the open
   container into EndInv, swap an EndInv item with a menu slot, and read the Storage Tracker
@@ -195,6 +205,7 @@ folder):
 | `specifiedMenuAttachability.container2attachable` | `[]` | Per-menu overrides, e.g. `"minecraft:generic_9x3:false"`, `"inventory:true"` |
 | `EnableAutoPick` | `true` | Auto-pickup into EndInv |
 | `FreeCraftingStations` | `true` | Every EndInv has all stations; `false`: each one is unlocked by putting its block into its button |
+| `DropStationsOnDeath` | `false` | A player who dies drops the station blocks and enchanting bookshelves in their EndInv |
 | `defaultEndinvBehavior.MaxStackSize` | `2147483647` | Max count per item type in a new EndInv |
 | `defaultEndinvBehavior.EnableInfinity` | `false` | Items that reach the max count become infinite |
 | `defaultEndinvBehavior.Accessibility` | `PUBLIC` | Default access level for new EndInvs |

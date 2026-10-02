@@ -16,7 +16,9 @@ public enum Station {
     STONECUTTER(null, null, -1),
     GRINDSTONE(null, null, -1),
     SMITHING(null, null, -1),
-    BREWING(null, null, -1);
+    BREWING(null, null, -1),
+    /** Added in 1.4.5; last so the earlier ordinals (sent over the network) don't change. */
+    ENCHANTING(null, null, -1);
 
     /** Non-null for cooking stations; null for NONE and CRAFTING. */
     public final @Nullable RecipeType<? extends AbstractCookingRecipe> cookingRecipeType;
@@ -42,7 +44,7 @@ public enum Station {
     }
 
     public boolean isInstantStation() {
-        return this == STONECUTTER || this == GRINDSTONE || this == SMITHING;
+        return this == STONECUTTER || this == GRINDSTONE || this == SMITHING || this == ENCHANTING;
     }
 
     public boolean isBrewing() {
@@ -72,6 +74,7 @@ public enum Station {
             case GRINDSTONE -> Items.GRINDSTONE;
             case SMITHING -> Items.SMITHING_TABLE;
             case BREWING -> Items.BREWING_STAND;
+            case ENCHANTING -> Items.ENCHANTING_TABLE;
         };
     }
 }

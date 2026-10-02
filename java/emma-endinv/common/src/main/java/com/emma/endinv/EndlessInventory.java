@@ -78,8 +78,9 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                     FurnaceState.CODEC.optionalFieldOf("smoker_state", FurnaceState.EMPTY).forGetter(ei -> ei.smokerState),
                     FurnaceState.CODEC.optionalFieldOf("blast_furnace_state", FurnaceState.EMPTY).forGetter(ei -> ei.blastFurnaceState),
                     BrewingState.CODEC.optionalFieldOf("brewing_state", BrewingState.EMPTY).forGetter(ei -> ei.brewingState),
-                    UNLOCKED_STATIONS_CODEC.optionalFieldOf("unlocked_stations", List.of()).forGetter(ei -> List.copyOf(ei.unlockedStations))
-                        ).apply(instance, (itemMap, aff, uuid, ownerUuid, wLstUid, acc, maxSize, infBool, furnaceState, smokerState, blastState, brewingState, unlocked) -> {
+                    UNLOCKED_STATIONS_CODEC.optionalFieldOf("unlocked_stations", List.of()).forGetter(ei -> List.copyOf(ei.unlockedStations)),
+                    Codec.INT.optionalFieldOf("bookshelves", 0).forGetter(ei -> ei.bookshelves)
+                        ).apply(instance, (itemMap, aff, uuid, ownerUuid, wLstUid, acc, maxSize, infBool, furnaceState, smokerState, blastState, brewingState, unlocked, shelves) -> {
                             EndlessInventory endInv = new EndlessInventory(uuid, aff);
                                endInv.itemMap.putAll(itemMap);
                                endInv.owner = ownerUuid.orElse(null);
@@ -92,6 +93,7 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                                endInv.blastFurnaceState = blastState;
                                endInv.brewingState = brewingState;
                                endInv.unlockedStations.addAll(unlocked);
+                               endInv.bookshelves = Math.clamp(shelves, 0, EndlessInventory.MAX_BOOKSHELVES);
                                return endInv;
                     }
             )
@@ -133,6 +135,27 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
     private final EnumSet<Station> unlockedStations = EnumSet.noneOf(Station.class);
 
     public boolean isStationUnlocked(Station st) { return unlockedStations.contains(st); }
+
+    /** The stations unlocked by putting their block in (a copy). */
+    public Set<Station> getUnlockedStations() { return EnumSet.copyOf(unlockedStations); }
+
+    public void lockStation(Station st) {
+        if (unlockedStations.remove(st)) setChanged();
+    }
+
+    /** Bookshelves put into the enchanting station: its enchanting power, like bookshelves around a table. */
+    public static final int MAX_BOOKSHELVES = 15;
+    private int bookshelves = 0;
+
+    public int getBookshelves() { return bookshelves; }
+
+    public void setBookshelves(int count) {
+        int clamped = Math.clamp(count, 0, MAX_BOOKSHELVES);
+        if (clamped != bookshelves) {
+            bookshelves = clamped;
+            setChanged();
+        }
+    }
 
     public void unlockStation(Station st) {
         if (st != Station.NONE && unlockedStations.add(st)) setChanged();

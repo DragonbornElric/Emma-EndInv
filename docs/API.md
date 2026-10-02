@@ -95,6 +95,10 @@ the player's client on the next tick.
 | `ItemStack insert(ServerPlayer player, ItemStack stack)` | What didn't fit: empty if everything was stored, the whole stack if EndInv isn't available. `stack` is not modified |
 | `ItemStack extract(ServerPlayer player, ItemStack like, int count)` | The items taken: at most `count`, possibly fewer or empty |
 | `Map<ItemStack, Integer> contents(ServerPlayer player)` | A copy of everything: one 1-count stack per item type, mapped to its stored count |
+| `boolean isStationUnlocked(ServerPlayer player, Item block)` | Whether the station that block (crafting table, furnace, smoker, blast furnace, stonecutter, grindstone, smithing table, brewing stand, enchanting table) opens can be used. Always true when the server has `FreeCraftingStations` on. *1.4.5* |
+| `boolean unlockStation(ServerPlayer player, Item block)` | Puts one of that block from the inventory, else EndInv, into its station. True if it unlocked now. *1.4.5* |
+| `int bookshelves(ServerPlayer player)` | Bookshelves in the enchanting station (0..15). *1.4.5* |
+| `int addBookshelves(ServerPlayer player, int count)` | Puts up to `count` bookshelves from the inventory, else EndInv, into the enchanting station. Returns how many went in. *1.4.5* |
 
 "The player's EndInv" is the one the player currently uses: their own, or a shared one they
 selected. All methods return empty or zero results before EndInv data is loaded.
@@ -148,6 +152,10 @@ player's EndInv, which is filled after joining a server that has EndInv.
 | `int lootAllOpenContainerToEndInv()` | Same as the **Loot All** button: moves every slot of the open chest/container into EndInv. Returns the number of slots queued, 0 if no container is open |
 | `boolean swapEndInvWithMenuSlot(ItemKey key, int menuSlotIndex)` | Swaps an EndInv item with a slot of the open menu (`player.containerMenu`). Empty slot: the item is placed from EndInv. EndInv doesn't have it: the slot empties into EndInv. Both: they swap. Respects `mayPickup`/`mayPlace`. Returns true if the request was sent |
 | `void requestStorageIndex()` | Asks the server for the Storage Tracker index (every tagged chest and its contents) |
+| `boolean unlockStation(Item block)` | Puts one station block (see the server method) from the inventory, else EndInv, into its station; no screen needed. Safe to repeat: the server ignores it when the station is free or already unlocked, or there is no such block. Returns true if the request was sent. *1.4.5* |
+| `Boolean isStationUnlocked(Item block)` | As of the open EndInv screen, or the last one open; null before any. *1.4.5* |
+| `void addBookshelves(int count)` | Puts up to `count` bookshelves from the inventory, else EndInv, into the enchanting station (15 at most); no screen needed. *1.4.5* |
+| `int bookshelves()` | Bookshelves in the enchanting station as of the open EndInv screen; -1 when none is open. *1.4.5* |
 | `List<TrackedContainer> getStorageIndex()` | The last index received: dimension, position, label and contents of each tracked container |
 
 `ItemKey` (`com.emma.endinv.util.ItemKey`) is EndInv's item + components key:

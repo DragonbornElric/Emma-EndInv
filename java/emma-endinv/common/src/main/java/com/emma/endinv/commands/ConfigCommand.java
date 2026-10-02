@@ -35,6 +35,13 @@ public class ConfigCommand {
                                                 )
                                 )
                                 .then(
+                                        Commands.literal("dropStationsOnDeath")
+                                                .then(
+                                                        Commands.argument("enable", BoolArgumentType.bool())
+                                                                .executes(context -> cmdSetDropStations(context.getSource(), BoolArgumentType.getBool(context, "enable")))
+                                                )
+                                )
+                                .then(
                                         Commands.literal("freeStations")
                                                 .then(
                                                         Commands.argument("enable", BoolArgumentType.bool())
@@ -67,6 +74,18 @@ public class ConfigCommand {
         if (!server) text += " (turned off on this server)";
         player.sendSystemMessage(Component.literal(text));
         return mine && server ? 1 : 0;
+    }
+
+    private static int cmdSetDropStations(CommandSourceStack source, boolean drop) {
+        try {
+            ServerConfigs.DROP_STATIONS_ON_DEATH.set(drop);
+            source.sendSuccess(() -> Component.literal(drop
+                    ? "Players drop their EndInv station blocks and bookshelves when they die"
+                    : "Players keep their EndInv station blocks and bookshelves when they die"), true);
+            return 1;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private static int cmdSetFreeStations(CommandSourceStack source, boolean free) {

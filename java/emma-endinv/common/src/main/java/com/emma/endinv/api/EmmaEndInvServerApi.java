@@ -89,6 +89,20 @@ public final class EmmaEndInvServerApi {
         return StationUnlocks.tryUnlockFromStorage(player, endInv(player).orElse(null), st);
     }
 
+    /** Bookshelves in the player's EndInv enchanting station (0..15). @since 1.4.5 */
+    public static int bookshelves(ServerPlayer player) {
+        return endInv(player).map(EndlessInventory::getBookshelves).orElse(0);
+    }
+
+    /**
+     * Put up to {@code count} bookshelves from the player's inventory, then EndInv, into the
+     * enchanting station (15 at most in all). @return how many were added
+     * @since 1.4.5
+     */
+    public static int addBookshelves(ServerPlayer player, int count) {
+        return com.emma.endinv.menu.EnchantingStation.addBookshelvesFromStorage(player, endInv(player).orElse(null), count);
+    }
+
     private static Optional<EndlessInventory> endInv(ServerPlayer player) {
         return ServerLevelEndInv.getEndInvForPlayer(player);
     }
