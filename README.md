@@ -109,6 +109,13 @@ Bugs found by these tests and fixed in 1.4.1:
 
 ## Features
 
+| | |
+|---|---|
+| ![Browse, filter and search](publish/gallery/storage.gif) | ![Auto-pickup](publish/gallery/auto-pickup.gif) |
+| **Browse, filter and search** everything you own | **Auto-pickup:** mined blocks and loot go straight into EndInv |
+| ![Loot All](publish/gallery/loot-all.gif) | ![Craft from storage](publish/gallery/crafting.gif) |
+| **Loot All:** empty a chest with one click | **Craft from storage:** the recipe book fills the grid from EndInv |
+
 **Endless Inventory (EndInv).** A per-player storage with no slot limit: each item type is one
 entry with a count of up to 2,147,483,647. Press **I** to open it. It is saved in the world's data.
 
