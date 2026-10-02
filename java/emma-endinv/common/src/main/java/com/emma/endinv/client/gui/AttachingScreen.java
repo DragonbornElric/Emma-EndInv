@@ -5,6 +5,7 @@ import com.emma.endinv.client.ClientModInfo;
 import com.emma.endinv.client.gui.bg.IRectangleParam;
 import com.emma.endinv.client.option.ClientConfigs;
 import com.emma.endinv.client.option.MenuAttachabilityCache;
+import com.emma.endinv.mixin.AbstractContainerScreenAccessor;
 import com.emma.endinv.network.payloads.toServer.OpenEndInvPayload;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
@@ -112,6 +113,15 @@ public class AttachingScreen<T extends AbstractContainerMenu>{
         // The panel is drawn after the screen, so draw the stack held on the cursor again on top of it.
         guiGraphics.nextStratum();
         screen.extractCarriedItem(guiGraphics, mouseX, mouseY);
+        // Same for the tooltip of the hovered container slot: vanilla already drew it in a lower stratum (before this
+        // after-render hook), so where it overlaps the panel it would be hidden. Queue it again and draw it on top.
+        AbstractContainerScreenAccessor access = (AbstractContainerScreenAccessor) screen;
+        net.minecraft.world.inventory.Slot hovered = access.endinv$getHoveredSlot();
+        if (hovered != null && hovered.hasItem() && screen.getMenu().getCarried().isEmpty()) {
+            guiGraphics.nextStratum();
+            access.endinv$invokeExtractTooltip(guiGraphics, mouseX, mouseY);
+            guiGraphics.extractDeferredElements(mouseX, mouseY, partialTick);
+        }
     }
 
 
