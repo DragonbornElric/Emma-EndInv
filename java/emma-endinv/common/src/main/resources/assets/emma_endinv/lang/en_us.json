@@ -114,6 +114,8 @@
   "emma_endinv.button.enchanting_table": "Enchanting Table",
   "emma_endinv.enchanting.bookshelves": "Bookshelves: %s/%s (enchanting power)",
   "emma_endinv.enchanting.bookshelves.hint": "Click holding bookshelves to add them. Right-click to take one out.",
+  "emma_endinv.station.done": "%s is done: %s",
+  "emma_endinv.station.out_of_fuel": "%s is out of fuel",
   "emma_endinv.station.disabled": "Ask Admin to Enable Crafting Devices on Server",
   "emma_endinv.station.locked": "%s (locked)\nClick here holding a %s to unlock it. The block is used up.",
 

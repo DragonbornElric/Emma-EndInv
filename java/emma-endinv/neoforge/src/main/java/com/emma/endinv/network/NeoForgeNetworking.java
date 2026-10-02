@@ -59,6 +59,8 @@ public final class NeoForgeNetworking {
                 (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))));
         reg.playToClient(ItemPickedUpPayload.TYPE, ItemPickedUpPayload.STREAM_CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))));
+        reg.playToClient(com.emma.endinv.network.payloads.toClient.StationEventPayload.TYPE, com.emma.endinv.network.payloads.toClient.StationEventPayload.STREAM_CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))));
         reg.playToClient(SetItemDisplayContentPayload.TYPE, SetItemDisplayContentPayload.STREAM_CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> payload.handle(clientCtx(ctx.player()))));
         reg.playToClient(SetStarredPagePayload.TYPE, SetStarredPagePayload.STREAM_CODEC,

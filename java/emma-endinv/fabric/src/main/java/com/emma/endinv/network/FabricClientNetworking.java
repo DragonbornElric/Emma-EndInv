@@ -18,6 +18,8 @@ public final class FabricClientNetworking {
                 (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
         ClientPlayNetworking.registerGlobalReceiver(ItemPickedUpPayload.TYPE,
                 (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
+        ClientPlayNetworking.registerGlobalReceiver(com.emma.endinv.network.payloads.toClient.StationEventPayload.TYPE,
+                (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
         ClientPlayNetworking.registerGlobalReceiver(SetItemDisplayContentPayload.TYPE,
                 (payload, context) -> context.client().execute(() -> payload.handle(context(context.player()))));
         ClientPlayNetworking.registerGlobalReceiver(SetStarredPagePayload.TYPE,

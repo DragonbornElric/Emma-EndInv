@@ -47,6 +47,9 @@ public final class ServerConfigs {
     public static final ConfigEntryImpl<Boolean> FREE_CRAFTING_STATIONS = register(new ConfigEntryImpl.BooleanEntry("FreeCraftingStations", new String[]{
             "Whether every Endless Inventory has all crafting stations (crafting table, furnace, smoker, blast furnace, stonecutter, grindstone, smithing table, brewing stand) for free.",
             "false: each station's button on the EndInv screen is locked until a player puts that block (crafted or found) into it; the block is used up and the station stays unlocked for that EndInv."}, true));
+    public static final ConfigEntryImpl<Boolean> STATION_CHAT_MESSAGES = register(new ConfigEntryImpl.BooleanEntry("StationChatMessages", new String[]{
+            "Whether a player gets a chat line when a furnace, smoker or blast furnace in their EndInv finishes its input or runs out of fuel, or a brewing stand finishes a brew.",
+            "false: no chat line; mods still get the event through the EndInv API."}, true));
     public static final ConfigEntryImpl<Boolean> DROP_STATIONS_ON_DEATH = register(new ConfigEntryImpl.BooleanEntry("DropStationsOnDeath", new String[]{
             "Whether a player who dies drops the station blocks put into their EndInv (when FreeCraftingStations is false) and the enchanting station's bookshelves, which then have to be picked up again or rebuilt.",
             "false: they are kept on death. The keepInventory game rule keeps them too."}, false));

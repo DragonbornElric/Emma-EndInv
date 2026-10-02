@@ -117,4 +117,30 @@ public final class EmmaEndInvApi {
     public static java.util.List<com.emma.endinv.storage.TrackedContainer> getStorageIndex() {
         return com.emma.endinv.client.gui.StorageTrackerScreen.lastIndex();
     }
+
+    private static final java.util.List<java.util.function.Consumer<StationEvent>> STATION_LISTENERS =
+            new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /** Called on the client thread when a station in the player's EndInv finishes (a furnace, smoker
+     *  or blast furnace cooked its last input, a brewing stand finished a brew) or burns out with input
+     *  left, whether its screen is open or not. Needs a server running EndInv 1.4.5+ (any loader).
+     *  @since 1.4.5 */
+    public static void addStationListener(java.util.function.Consumer<StationEvent> listener) {
+        STATION_LISTENERS.add(listener);
+    }
+
+    public static void removeStationListener(java.util.function.Consumer<StationEvent> listener) {
+        STATION_LISTENERS.remove(listener);
+    }
+
+    /** Internal: delivers a server's station event to the listeners. */
+    public static void fireStationEvent(StationEvent event) {
+        for (var listener : STATION_LISTENERS) {
+            try {
+                listener.accept(event);
+            } catch (RuntimeException e) {
+                com.mojang.logging.LogUtils.getLogger().warn("EndInv station listener failed", e);
+            }
+        }
+    }
 }

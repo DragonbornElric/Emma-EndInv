@@ -196,6 +196,31 @@ public class StationUnlockClientGameTest implements FabricClientGameTest {
             check(!ctx.computeOnClient(mc -> ((EndlessInventoryScreen) mc.gui.screen()).stationsDisabled()), "craftingStations true shows the stations again");
             check(unlocked(ctx, Station.FURNACE), "stations unlocked again after turning them back on");
 
+            // Finished and burned-out stations: chat line plus the client API event, screen closed.
+            List<com.emma.endinv.api.StationEvent> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+            ctx.runOnClient(mc -> com.emma.endinv.api.EmmaEndInvApi.addStationListener(events::add));
+            ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
+            ctx.waitTicks(5);
+            sp.getServer().runOnServer(server -> {
+                var endInv = com.emma.endinv.ServerLevelEndInv.getEndInvForPlayer(server.getPlayerList().getPlayers().get(0)).orElseThrow();
+                endInv.setCookingState(Station.FURNACE, new com.emma.endinv.menu.FurnaceState(
+                        new net.minecraft.world.item.ItemStack(Items.RAW_IRON, 1), new net.minecraft.world.item.ItemStack(Items.COAL, 1),
+                        new net.minecraft.world.item.ItemStack(Items.IRON_INGOT, 7), 1000, 1600, 195, 200));
+                endInv.setCookingState(Station.SMOKER, new com.emma.endinv.menu.FurnaceState(
+                        new net.minecraft.world.item.ItemStack(Items.BEEF, 3), net.minecraft.world.item.ItemStack.EMPTY,
+                        net.minecraft.world.item.ItemStack.EMPTY, 3, 1600, 10, 100));
+            });
+            ctx.waitTicks(30);
+            check(events.stream().anyMatch(e -> e.station() == Items.FURNACE && e.reason() == com.emma.endinv.api.StationEvent.Reason.DONE
+                    && e.result().is(Items.IRON_INGOT) && e.result().getCount() == 8), "furnace done event with 8 iron ingots");
+            check(events.stream().anyMatch(e -> e.station() == Items.SMOKER && e.reason() == com.emma.endinv.api.StationEvent.Reason.OUT_OF_FUEL),
+                    "smoker out-of-fuel event");
+            check(events.stream().filter(e -> e.station() == Items.FURNACE).count() == 1, "one furnace event, not one per tick");
+            screenshot(ctx, "stations-7-done-chat");
+            ctx.getInput().pressKey(GLFW.GLFW_KEY_I);
+            ctx.waitForScreen(EndlessInventoryScreen.class);
+            ctx.waitTicks(5);
+
             ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
             ctx.waitTicks(5);
             if (!failures.isEmpty()) throw new AssertionError("[EndInvTest] " + failures.size() + " check(s) failed: " + failures);

@@ -36,6 +36,7 @@ public final class FabricNetworking {
         s2c.register(EndInvContent.TYPE, EndInvContent.STREAM_CODEC);
         s2c.register(EndInvMetadata.TYPE, EndInvMetadata.STREAM_CODEC);
         s2c.register(ItemPickedUpPayload.TYPE, ItemPickedUpPayload.STREAM_CODEC);
+        s2c.register(com.emma.endinv.network.payloads.toClient.StationEventPayload.TYPE, com.emma.endinv.network.payloads.toClient.StationEventPayload.STREAM_CODEC);
         s2c.register(SetItemDisplayContentPayload.TYPE, SetItemDisplayContentPayload.STREAM_CODEC);
         s2c.register(SetStarredPagePayload.TYPE, SetStarredPagePayload.STREAM_CODEC);
         s2c.register(MenuAttachabilityPayload.TYPE, MenuAttachabilityPayload.STREAM_CODEC);
