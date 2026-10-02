@@ -35,6 +35,13 @@ public class ConfigCommand {
                                                 )
                                 )
                                 .then(
+                                        Commands.literal("craftingStations")
+                                                .then(
+                                                        Commands.argument("enable", BoolArgumentType.bool())
+                                                                .executes(context -> cmdSetCraftingStations(context.getSource(), BoolArgumentType.getBool(context, "enable")))
+                                                )
+                                )
+                                .then(
                                         Commands.literal("dropStationsOnDeath")
                                                 .then(
                                                         Commands.argument("enable", BoolArgumentType.bool())
@@ -82,6 +89,18 @@ public class ConfigCommand {
             source.sendSuccess(() -> Component.literal(drop
                     ? "Players drop their EndInv station blocks and bookshelves when they die"
                     : "Players keep their EndInv station blocks and bookshelves when they die"), true);
+            return 1;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private static int cmdSetCraftingStations(CommandSourceStack source, boolean enable) {
+        try {
+            ServerConfigs.CRAFTING_STATIONS.set(enable);
+            source.sendSuccess(() -> Component.literal(enable
+                    ? "Crafting stations are enabled on the EndInv screen"
+                    : "Crafting stations are turned off on the EndInv screen"), true);
             return 1;
         } catch (Exception e) {
             return 0;

@@ -167,6 +167,35 @@ public class StationUnlockClientGameTest implements FabricClientGameTest {
                     "smoker and blast furnace lit");
             screenshot(ctx, "stations-5-all-running");
 
+            // CraftingStations false: every station button hidden, one icon asking for an admin.
+            sp.getServer().runCommand("endinv config craftingStations false");
+            ctx.waitTicks(10);
+            check(ctx.computeOnClient(mc -> ((EndlessInventoryScreen) mc.gui.screen()).stationsDisabled()), "craftingStations false hides the stations");
+            check(!unlocked(ctx, Station.CRAFTING) && !unlocked(ctx, Station.ENCHANTING), "craftingStations false locks every station");
+            check(!sp.getServer().computeOnServer(server -> com.emma.endinv.api.EmmaEndInvServerApi.isStationUnlocked(
+                    server.getPlayerList().getPlayers().get(0), Items.FURNACE)), "server API: furnace off while stations are off");
+            int[] icon = ctx.computeOnClient(mc -> {
+                var screen = (EndlessInventoryScreen) mc.gui.screen();
+                for (var child : screen.children()) {
+                    if (child instanceof AbstractWidget w && w.visible && w.getWidth() == 22
+                            && w.getMessage().getString().startsWith("Ask Admin")) {
+                        return new int[]{w.getX() + 11, w.getY() + 11};
+                    }
+                }
+                return null;
+            });
+            check(icon != null, "disabled-stations icon shown");
+            if (icon != null) {
+                int scale = ctx.computeOnClient(mc -> mc.getWindow().getGuiScale());
+                ctx.getInput().setCursorPos(icon[0] * scale, icon[1] * scale);
+                ctx.waitTicks(20);
+            }
+            screenshot(ctx, "stations-6-turned-off");
+            sp.getServer().runCommand("endinv config craftingStations true");
+            ctx.waitTicks(10);
+            check(!ctx.computeOnClient(mc -> ((EndlessInventoryScreen) mc.gui.screen()).stationsDisabled()), "craftingStations true shows the stations again");
+            check(unlocked(ctx, Station.FURNACE), "stations unlocked again after turning them back on");
+
             ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
             ctx.waitTicks(5);
             if (!failures.isEmpty()) throw new AssertionError("[EndInvTest] " + failures.size() + " check(s) failed: " + failures);

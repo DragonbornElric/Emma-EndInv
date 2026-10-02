@@ -95,7 +95,7 @@ the player's client on the next tick.
 | `ItemStack insert(ServerPlayer player, ItemStack stack)` | What didn't fit: empty if everything was stored, the whole stack if EndInv isn't available. `stack` is not modified |
 | `ItemStack extract(ServerPlayer player, ItemStack like, int count)` | The items taken: at most `count`, possibly fewer or empty |
 | `Map<ItemStack, Integer> contents(ServerPlayer player)` | A copy of everything: one 1-count stack per item type, mapped to its stored count |
-| `boolean isStationUnlocked(ServerPlayer player, Item block)` | Whether the station that block (crafting table, furnace, smoker, blast furnace, stonecutter, grindstone, smithing table, brewing stand, enchanting table) opens can be used. Always true when the server has `FreeCraftingStations` on. *1.4.5* |
+| `boolean isStationUnlocked(ServerPlayer player, Item block)` | Whether the station that block (crafting table, furnace, smoker, blast furnace, stonecutter, grindstone, smithing table, brewing stand, enchanting table) opens can be used. Always true when the server has `FreeCraftingStations` on, always false when it has `CraftingStations` off. *1.4.5* |
 | `boolean unlockStation(ServerPlayer player, Item block)` | Puts one of that block from the inventory, else EndInv, into its station. True if it unlocked now. *1.4.5* |
 | `int bookshelves(ServerPlayer player)` | Bookshelves in the enchanting station (0..15). *1.4.5* |
 | `int addBookshelves(ServerPlayer player, int count)` | Puts up to `count` bookshelves from the inventory, else EndInv, into the enchanting station. Returns how many went in. *1.4.5* |

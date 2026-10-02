@@ -230,7 +230,7 @@ public final class EnchantingStation {
      * creative). @return how many were added
      */
     public static int addBookshelvesFromStorage(Player player, @org.jetbrains.annotations.Nullable SourceInventory source, int count) {
-        if (!(source instanceof EndlessInventory endInv) || count <= 0) return 0;
+        if (!(source instanceof EndlessInventory endInv) || count <= 0 || !StationUnlocks.enabled()) return 0;
         int want = Math.min(count, EndlessInventory.MAX_BOOKSHELVES - endInv.getBookshelves());
         int added = 0;
         if (player.hasInfiniteMaterials()) {

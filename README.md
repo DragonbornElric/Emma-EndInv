@@ -180,6 +180,8 @@ entry with a count of up to 2,147,483,647. Press **I** to open it. It is saved i
   - Furnaces and the brewing stand keep cooking and brewing after you close the screen, as long
     as you are online.
   - Cooking XP is given to you.
+  - A server can turn stations off entirely (`CraftingStations: false`, or `/endinv config craftingStations false`):
+    the buttons are hidden and one icon in their place tells players to ask an admin to enable them.
   - Free by default. A server can make players earn them instead (`FreeCraftingStations: false`,
     or `/endinv config freeStations false`): each station's button then shows its block greyed
     out, and stays locked until you click it holding that block (crafted or found). The block is
@@ -209,6 +211,7 @@ folder):
 | `DefaultAttach` | `true` | Show the attached EndInv panel on menus by default |
 | `specifiedMenuAttachability.container2attachable` | `[]` | Per-menu overrides, e.g. `"minecraft:generic_9x3:false"`, `"inventory:true"` |
 | `EnableAutoPick` | `true` | Auto-pickup into EndInv |
+| `CraftingStations` | `true` | `false`: the EndInv screen has no stations; their buttons are hidden behind one icon saying to ask an admin to enable them (`/endinv config craftingStations`). Unlocks and bookshelves are kept for when they come back |
 | `FreeCraftingStations` | `true` | Every EndInv has all stations; `false`: each one is unlocked by putting its block into its button |
 | `DropStationsOnDeath` | `false` | A player who dies drops the station blocks and enchanting bookshelves in their EndInv |
 | `defaultEndinvBehavior.MaxStackSize` | `2147483647` | Max count per item type in a new EndInv |

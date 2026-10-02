@@ -25,6 +25,13 @@ public final class StationUnlocks {
     /** Menu button ids at and above this unlock a station; below are stonecutter recipe picks. */
     public static final int BUTTON_BASE = 1000;
 
+    /**
+     * Set in the mask when the server has stations turned off ({@code CraftingStations = false}):
+     * every station is locked and the client hides the buttons. Bit 14 keeps the mask a positive
+     * short, which is how menu data slots go over the network.
+     */
+    public static final int DISABLED_BIT = 1 << 14;
+
     /** Every station unlocked. Also the client's value before the server's first sync. */
     public static final int ALL = allMask();
 
@@ -43,12 +50,25 @@ public final class StationUnlocks {
         return 1 << st.ordinal();
     }
 
+    /** Server side: whether stations exist at all ({@code CraftingStations}). */
+    public static boolean enabled() {
+        return ServerConfigs.CRAFTING_STATIONS.get();
+    }
+
+    public static boolean isDisabled(int mask) {
+        return mask >= 0 && (mask & DISABLED_BIT) != 0;
+    }
+
     public static boolean free() {
         return ServerConfigs.FREE_CRAFTING_STATIONS.get();
     }
 
-    /** Server side: the unlocked stations of {@code source}, all of them when stations are free. */
+    /**
+     * Server side: the unlocked stations of {@code source}, all of them when stations are free, none
+     * plus {@link #DISABLED_BIT} when stations are turned off.
+     */
     public static int mask(@Nullable SourceInventory source) {
+        if (!enabled()) return bit(Station.NONE) | DISABLED_BIT;
         if (!(source instanceof EndlessInventory endInv) || free()) return ALL;
         int mask = bit(Station.NONE);
         for (Station st : Station.values()) {
@@ -75,7 +95,7 @@ public final class StationUnlocks {
      * @return true when the station was unlocked (one block used up)
      */
     public static boolean tryUnlock(AbstractContainerMenu menu, Player player, @Nullable SourceInventory source, Station st) {
-        if (free() || !(source instanceof EndlessInventory endInv) || endInv.isStationUnlocked(st)) return false;
+        if (!enabled() || free() || !(source instanceof EndlessInventory endInv) || endInv.isStationUnlocked(st)) return false;
         Item needed = st.unlockItem();
         ItemStack carried = menu.getCarried();
         if (needed == null || carried.isEmpty() || !carried.is(needed)) return false;
@@ -93,7 +113,7 @@ public final class StationUnlocks {
      * @return true when the station was unlocked (one block used up)
      */
     public static boolean tryUnlockFromStorage(Player player, @Nullable SourceInventory source, Station st) {
-        if (free() || !(source instanceof EndlessInventory endInv) || endInv.isStationUnlocked(st)) return false;
+        if (!enabled() || free() || !(source instanceof EndlessInventory endInv) || endInv.isStationUnlocked(st)) return false;
         Item needed = st.unlockItem();
         if (needed == null) return false;
         if (!player.hasInfiniteMaterials() && !takeOne(player.getInventory(), needed)) {
