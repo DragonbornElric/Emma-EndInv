@@ -219,7 +219,7 @@ public final class EnchantingStation {
         if (player.level().isClientSide()) return;
         for (int i = 0; i < slots.getContainerSize(); i++) {
             ItemStack s = slots.removeItemNoUpdate(i);
-            if (!s.isEmpty()) player.getInventory().placeItemBackInInventory(s);
+            if (!s.isEmpty()) player.getInventory().placeItemBackInInventory(s, net.minecraft.util.Prediction.SERVER_ONLY);
         }
         slots.setChanged();
     }

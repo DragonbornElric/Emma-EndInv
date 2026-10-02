@@ -23,7 +23,7 @@ public abstract class PlayerDeathStationDropMixin {
         if (!((Object) this instanceof ServerPlayer player)) return;
         if (level.getGameRules().get(GameRules.KEEP_INVENTORY)) return;
         for (ItemStack stack : StationUnlocks.takeDeathDrops(player)) {
-            player.drop(stack, true, false);
+            player.drop(stack, true, net.minecraft.util.Prediction.SERVER_ONLY);   // 26.3: Prediction replaced the boolean
         }
     }
 }
