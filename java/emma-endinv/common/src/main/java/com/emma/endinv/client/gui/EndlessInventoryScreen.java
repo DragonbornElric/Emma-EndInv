@@ -106,6 +106,8 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
     private float bookFlip, bookOFlip, bookFlipT, bookFlipA, bookOpen, bookOOpen;
     private ItemStack bookLastItem = ItemStack.EMPTY;
     @Nullable private StorageTrackerButton storageButton;
+    /** Shown in place of the station buttons when the server has stations turned off. */
+    @Nullable private StationsDisabledIcon stationsDisabledIcon;
 
     /** imageHeight without page rows ({@code imageHeight = BASE_IMAGE_HEIGHT + rows * 18}). */
     public static final int BASE_IMAGE_HEIGHT = 114;
@@ -174,6 +176,7 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         // syncing in tick()); the panel and the recipe book button follow it here.
         requestRelayoutIfMoved();
         StationUnlocks.lastSeenClientMask = menu.getStationUnlockMask();
+        updateStationVisibility();
         // The server closes a station that became locked (FreeCraftingStations turned off); follow it.
         if (activeStation != Station.NONE && !menu.isStationUnlocked(activeStation)) {
             setActiveStation(activeStation);
@@ -250,7 +253,10 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
                 this.minecraft.getEntityModels().bakeLayer(net.minecraft.client.model.geom.ModelLayers.BOOK));
         storageButton = new StorageTrackerButton(0, 0);
         addRenderableWidget(storageButton);
+        stationsDisabledIcon = new StationsDisabledIcon(0, 0);
+        addRenderableWidget(stationsDisabledIcon);
         updateStationButtonPositions();
+        updateStationVisibility();
 
         // The first build measures the real tab overhang; move again if it differed from the guess.
         requestRelayoutIfMoved();
@@ -318,8 +324,27 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
         grindstoneButton.setX(rightEdge - 22 - 48);    grindstoneButton.setY(row2Y);
         stonecutterButton.setX(rightEdge - 22 - 72);   stonecutterButton.setY(row2Y);
         if (enchantingButton != null) { enchantingButton.setX(rightEdge - 22 - 96); enchantingButton.setY(row2Y); }
+        if (stationsDisabledIcon != null) { stationsDisabledIcon.setX(rightEdge - 22); stationsDisabledIcon.setY(row1Y); }
         // Storage tracker sits at the left end of row 2, above the recipe book button.
         if (storageButton != null) { storageButton.setX(this.leftPos); storageButton.setY(row2Y); }
+    }
+
+    /**
+     * With stations turned off on the server ({@code CraftingStations = false}) the station buttons
+     * are hidden and one icon says to ask an admin; the server sends that as a bit in the unlock mask.
+     */
+    private void updateStationVisibility() {
+        boolean disabled = StationUnlocks.isDisabled(menu.getStationUnlockMask());
+        for (StationIconButton button : new StationIconButton[] {craftingButton, furnaceButton, smokerButton, blastFurnaceButton,
+                stonecutterButton, grindstoneButton, smithingButton, brewingButton, enchantingButton}) {
+            if (button != null) button.visible = !disabled;
+        }
+        if (stationsDisabledIcon != null) stationsDisabledIcon.visible = disabled;
+    }
+
+    /** Whether the station buttons are hidden because the server has stations turned off. */
+    public boolean stationsDisabled() {
+        return stationsDisabledIcon != null && stationsDisabledIcon.visible;
     }
 
     private void drawStationBackground(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
@@ -901,6 +926,36 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
                 graphics.fill(x + 3, y + 18, x + 19, y + 20, 0xFF373737);
                 graphics.fill(x + 3, y + 18, x + 3 + Math.max(1, Math.round(16 * progress)), y + 19, barColor);
             }
+        }
+
+        @Override
+        public void updateWidgetNarration(NarrationElementOutput output) {
+            this.defaultButtonNarrationText(output);
+        }
+    }
+
+    /** A barrier where the station buttons would be, with a tooltip to ask an admin to turn them on. */
+    private class StationsDisabledIcon extends AbstractButton {
+        private final ItemStack icon = new ItemStack(Items.BARRIER);
+
+        StationsDisabledIcon(int x, int y) {
+            super(x, y, 22, 22, Component.translatable("emma_endinv.station.disabled"));
+            this.setTooltip(Tooltip.create(Component.translatable("emma_endinv.station.disabled")));
+            this.visible = false;
+        }
+
+        @Override
+        public void onPress(InputWithModifiers input) {
+        }
+
+        @Override
+        public void playDownSound(net.minecraft.client.sounds.SoundManager soundManager) {
+        }
+
+        @Override
+        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+            this.extractDefaultSprite(graphics);
+            graphics.item(icon, this.getX() + 3, this.getY() + 3, 0);
         }
 
         @Override
