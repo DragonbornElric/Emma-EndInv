@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ask on the livestream
+    url: https://www.twitch.tv/Elric_Heart
+    about: Questions and ideas are welcome on stream.
+  - name: API for mod developers
+    url: https://github.com/DragonbornElric/Emma-EndInv/blob/main/docs/API.md
+    about: How other mods can use Endless Inventory.
