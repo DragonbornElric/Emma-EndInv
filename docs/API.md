@@ -95,10 +95,11 @@ the player's client on the next tick.
 | `ItemStack insert(ServerPlayer player, ItemStack stack)` | What didn't fit: empty if everything was stored, the whole stack if EndInv isn't available. `stack` is not modified |
 | `ItemStack extract(ServerPlayer player, ItemStack like, int count)` | The items taken: at most `count`, possibly fewer or empty |
 | `Map<ItemStack, Integer> contents(ServerPlayer player)` | A copy of everything: one 1-count stack per item type, mapped to its stored count |
-| `boolean isStationUnlocked(ServerPlayer player, Item block)` | Whether the station that block (crafting table, furnace, smoker, blast furnace, stonecutter, grindstone, smithing table, brewing stand, enchanting table) opens can be used. Always true when the server has `FreeCraftingStations` on. *1.4.5* |
+| `boolean isStationUnlocked(ServerPlayer player, Item block)` | Whether the station that block (crafting table, furnace, smoker, blast furnace, stonecutter, grindstone, smithing table, brewing stand, enchanting table) opens can be used. Always true when the server has `FreeCraftingStations` on, always false when it has `CraftingStations` off. *1.4.5* |
 | `boolean unlockStation(ServerPlayer player, Item block)` | Puts one of that block from the inventory, else EndInv, into its station. True if it unlocked now. *1.4.5* |
 | `int bookshelves(ServerPlayer player)` | Bookshelves in the enchanting station (0..15). *1.4.5* |
 | `int addBookshelves(ServerPlayer player, int count)` | Puts up to `count` bookshelves from the inventory, else EndInv, into the enchanting station. Returns how many went in. *1.4.5* |
+| `void addStationListener(BiConsumer<ServerPlayer, StationEvent> listener)` | Called when a station in a player's EndInv finishes or burns out, screen open or not (server thread; the player's region thread on Folia). See `StationEvent` below. *1.4.5* |
 
 "The player's EndInv" is the one the player currently uses: their own, or a shared one they
 selected. All methods return empty or zero results before EndInv data is loaded.
@@ -156,6 +157,17 @@ player's EndInv, which is filled after joining a server that has EndInv.
 | `Boolean isStationUnlocked(Item block)` | As of the open EndInv screen, or the last one open; null before any. *1.4.5* |
 | `void addBookshelves(int count)` | Puts up to `count` bookshelves from the inventory, else EndInv, into the enchanting station (15 at most); no screen needed. *1.4.5* |
 | `int bookshelves()` | Bookshelves in the enchanting station as of the open EndInv screen; -1 when none is open. *1.4.5* |
+| `void addStationListener(Consumer<StationEvent> listener)` / `removeStationListener` | Called on the client thread when a station in the player's EndInv finishes or burns out, screen open or not. Needs a server with EndInv 1.4.5+ (any loader). *1.4.5* |
+
+`StationEvent(Item station, Reason reason, ItemStack result)` (`com.emma.endinv.api`, 1.4.5):
+
+- `station` is the block item: furnace, smoker, blast furnace or brewing stand.
+- `reason` is one of:
+  - `DONE`: a furnace, smoker or blast furnace cooked its last input item, or a brewing stand finished a brew.
+  - `OUT_OF_FUEL`: a furnace, smoker or blast furnace burned out with input left and no fuel.
+- `result` is a copy of the output slot for cooking, or the first finished bottle for brewing. It is empty for `OUT_OF_FUEL`.
+
+The player also gets a chat line such as `[EndInv] Furnace is done: 8 Iron Ingot`, unless the server turns that off with `StationChatMessages`.
 | `List<TrackedContainer> getStorageIndex()` | The last index received: dimension, position, label and contents of each tracked container |
 
 `ItemKey` (`com.emma.endinv.util.ItemKey`) is EndInv's item + components key:

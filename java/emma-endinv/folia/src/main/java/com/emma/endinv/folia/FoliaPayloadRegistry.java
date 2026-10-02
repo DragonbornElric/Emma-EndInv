@@ -30,6 +30,7 @@ public final class FoliaPayloadRegistry {
             codecs.put(EndInvContent.TYPE.id(), EndInvContent.STREAM_CODEC);
             codecs.put(EndInvMetadata.TYPE.id(), EndInvMetadata.STREAM_CODEC);
             codecs.put(ItemPickedUpPayload.TYPE.id(), ItemPickedUpPayload.STREAM_CODEC);
+            codecs.put(com.emma.endinv.network.payloads.toClient.StationEventPayload.TYPE.id(), com.emma.endinv.network.payloads.toClient.StationEventPayload.STREAM_CODEC);
             codecs.put(SetItemDisplayContentPayload.TYPE.id(), SetItemDisplayContentPayload.STREAM_CODEC);
             codecs.put(SetStarredPagePayload.TYPE.id(), SetStarredPagePayload.STREAM_CODEC);
             codecs.put(MenuAttachabilityPayload.TYPE.id(), MenuAttachabilityPayload.STREAM_CODEC);

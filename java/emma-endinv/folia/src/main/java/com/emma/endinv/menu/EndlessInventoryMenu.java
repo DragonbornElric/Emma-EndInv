@@ -526,6 +526,7 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
         boolean hasFuel = !fuel.isEmpty();
 
         int litTime = ds[0].get();
+        boolean wasLit = litTime > 0;
         int litDuration = ds[1].get();
         int cookTime = ds[2].get();
         int cookDuration = ds[3].get();
@@ -565,6 +566,9 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
                                 cookDuration = recipeVal.cookingTime();
                                 completeCookingBurn(container, ingredient, burnResult, st);
                                 recipesUsed.merge(optRecipe.get().id(), 1, Integer::sum);
+                                if (container.getItem(0).isEmpty() && player instanceof ServerPlayer sp) {
+                                    StationNotifications.notify(sp, st, com.emma.endinv.api.StationEvent.Reason.DONE, container.getItem(2));
+                                }
                             }
                         } else {
                             cookTime = 0;
@@ -580,6 +584,10 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
             cookTime = Mth.clamp(cookTime - 2, 0, cookDuration);
         }
 
+        if (wasLit && !isLit && !container.getItem(0).isEmpty() && container.getItem(1).isEmpty()
+                && player instanceof ServerPlayer sp) {
+            StationNotifications.notify(sp, st, com.emma.endinv.api.StationEvent.Reason.OUT_OF_FUEL, ItemStack.EMPTY);
+        }
         ds[0].set(litTime);
         ds[1].set(litDuration);
         ds[2].set(cookTime);
@@ -920,6 +928,11 @@ public class EndlessInventoryMenu extends RecipeBookMenu implements PageMetaData
             }
             ingredient.shrink(1);
             brewingContainer.setItem(3, ingredient);
+            if (player instanceof ServerPlayer sp) {
+                ItemStack brewed = ItemStack.EMPTY;
+                for (int i = 0; i < 3 && brewed.isEmpty(); i++) brewed = brewingContainer.getItem(i);
+                StationNotifications.notify(sp, Station.BREWING, com.emma.endinv.api.StationEvent.Reason.DONE, brewed);
+            }
         }
     }
 

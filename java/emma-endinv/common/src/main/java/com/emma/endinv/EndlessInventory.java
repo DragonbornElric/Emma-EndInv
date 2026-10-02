@@ -269,6 +269,7 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
         boolean hasFuel       = !fuel.isEmpty();
         boolean changed       = false;
 
+        boolean wasLit = litTime > 0;
         boolean isLit;
         if (litTime > 0) {
             litTime--;
@@ -277,6 +278,7 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
         } else {
             isLit = false;
         }
+        boolean finished = false;
 
         if (isLit || (hasFuel && hasIngredient)) {
             if (hasIngredient) {
@@ -319,6 +321,7 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                                     fuel = new ItemStack(net.minecraft.world.item.Items.WATER_BUCKET);
                                 }
                                 input.shrink(1);
+                                finished = input.isEmpty();
                                 ServerPlayer ownerPlayer = level.getServer().getPlayerList().getPlayer(owner);
                                 if (ownerPlayer != null) {
                                     float xp = recipeVal.experience();
@@ -348,6 +351,13 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
         if (changed) {
             setCookingState(st, new FurnaceState(input, fuel, result, litTime, litDuration, cookTime, cookDuration));
             setChanged();
+        }
+        if (finished) {
+            com.emma.endinv.menu.StationNotifications.notify(level.getServer().getPlayerList().getPlayer(owner), st,
+                    com.emma.endinv.api.StationEvent.Reason.DONE, result);
+        } else if (wasLit && !isLit && !input.isEmpty() && fuel.isEmpty()) {
+            com.emma.endinv.menu.StationNotifications.notify(level.getServer().getPlayerList().getPlayer(owner), st,
+                    com.emma.endinv.api.StationEvent.Reason.OUT_OF_FUEL, ItemStack.EMPTY);
         }
     }
 
@@ -384,6 +394,9 @@ public class EndlessInventory extends SourceInventory {//todo add content transf
                     if (!potion1.isEmpty()) potion1 = pb.mix(ingredient, potion1);
                     if (!potion2.isEmpty()) potion2 = pb.mix(ingredient, potion2);
                     ingredient.shrink(1);
+                    ItemStack brewed = !potion0.isEmpty() ? potion0 : !potion1.isEmpty() ? potion1 : potion2;
+                    com.emma.endinv.menu.StationNotifications.notify(level.getServer().getPlayerList().getPlayer(owner),
+                            com.emma.endinv.menu.Station.BREWING, com.emma.endinv.api.StationEvent.Reason.DONE, brewed);
                 }
                 changed = true;
             } else if (!brewable) {

@@ -106,4 +106,12 @@ public final class EmmaEndInvServerApi {
     private static Optional<EndlessInventory> endInv(ServerPlayer player) {
         return ServerLevelEndInv.getEndInvForPlayer(player);
     }
+
+    /** Called on the server thread (the player's region thread on Folia) when a station in a
+     *  player's EndInv finishes or burns out; see {@link StationEvent}. Runs for every player whose
+     *  EndInv it is, online and with or without the screen open.
+     *  @since 1.4.5 */
+    public static void addStationListener(java.util.function.BiConsumer<ServerPlayer, StationEvent> listener) {
+        com.emma.endinv.menu.StationNotifications.addListener(listener);
+    }
 }
