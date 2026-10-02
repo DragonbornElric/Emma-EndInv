@@ -117,6 +117,9 @@ Fixed (auto-pickup):
 - A full stack of an item no longer keeps more of that item out of Endless Inventory: with a full inventory, given or dropped items now go to EndInv instead of staying on the ground
 - Folia/Paper plugin: items are picked into EndInv even when the inventory has no room for them
 - XP from auto-pickup (mining, kills) repairs Mending gear first, like a vanilla orb; before, it all went to levels and Mending never repaired. Server setting `AutoPickMendingFirst` (on by default)
+
+Fixed (client GUI):
+- The tooltip of the hovered item is drawn on top of the Endless Inventory side panel instead of behind it
 ```
 
 ## Changelog for 1.4.3 (per file)
