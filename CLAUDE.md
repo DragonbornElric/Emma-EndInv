@@ -1,6 +1,8 @@
 # Emma-EndInv
 
-Multi-loader repository for the Emma fork of Endless Inventory — Fabric, NeoForge, and Folia, targeting Minecraft 26.1.2.
+Multi-loader repository for the Emma fork of Endless Inventory — Fabric, NeoForge, and Folia, targeting Minecraft 26.2.
+
+**Branches (since 2026-10-02):** `main` is the Minecraft 26.2 line (owner: all mods proven on 26.2). 26.1.2 is frozen as branch `mc-26.1.2` / tag `archive/26.1.2-final` (no further updates). `mc-26.3` is the 26.3 port; changes flow one way, `main` → `mc-26.3`.
 
 ## Loader roles
 
@@ -116,10 +118,10 @@ on a dedicated server.
 
 ## Conventions
 
-- Minecraft 26.1.2
-- Fabric Loader 0.19.2 / Fabric API 0.149.0+26.1.2
-- NeoForge 26.1.2.7-beta (pin deliberately before upgrading)
-- Folia 26.1.2.build.8-stable (paperweight-userdev 2.0.0-SNAPSHOT, `foliaDevBundle`)
+- Minecraft 26.2
+- Fabric Loader 0.19.5 / Fabric API 0.161.0+26.2
+- NeoForge 26.2.0.88 (pin deliberately before upgrading)
+- Folia 26.2.build.7-beta (paperweight-userdev 2.0.0-SNAPSHOT, `foliaDevBundle`)
 - Fabric Loom 1.15.5 / ModDevGradle 2.0.141
 - Java 25
 - Package namespace: `com.emma.endinv`
@@ -164,6 +166,6 @@ In-game test results and methodology are in `TESTING.md` (Pelican test servers f
 
 - Treat comments as claims, not proof. Verify behavior from the code path.
 - Keep edits focused on the standalone mod and avoid reintroducing assumptions from the old multi-project workspace.
-- NeoForge 26.1.2 is still in `-beta`. Update the `neoforge_version` pin in `gradle.properties` deliberately.
+- Update the `neoforge_version` and `folia_version` pins in `gradle.properties` deliberately (Folia 26.2 is still a beta build).
 - The `common` module compiles against vanilla MC only (NeoForm mode) — it must NOT import any loader API.
 - The `folia` module compiles against server-only NMS (paperweight-userdev `foliaDevBundle`). It pulls common sources via the `commonServerJava` filtered Zip artifact (excludes `client/`, `mixin/`, `item/`, toClient payloads, `PageType`). Folia-local overrides in `folia/src/main/java/.../network/payloads/` and `menu/page/` replace the excluded files with server-safe versions.
