@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "emma_endinv_gametest",
+  "version": "1.0.0",
+  "name": "Emma EndInv client game tests",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-client-gametest": [
+      "com.emma.endinv.gametest.RecipeBookClientGameTest"
+    ]
+  },
+  "depends": {
+    "emma_endinv": "*",
+    "fabric-client-gametest-api-v1": "*"
+  }
+}

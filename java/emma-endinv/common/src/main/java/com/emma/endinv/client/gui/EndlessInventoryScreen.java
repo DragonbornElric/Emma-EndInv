@@ -142,6 +142,9 @@ public class EndlessInventoryScreen extends AbstractRecipeBookScreen<EndlessInve
     @Override
     public void containerTick() {
         super.containerTick();
+        // The book can also open or close itself (a recipe click on a narrow screen, the book state
+        // syncing in tick()); the panel and the recipe book button follow it here.
+        requestRelayoutIfMoved();
         if (relayoutPending) {
             relayoutPending = false;
             rebuildWidgets();

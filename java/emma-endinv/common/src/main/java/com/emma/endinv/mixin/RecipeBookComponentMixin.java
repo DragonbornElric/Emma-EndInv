@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(RecipeBookComponent.class)
 public class RecipeBookComponentMixin {
@@ -26,6 +27,8 @@ public class RecipeBookComponentMixin {
     private int xOffset;
     @Shadow
     private int width;
+    @Shadow
+    private boolean widthTooNarrow;
     @Unique
     private final CachedSrcInv srcInv = CachedSrcInv.INSTANCE;
 
@@ -50,6 +53,15 @@ public class RecipeBookComponentMixin {
     private void ei$pinPanelToLeftEdge(CallbackInfo ci) {
         if ((Object) this instanceof EndInvRecipeBookComponent) {
             this.xOffset = (this.width - 147) / 2 - 34;
+        }
+    }
+
+    // Vanilla reads "beside the panel" as xOffset == 86, which the pin above replaces. Without this the
+    // book closed after every recipe click and Escape closed only the book, as on a narrow screen.
+    @Inject(method = "isOffsetNextToMainGUI", at = @At("HEAD"), cancellable = true)
+    private void ei$besidePanelWhenPinned(CallbackInfoReturnable<Boolean> cir) {
+        if ((Object) this instanceof EndInvRecipeBookComponent) {
+            cir.setReturnValue(!this.widthTooNarrow);
         }
     }
 }
