@@ -2,6 +2,8 @@ package com.emma.endinv.menu;
 
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.inventory.RecipeBookType;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeType;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,7 +16,9 @@ public enum Station {
     STONECUTTER(null, null, -1),
     GRINDSTONE(null, null, -1),
     SMITHING(null, null, -1),
-    BREWING(null, null, -1);
+    BREWING(null, null, -1),
+    /** Added in 1.4.5; last so the earlier ordinals (sent over the network) don't change. */
+    ENCHANTING(null, null, -1);
 
     /** Non-null for cooking stations; null for NONE and CRAFTING. */
     public final @Nullable RecipeType<? extends AbstractCookingRecipe> cookingRecipeType;
@@ -40,10 +44,37 @@ public enum Station {
     }
 
     public boolean isInstantStation() {
-        return this == STONECUTTER || this == GRINDSTONE || this == SMITHING;
+        return this == STONECUTTER || this == GRINDSTONE || this == SMITHING || this == ENCHANTING;
     }
 
     public boolean isBrewing() {
         return this == BREWING;
+    }
+
+    /**
+     * The block item that unlocks this station when stations are not free
+     * ({@code FreeCraftingStations = false}); null for {@link #NONE}.
+     */
+    /** The station whose {@link #unlockItem()} is {@code item}, or null. */
+    public static @Nullable Station forUnlockItem(Item item) {
+        for (Station st : values()) {
+            if (st.unlockItem() == item) return st;
+        }
+        return null;
+    }
+
+    public @Nullable Item unlockItem() {
+        return switch (this) {
+            case NONE -> null;
+            case CRAFTING -> Items.CRAFTING_TABLE;
+            case FURNACE -> Items.FURNACE;
+            case SMOKER -> Items.SMOKER;
+            case BLAST_FURNACE -> Items.BLAST_FURNACE;
+            case STONECUTTER -> Items.STONECUTTER;
+            case GRINDSTONE -> Items.GRINDSTONE;
+            case SMITHING -> Items.SMITHING_TABLE;
+            case BREWING -> Items.BREWING_STAND;
+            case ENCHANTING -> Items.ENCHANTING_TABLE;
+        };
     }
 }
