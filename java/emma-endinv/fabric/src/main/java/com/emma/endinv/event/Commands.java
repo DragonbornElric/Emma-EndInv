@@ -19,7 +19,7 @@ public final class Commands {
                 .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
                 .executes(context -> {
                     var snapshot = com.emma.endinv.api.ClusterStateSnapshot.capture(context.getSource().getServer());
-                    context.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("EndInv real codec snapshot round-trip OK; schema=1; nbt_chars=" + snapshot.toString().length()), false);
+                    context.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("EndInv real codec snapshot round-trip OK; schema=1; nbt_chars=" + snapshot.toString().length() + "; inventories=" + com.emma.endinv.ServerLevelEndInv.levelEndInvData.levelEndInvs.size() + "; stored_items=" + com.emma.endinv.ServerLevelEndInv.levelEndInvData.levelEndInvs.stream().flatMap(i -> i.getItemMap().values().stream()).mapToLong(i -> i.count()).sum() + "; nbt=" + snapshot), false);
                     return 1;
                 }));
         });
