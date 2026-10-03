@@ -59,6 +59,9 @@ public class ModInit extends AbstractModInitializer implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        if (Boolean.getBoolean("mtmc.cluster.enabled")) {
+            throw new IllegalStateException("EndInv cluster gameplay BLOCKED: async mutation escrow/backend not integrated; SavedData must not be replicated");
+        }
         // Register payload types first, then receivers
         com.emma.endinv.network.FabricNetworking.init();
         FabricServerNetworking.init();

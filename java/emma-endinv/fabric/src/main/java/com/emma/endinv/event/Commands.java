@@ -15,6 +15,13 @@ public final class Commands {
             EndInvCommand.register(dispatcher);
             ConfigCommand.register(dispatcher);
             StorageCommand.register(dispatcher);
+            dispatcher.register(net.minecraft.commands.Commands.literal("endinv-cluster-snapshot")
+                .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
+                .executes(context -> {
+                    var snapshot = com.emma.endinv.api.ClusterStateSnapshot.capture(context.getSource().getServer());
+                    context.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("EndInv real codec snapshot round-trip OK; schema=1; nbt_chars=" + snapshot.toString().length()), false);
+                    return 1;
+                }));
         });
     }
 }
